@@ -1,0 +1,177 @@
+{"name": "Person", "id": 474, "title": "Person", "hidden": false, "sealed": false, "abstract": false, "version": "1.0", "inherits": "Thing", "fields": [
+    {
+        "name": "id",
+        "title": "Id",
+        "type": "Integer",
+        "nullable": false,
+        "primary": true
+    },
+    {
+        "name": "additionalName",
+        "title": "Additional Name",
+        "description": "An additional name for a Person, can be used for a middle name.",
+        "type": "Text"
+    },
+    {
+        "name": "affiliation",
+        "title": "Affiliation",
+        "description": "An organization that this person is affiliated with. For example, a school/university, a club, or a team.",
+        "type": "Organization"
+    },
+    {
+        "name": "alumniOf",
+        "title": "Alumni of",
+        "description": "An educational organizations that the person is an alumni of.",
+        "type": "EducationalOrganization",
+        "many":true
+    },
+    {
+        "name": "birthDate",
+        "title": "Birth Date",
+        "description": "Date of birth.",
+        "type": "Date"
+    },
+    {
+        "name": "children",
+        "title": "Children",
+        "description": "A child of the person.",
+        "type": "Person",
+        "many":true
+    },
+    {
+        "name": "colleagues",
+        "title": "Colleagues",
+        "description": "A colleague of the person.",
+        "type": "Person",
+        "many":true
+    },
+    {
+        "name": "deathDate",
+        "title": "Death Date",
+        "description": "Date of death.",
+        "type": "Date"
+    },
+    {
+        "name": "familyName",
+        "title": "Family Name",
+        "description": "Family name.",
+        "type": "Text",
+        "size":255
+    },
+    {
+        "name": "follows",
+        "title": "Follows",
+        "description": "The most generic uni-directional social relation.",
+        "type": "Person",
+        "many":true
+    },
+    {
+        "name": "gender",
+        "title": "Gender",
+        "description": "Gender of the person.",
+        "type": "Text",
+        "size":20
+    },
+    {
+        "name": "givenName",
+        "title": "Given Name",
+        "description": "Given name. In the U.S., the first name of a Person. This can be used along with familyName instead of the Name property.",
+        "type": "Text",
+        "size":255
+    },
+    {
+        "name": "homeLocation",
+        "title": "Home Location",
+        "description": "A contact location for a person's residence.",
+        "type": "ContactPoint",
+        "many":true
+    },
+    {
+        "name": "honorificPrefix",
+        "title": "Honorific Prefix",
+        "description": "An honorific prefix preceding a Person's name such as Dr/Mrs/Mr.",
+        "type": "Text",
+        "size":40
+    },
+    {
+        "name": "honorificSuffix",
+        "title": "Honorific Suffix",
+        "description": "An honorific suffix preceding a Person's name such as M.D. /PhD/MSCSW.",
+        "type": "Text",
+        "size":40
+    },
+    {
+        "name": "jobTitle",
+        "title": "Job Title",
+        "description": "The job title of the person (for example, Financial Manager).",
+        "type": "Text",
+        "size":120
+    },
+    {
+        "name": "knows",
+        "title": "Knows",
+        "description": "The most generic bi-directional social/work relation.",
+        "type": "Person",
+        "many":true
+    },
+    {
+        "name": "memberOf",
+        "title": "Member of",
+        "description": "An organization to which the person belongs.",
+        "type": "Organization",
+        "many":true
+    },
+    {
+        "name": "nationality",
+        "title": "Nationality",
+        "description": "Nationality of the person.",
+        "type": "Country"
+    },
+    {
+        "name": "parents",
+        "title": "Parents",
+        "description": "A parents of the person (legacy spelling; see singular form, parent).",
+        "type": "Person",
+        "many":true
+    },
+    {
+        "name": "performerIn",
+        "title": "Performer in",
+        "description": "Event that this person is a performer or participant in.",
+        "type": "Event",
+        "many":true
+    },
+    {
+        "name": "relatedTo",
+        "title": "Related to",
+        "description": "The most generic familial relation.",
+        "type": "Person",
+        "many":true
+    },
+    {
+        "name": "siblings",
+        "title": "Siblings",
+        "description": "A sibling of the person (legacy spelling; see singular form, sibling).",
+        "type": "Person",
+        "many":true
+    },
+    {
+        "name": "spouse",
+        "title": "Spouse",
+        "description": "The person's spouse.",
+        "type": "Person"
+    },
+    {
+        "name": "workLocation",
+        "title": "Work Location",
+        "description": "A contact location for a person's place of work.",
+        "type": "ContactPoint"
+    },
+    {
+        "name": "worksFor",
+        "title": "Works for",
+        "description": "Organizations that the person works for.",
+        "type": "Organization",
+        "many":true
+    }
+]}

@@ -1,0 +1,75 @@
+{"name": "Thing", "id": 593, "title": "Thing", "hidden": false, "sealed": false, "abstract": false, "version": "1.1", "fields": [
+    {
+        "name": "id",
+        "title": "Id",
+        "type": "Counter",
+        "nullable": false,
+        "primary": true
+    },
+    {
+        "name": "additionalType",
+        "title": "Additional Type",
+        "description": "An additional type for the item.",
+        "type": "URL"
+    },
+    {
+        "name": "alternateName",
+        "title": "Alternate Name",
+        "description": "An alias for the item.",
+        "type": "Text"
+    },
+    {
+        "name": "description",
+        "title": "Description",
+        "description": "A short description of the item.",
+        "type": "Text"
+    },
+    {
+        "name": "image",
+        "title": "Image",
+        "description": "URL of an image of the item.",
+        "type": "URL"
+    },
+    {
+        "name": "name",
+        "title": "Name",
+        "description": "The name of the item.",
+        "type": "Text"
+    },
+    {
+        "name": "sameAs",
+        "title": "Same As",
+        "description": "URL of a reference Web page that unambiguously indicates the item's identity. E.g. the URL of the item's Wikipedia page, Freebase page, or official website.",
+        "type": "URL"
+    },
+    {
+        "name": "url",
+        "title": "URL",
+        "description": "URL of the item.",
+        "type": "URL"
+    },
+    {
+        "name": "dateCreated",
+        "title": "Date Created",
+        "description": "The date and time when the item was created.",
+        "type": "DateTime",
+        "value":"fn:now()",
+        "readonly":true
+    },
+    {
+        "name": "dateModified",
+        "title": "Date Modified",
+        "description": "The date and time when the item was modified.",
+        "type": "DateTime",
+        "value":"javascript:return new Date();",
+        "calculation":"fn:now()",
+        "readonly":true
+    }
+],
+    "constraints":[
+
+    ],
+    "eventListeners":[
+
+    ]
+}

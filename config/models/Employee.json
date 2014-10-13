@@ -1,0 +1,68 @@
+{
+    "name": "Employee", "id": 1001, "title": "Employee", "source":"employees",  "view":"employees", "hidden": false, "sealed": true, "abstract": false, "version": "1.0",
+    "fields": [
+        {
+            "name": "employeeNumber",
+            "title": "Employee Number",
+            "type": "Integer",
+            "nullable": false,
+            "primary": true,
+            "value":"fn:newid()"
+        },
+        {
+            "name": "lastName",
+            "title": "Last Name",
+            "type": "Text",
+            "size": 50,
+            "nullable": false
+        },
+        {
+            "name": "firstName",
+            "title": "First Name",
+            "type": "Text",
+            "size": 50,
+            "nullable": false
+        },
+        {
+            "name": "extension",
+            "title": "Extension",
+            "type": "Text",
+            "size": 10,
+            "nullable": false
+        },
+        {
+            "name": "email",
+            "title": "Email",
+            "type": "Text",
+            "size": 100,
+            "nullable": false
+        },
+        {
+            "name": "officeCode",
+            "property":"office",
+            "title": "Office Code",
+            "type": "Office",
+            "nullable": false
+        },
+        {
+            "name": "reportsTo",
+            "title": "Reports To",
+            "type": "Employee",
+            "property":"supervisor"
+        },
+        {
+            "name": "jobTitle",
+            "title": "Job Title",
+            "type": "Text",
+            "size": 50,
+            "nullable": false
+        }
+    ],
+    "constraints":[
+        {
+            "description": "Email address must be unique across different records.",
+            "type":"unique",
+            "fields": [ "email" ]
+        }
+    ]
+}

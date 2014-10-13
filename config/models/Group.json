@@ -1,0 +1,28 @@
+{
+    "name": "Group", "id": 91, "title": "User Group", "inherits":"Account", "hidden": false, "sealed": false, "abstract": false, "version": "1.1",
+    "fields": [
+        {
+            "name": "id",
+            "title": "Id",
+            "description":"The identifier of the item.",
+            "type": "Integer",
+            "nullable": false,
+            "primary": true
+        },
+        {
+            "name": "members",
+            "title": "Group Members",
+            "description": "Contains the collection of group members (users or groups).",
+            "type": "Account"
+        },
+        {
+            "name": "tags",
+            "title": "Group Tags",
+            "description": "Contains a collection of tags for this object.",
+            "type": "Text",
+            "many":true
+        }
+
+
+    ]
+}
