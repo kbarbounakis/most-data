@@ -251,6 +251,7 @@ MySqlAdapter.prototype.selectIdentity = function(entity, attribute , callback) {
     var migration = {
         appliesTo:'increment_id',
         model:'increments',
+        description:'Increments migration (version 1.0)',
         version:'1.0',
         add:[
             { name:'id', type:'Counter', primary:true },

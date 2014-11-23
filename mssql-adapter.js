@@ -144,22 +144,39 @@ MsSqlAdapter.prototype.executeInTransaction = function(fn, callback) {
                     callback.call(self, err);
                 }
                 else {
-                    fn.call(self, function (err) {
-                        if (err) {
-                            self.transaction.rollback();
-                            self.transaction=null;
-                            callback.call(self, err);
-                        }
-                        else {
-                            self.transaction.commit(function (err) {
+                    try {
+                        fn.call(self, function (err) {
+                            try {
                                 if (err) {
-                                    self.transaction.rollback();
+                                    if (self.transaction) {
+                                        self.transaction.rollback();
+                                        self.transaction=null;
+                                    }
+                                    callback.call(self, err);
                                 }
-                                self.transaction = null;
-                                callback.call(self, err);
-                            });
-                        }
-                    });
+                                else {
+                                    if (typeof self.transaction === 'undefined' || self.transaction === null) {
+                                        callback.call(self, new Error('Database transaction cannot be empty on commit.'));
+                                        return;
+                                    }
+                                    self.transaction.commit(function (err) {
+                                        if (err) {
+                                            self.transaction.rollback();
+                                        }
+                                        self.transaction = null;
+                                        callback.call(self, err);
+                                    });
+                                }
+                            }
+                            catch (e) {
+                                callback.call(self, e);
+                            }
+                        });
+                    }
+                    catch (e) {
+                        callback.call(self, e);
+                    }
+
                 }
             });
 
@@ -238,6 +255,7 @@ MsSqlAdapter.prototype.selectIdentity = function(entity, attribute , callback) {
         appliesTo:'increment_id',
         model:'increments',
         version:'1.0',
+        description:'Increments migration (version 1.0)',
         add:[
             { name:'id', type:'Counter', primary:true },
             { name:'entity', type:'Text', size:120 },
@@ -686,9 +704,10 @@ MsSqlAdapter.queryFormat = function (query, values) {
  * @augments {SqlFormatter}
  */
 function MsSqlFormatter() {
-    //
+    this.settings = {
+        nameFormat:'[$1]'
+    }
 }
-
 util.inherits(MsSqlFormatter, qry.classes.SqlFormatter);
 
 MsSqlFormatter.prototype.formatLimitSelect = function(obj) {

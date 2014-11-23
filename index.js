@@ -9,7 +9,7 @@ var model = require('./data-model'),
     perms = require('./data-permission'),
     mssqlAdapter = require('./mssql-adapter');
 
-var data = {
+var dat = {
     /**
      * @namespace
      */
@@ -131,13 +131,13 @@ var data = {
  * @class {DataPermissionEventListener}
  * @constructor
  */
-data.classes.DataPermissionEventListener = perms.DataPermissionEventListener;
+dat.classes.DataPermissionEventListener = perms.DataPermissionEventListener;
 /**
  * @constructor {DataPermissionEventArgs}
  */
-data.classes.DataPermissionEventArgs = perms.DataPermissionEventArgs;
+dat.classes.DataPermissionEventArgs = perms.DataPermissionEventArgs;
 
 if (typeof exports !== 'undefined')
 {
-        module.exports = data;
+        module.exports = dat;
 }

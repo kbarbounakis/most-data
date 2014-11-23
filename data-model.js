@@ -11,7 +11,7 @@ var array = require('most-array'),
     events = require('events'),
     qry = require('most-query'),
     cfg = require('./data-configuration'),
-    __types__ = require('./types');
+    __types__ = require('./types'), functions = require('./functions');
 
 
 if (typeof Array.prototype.find === 'undefined')
@@ -30,13 +30,13 @@ if (typeof Array.prototype.find === 'undefined')
         }
         var list = Object(this);
         var length = list.length >>> 0;
-        var thisObject = arguments[1];
+        var thisObj = arguments[1];
         var value;
 
         for (var i = 0; i < length; i++) {
             if (i in list) {
                 value = list[i];
-                if (callback.call(thisObject, value, i, list)) {
+                if (callback.call(thisObj, value, i, list)) {
                     return value;
                 }
             }
@@ -61,13 +61,13 @@ if (typeof Array.prototype.select === 'undefined')
         }
         var list = Object(this);
         var length = list.length >>> 0;
-        var thisObject = arguments[1];
+        var thisObj = arguments[1];
         var value;
         var res = [];
         for (var i = 0; i < length; i++) {
             if (i in list) {
                 value = list[i];
-                var item = callback.call(thisObject, value, i, list);
+                var item = callback.call(thisObj, value, i, list);
                 if (item)
                     res.push(item);
             }
@@ -92,13 +92,13 @@ if (typeof Array.prototype.distinct === 'undefined')
         }
         var list = Object(this);
         var length = list.length >>> 0;
-        var thisObject = arguments[1];
+        var thisObj = arguments[1];
         var value;
         var res = [];
         for (var i = 0; i < length; i++) {
             if (i in list) {
                 value = list[i];
-                var item = callback.call(thisObject, value, i, list);
+                var item = callback.call(thisObj, value, i, list);
                 if (item)
                     if (res.indexOf(item)<0)
                         res.push(item);
@@ -127,7 +127,7 @@ function DefaultDataContext()
         if (__db__)
             __db__.close();
         __db__=null;
-    }
+    };
 
     Object.defineProperty(this, 'db', {
         get : function() {
@@ -176,7 +176,7 @@ DefaultDataContext.prototype.finalize = function(cb) {
     cb = cb || function () {};
     this.__finalize__();
     cb.call(this);
-}
+};
 /**
  * @class DataView
  * @param {DataModel} model
@@ -213,10 +213,10 @@ function DataView(model) {
      * @type {DataModel}
      */
     this.model = undefined;
-    var model = model;
+    var _model = model;
     Object.defineProperty(this,'model', {
        get: function() {
-           return model;
+           return _model;
        }, configurable:false, enumerable: false
     });
     /**
@@ -228,9 +228,9 @@ function DataView(model) {
     Object.defineProperty(this,'attributes', {
         get: function() {
             var attrs = [];
-            this.fields.forEach(function(x) {
+            self.fields.forEach(function(x) {
                 if (self.model) {
-                    var field = self.model.field(x.name);
+                    var field = util._extend(new DataField(), self.model.field(x.name));
                     if (field)
                         attrs.push(util._extend(field, x));
                     else
@@ -312,6 +312,31 @@ function DataField() {
      * @type {DataAssociationMapping}
      */
     this.expandable = false;
+    /**
+     * Gets or sets the section where the field belongs.
+     * @type {string}
+     */
+    this.section = null;
+    /**
+     * Gets or sets a short description for this field.
+     * @type {string}
+     */
+    this.description = null;
+    /**
+     * Gets or sets a short help for this field.
+     * @type {string}
+     */
+    this.help = null;
+    /**
+     * Gets or sets the appearance template of this field, if any.
+     * @type {string}
+     */
+    this.appearance = null;
+    /**
+     * Gets or sets the available options for this field.
+     * @type  {{name: string, value: *}[]}
+     */
+    this.options = null;
 }
 
 /**
@@ -392,11 +417,11 @@ function DataFilterResolver() {
 
 DataFilterResolver.resolveMember = function(member, callback) {
     callback(null, this.viewAdapter.concat('.', member))
-}
+};
 
 DataFilterResolver.resolveMethod = function(name, args, callback) {
     callback();
-}
+};
 
 /**
  * @class EmptyQueryExpression
@@ -556,16 +581,30 @@ function DataModel(obj) {
                 x.model = self.name;
         });
         //clone self fields
-        var result = [];
+        var result = [], baseModel = self.base(), field;
         array(self.fields).each(function(x) {
-                result.push(x);
+            var clone = x;
+            if (baseModel && !x.primary) {
+                field = baseModel.field(x.name);
+                if (field) {
+                    clone = new DataField();
+                    //get all inherited properties
+                    util._extend(clone, field);
+                    //get all overriden properties
+                    util._extend(clone, x);
+                    //set field model
+                    clone.model = field.model;
+                }
+            }
+            result.push(clone);
         });
-        //get base model
-        var baseModel = self.base();
         if (baseModel!=null) {
             array(baseModel.attributes).each(function(x) {
                 if (!x.primary) {
-                    result.push(x);
+                    //check if member is overriden by the current model
+                    field = self.fields.filter(function(y) { return y.name==x.name; })[0];
+                    if (typeof field === 'undefined')
+                        result.push(x);
                 }
             });
         }
@@ -588,9 +627,9 @@ function DataModel(obj) {
     */
     this.attributeNames = undefined;
     Object.defineProperty(this, 'attributeNames' , { get: function() {
-        return array(this.attributes).select(function(x) {
+        return self.attributes.map(function(x) {
             return x.name;
-        }).toArray();
+        });
     }, enumerable: false, configurable: false});
 
     //register listeners
@@ -687,6 +726,10 @@ DataModel.prototype.filter = function(filter, callback) {
     var self = this;
     var parser = qry.openData.createParser();
     parser.resolveMember = function(member, cb) {
+        var attr = self.field(member);
+        if (attr)
+            member = attr.name;
+        //todo:: throw exception for missing field
         if (typeof self.resolveMember === 'function')
             self.resolveMember.call(self, member, cb)
         else
@@ -804,6 +847,7 @@ DataModel.prototype.first = function(callback) {
 
 /**
  * Returns a data item based on the given key.
+ * @param {String} key
  * @param {Function} callback - A callback function that will be invoked.
 */
 DataModel.prototype.get = function(key, callback) {
@@ -880,7 +924,7 @@ DataModel.prototype.base = function()
     if (this.context==null)
         throw new Error("The underlying data context cannot be empty.");
     return this.context.model(this.inherits);
-}
+};
 /**
  * Converts an object or a collection of objects to the corresponding data instance
  * @param {Array|*} obj
@@ -914,11 +958,6 @@ DataModel.prototype.convert = function(obj)
             util._extend(o, x);
             o.context = self.context;
             o.type = self.name;
-            /*if (DataObjectClass.super_) {
-                if (DataObjectClass.super_.name=='DataObject') {
-                    o.type = self.name;
-                }
-            }*/
             result.push(o)
         });
         return result;
@@ -928,11 +967,6 @@ DataModel.prototype.convert = function(obj)
         util._extend(result, obj);
         result.context = self.context;
         result.type = self.name;
-       /* if (DataObjectClass.super_) {
-            if (DataObjectClass.super_.name=='DataObject') {
-                result.type = self.name;
-            }
-        }*/
         return result;
     }
 }
@@ -950,23 +984,102 @@ DataModel.prototype.cast = function(obj)
     }
     else
     {
-        var result = {};
-        array(self.fields).each(function(x)
-        {
-            if (obj.hasOwnProperty(x.name))
+        var result = {}, name;
+        self.attributes.forEach(function(x) {
+            name = obj.hasOwnProperty(x.property) ? x.property : x.name;
+            if (obj.hasOwnProperty(name))
             {
-                if (!(x.readonly && typeof x.value==='undefined')) {
-                    var mapping = self.inferMapping(x.name);
-                    if (mapping==null)
-                        result[x.name] = obj[x.name];
-                    else if (mapping.associationType==='association')
-                        result[x.name] = obj[x.name];
+                if (!(x.readonly && typeof x.value==='undefined') && (x.model===self.name)) {
+                    var mapping = self.inferMapping(name);
+                    if (typeof mapping === 'undefined' || mapping === null)
+                        result[x.name] = obj[name];
+                    else if (mapping.associationType==='association') {
+                        if (typeof obj[name] === 'object')
+                            //set associated key value (e.g. primary key value)
+                            result[x.name] = obj[name][mapping.parentField];
+                        else
+                            //set raw value
+                            result[x.name] = obj[name];
+                    }
                 }
             }
         });
         return result;
     }
-}
+};
+/**
+ * @param {*} dest
+ * @param {*} src
+ * @param {function(Error=)} callback
+ */
+DataModel.prototype.recast = function(dest, src, callback)
+{
+    callback = callback || function() {};
+    var self = this;
+    if (typeof src === 'undefined' || src === null) {
+        callback();
+        return;
+    }
+    if (typeof dest === 'undefined' || dest === null) {
+        dest = { };
+    }
+    async.eachSeries(self.fields, function(field, cb) {
+        try {
+            if (src.hasOwnProperty(field.name)) {
+                //ensure db property removal
+                if (field.property && field.property!==field.name)
+                    delete dest[field.name];
+                var mapping = self.inferMapping(field.name), name = field.property || field.name;
+                if (typeof mapping=== 'undefined' || mapping === null) {
+                    //set destination property
+                    dest[name] = src[field.name];
+                    cb(null);
+                }
+                else if (mapping.associationType==='association') {
+
+                    if (typeof dest[name] === 'object') {
+                        //check associated object
+                        if (dest[name][mapping.parentField]===src[field.name]) {
+                            //return
+                            cb(null);
+                        }
+                        else {
+                            //load associated item
+                            var associatedModel = self.context.model(mapping.parentModel);
+                            associatedModel.where(mapping.parentField).equal(src[field.name]).silent().first(function(err, result) {
+                                if (err) {
+                                    cb(err);
+                                }
+                                else {
+                                    dest[name] = result;
+                                    //return
+                                    cb(null);
+                                }
+                            });
+                        }
+                    }
+                    else {
+                        //set destination property
+                        dest[name] = src[field.name];
+                        cb(null);
+                    }
+                }
+            }
+            else {
+                cb(null);
+            }
+        }
+        catch (e) {
+            cb(e);
+        }
+    }, function(err) {
+        callback(err);
+    });
+};
+
+
+
+
 
 /**
  *
@@ -1071,7 +1184,7 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
         state:state
     };
     //register data association listener
-    self.once('before.save', DataObjectAssociationListener.beforeSave);
+    //self.once('before.save', DataObjectAssociationListener.beforeSave);
     //register data association listener
     self.once('after.save', DataObjectAssociationListener.afterSave);
     //register not null listener at the end of listeners collection (before emit)
@@ -1079,7 +1192,7 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
     //register unique constraint listener at the end of listeners collection (before emit)
     self.once('before.save', UniqueContraintListener.beforeSave);
     //execute before update events
-    self.emit('before.save', e, function(err, result) {
+    self.emit('before.save', e, function(err) {
         //if an error occured
         if (err) {
             //invoke callback with error
@@ -1120,11 +1233,17 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
                     if (key)
                         target[self.primaryKey] = key;
                     //get updated object
-                    util._extend(e.target, target);
-                    //execute after update events
-                    self.emit('after.save',e, function(err, result) {
-                        //invoke callback
-                        callback.call(self, err, e.target);
+                    self.recast(e.target, target, function(err) {
+                        if (err) {
+                            callback.call(self, err);
+                        }
+                        else {
+                            //execute after update events
+                            self.emit('after.save',e, function(err) {
+                                //invoke callback
+                                callback.call(self, err, e.target);
+                            });
+                        }
                     });
                 }
                 else {
@@ -1136,15 +1255,21 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
                             if (key)
                                 target[self.primaryKey] = key;
                             //get updated object
-                            util._extend(e.target, target);
-                            //get inserted id
-                            if (e.state==1)
-                                if (result.insertId)
-                                    e.target[self.primaryKey] = result.insertId;
-                            //execute after update events
-                            self.emit('after.save',e, function(err, result) {
-                                //invoke callback
-                                callback.call(self, err, e.target);
+                            self.recast(e.target, target, function(err) {
+                                if (err) {
+                                    callback.call(self, err);
+                                }
+                                else {
+                                    //get inserted id
+                                    if (e.state==1)
+                                        if (result.insertId)
+                                            e.target[self.primaryKey] = result.insertId;
+                                    //execute after update events
+                                    self.emit('after.save',e, function(err, result) {
+                                        //invoke callback
+                                        callback.call(self, err, e.target);
+                                    });
+                                }
                             });
                         }
                     });
@@ -1162,7 +1287,7 @@ DataModel.prototype.superTypes = function() {
         baseModel = model;
     }
     return result;
-}
+};
 
 /**
  * Inserts an item or an array of items
@@ -1688,7 +1813,7 @@ function DataContextEmitter() {
 }
 DataContextEmitter.prototype.ensureContext = function() {
     return null;
-}
+};
 
 /**
  * @class DataQueryable
@@ -1750,11 +1875,10 @@ DataQueryable.prototype.clone = function() {
     var result = new DataQueryable(this.model);
     util._extend(result.query, this.query);
     return result;
-}
+};
 
 /**
  * Ensures data queryable context and returns the current data context. This function may be overriden.
- * @param attr
  * @returns {DataContext}
  */
 DataQueryable.prototype.ensureContext = function() {
@@ -1770,7 +1894,7 @@ DataQueryable.prototype.ensureContext = function() {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.where = function(attr) {
-    this.query.where(qry.fields.select(attr).from(this.model.viewAdapter));
+    this.query.where(this.fieldOf(attr));
     return this;
 };
 
@@ -1803,7 +1927,7 @@ DataQueryable.prototype.join = function(model)
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.and = function(attr) {
-    this.query.and(attr);
+    this.query.and(this.fieldOf(attr));
     return this;
 };
 /**
@@ -1811,7 +1935,7 @@ DataQueryable.prototype.and = function(attr) {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.or = function(attr) {
-    this.query.or(attr);
+    this.query.or(this.fieldOf(attr));
     return this;
 };
 
@@ -1940,7 +2064,10 @@ DataQueryable.prototype.select = function(attrs) {
             var fields = array(self.model.attributes).where(function(x) {
                 return (!x.many);
             }).select(function(x) {
-                return qry.fields.select(x.name).from(self.model.viewAdapter);
+                var f = qry.fields.select(x.name).from(self.model.viewAdapter);
+                if (x.property)
+                    f.as(x.property);
+                return f;
             }).toArray();
             //and select fields
             self.select(fields);
@@ -1955,25 +2082,31 @@ DataQueryable.prototype.select = function(attrs) {
 
 /**
  * @param attr {string}
- * @returns {DataQueryable}
+ * @returns {DataQueryable|QueryField}
  */
 DataQueryable.prototype.fieldOf = function(attr) {
 
     var matches = /(count|avg|sum|min|max)\((.*?)\)/i.exec(attr);
     if (matches) {
+        var field = this.model.field(matches[2]);
+        if (typeof  field === 'undefined' || field === null)
+            throw new Error(util.format('The specified field %s cannot be found in target model.', matches[2]));
         if (matches[1]=='count')
-            return qry.fields.count(matches[2]).from(this.model.viewAdapter).as('countOf'.concat(matches[2]));
+            return qry.fields.count(field.name).from(this.model.viewAdapter).as('countOf'.concat(matches[2]));
         else if (matches[1]=='avg')
-            return qry.fields.average(matches[2]).from(this.model.viewAdapter).as('avgOf'.concat(matches[2]));
+            return qry.fields.average(field.name).from(this.model.viewAdapter).as('avgOf'.concat(matches[2]));
         else if (matches[1]=='sum')
-            return qry.fields.sum(matches[2]).from(this.model.viewAdapter).as('sumOf'.concat(matches[2]));
+            return qry.fields.sum(field.name).from(this.model.viewAdapter).as('sumOf'.concat(matches[2]));
         else if (matches[1]=='min')
-            return qry.fields.min(matches[2]).from(this.model.viewAdapter).as('minOf'.concat(matches[2]));
+            return qry.fields.min(field.name).from(this.model.viewAdapter).as('minOf'.concat(matches[2]));
         else if (matches[1]=='max')
-            return qry.fields.max(matches[2]).from(this.model.viewAdapter).as('maxOf'.concat(matches[2]));
+            return qry.fields.max(field.name).from(this.model.viewAdapter).as('maxOf'.concat(matches[2]));
     }
     else {
-        return qry.fields.select(attr).from(this.model.viewAdapter);
+        var field = this.model.field(attr);
+        if (typeof  field === 'undefined' || field === null)
+            throw new Error(util.format('The specified field %s cannot be found in target model.', attr));
+        return qry.fields.select(field.name).from(this.model.viewAdapter);
     }
     return this;
 };
@@ -2050,7 +2183,11 @@ DataQueryable.prototype.all = function(callback) {
         var fields = array(self.model.attributes).where(function(x) {
             return (!x.many);
         }).select(function(x) {
-            return qry.fields.select(x.name).from(self.model.viewAdapter);
+            var f = qry.fields.select(x.name).from(self.model.viewAdapter);
+            if (x.property)
+                f.as(x.property)
+            return f;
+
         }).toArray();
         //and select fields
         self.select(fields);
@@ -2085,7 +2222,10 @@ DataQueryable.prototype.take = function(n, callback) {
         var fields = array(self.model.attributes).where(function(x) {
             return (!x.many);
         }).select(function(x) {
-            return qry.fields.select(x.name).from(self.model.viewAdapter);
+            var f = qry.fields.select(x.name).from(self.model.viewAdapter);
+            if (x.property)
+                f.as(x.property);
+            return f;
         }).toArray();
         //and select fields
         self.select(fields);
@@ -2100,7 +2240,7 @@ DataQueryable.prototype.take = function(n, callback) {
  */
 DataQueryable.prototype.countOf = function(name, alias) {
     alias = alias || 'countOf'.concat(name);
-    var res = qry.fields.count(name).from(this.model.viewAdapter);
+    var res = this.fieldOf(util.format('count(%s)', name));
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
@@ -2112,7 +2252,7 @@ DataQueryable.prototype.countOf = function(name, alias) {
  */
 DataQueryable.prototype.maxOf = function(name, alias) {
     alias = alias || 'maxOf'.concat(name);
-    var res = qry.fields.max(name).from(this.model.viewAdapter);
+    var res = this.fieldOf(util.format('max(%s)', name));
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
@@ -2124,7 +2264,7 @@ DataQueryable.prototype.maxOf = function(name, alias) {
  */
 DataQueryable.prototype.minOf = function(name, alias) {
     alias = alias || 'minOf'.concat(name);
-    var res = qry.fields.min(name).from(this.model.viewAdapter);
+    var res = this.fieldOf(util.format('min(%s)', name));
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
@@ -2136,7 +2276,7 @@ DataQueryable.prototype.minOf = function(name, alias) {
  */
 DataQueryable.prototype.averageOf = function(name, alias) {
     alias = alias || 'avgOf'.concat(name);
-    var res = qry.fields.average(name).from(this.model.viewAdapter);
+    var res = this.fieldOf(util.format('avg(%s)', name));
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
@@ -2148,7 +2288,7 @@ DataQueryable.prototype.averageOf = function(name, alias) {
  */
 DataQueryable.prototype.sumOf = function(name, alias) {
     alias = alias || 'sumOf'.concat(name);
-    var res = qry.fields.sum(name).from(this.model.viewAdapter);
+    var res = this.fieldOf(util.format('sum(%s)', name));
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
@@ -2348,29 +2488,37 @@ DataQueryable.prototype.execute = function(callback) {
             //get selected fields
             var selected = self.query.$select[self.model.viewAdapter];
             if (util.isArray(selected)) {
-                selected.forEach(function(x) {
-                    //get field
-                    var field = expandables.find(function(y) {
-                        if (typeof x === 'string')
-                            return x == y.name;
-                        else if (typeof x === 'object' && x!=null) {
-                            if (x instanceof qry.classes.QueryField)
-                                return x.name() == y.name;
-                            else {
-                                var f = util._extend(new qry.classes.QueryField(), x);
-                                return f.name() == y.name;
-                            }
+                //remove hidden fields
+                var hiddens = self.model.attributes.filter(function(x) { return x.hidden; });
+                if (hiddens.length>0) {
+                    for (var i = 0; i < selected.length; i++) {
+                        var x = selected[i];
+                        var hiddenField = hiddens.find(function(y) {
+                            var f = x instanceof qry.classes.QueryField ? x : new qry.classes.QueryField(x);
+                            return f.name() == y.name;
+                        });
+                        if (hiddenField) {
+                            selected.splice(i, 1);
+                            i-=1;
                         }
-                        else
-                            return false;
-                    });
-                    //add expandable models
-                    if (field) {
-                        var mapping = self.model.inferMapping(field.name);
-                        if (mapping)
-                            self.expand(mapping);
                     }
-                });
+                }
+                //expand fields
+                if (expandables.length>0) {
+                    selected.forEach(function(x) {
+                        //get field
+                        var field = expandables.find(function(y) {
+                            var f = x instanceof qry.classes.QueryField ? x : new qry.classes.QueryField(x);
+                            return f.name() == y.name;
+                        });
+                        //add expandable models
+                        if (field) {
+                            var mapping = self.model.inferMapping(field.name);
+                            if (mapping)
+                                self.expand(mapping);
+                        }
+                    });
+                }
             }
         }
         if (self.$silent) {
@@ -2416,8 +2564,10 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                 var field = self.model.field(expand);
                 if (typeof field === 'undefined')
                     field = self.model.attributes.find(function(x) { return x.type==expand });
-                if (field)
+                if (field) {
                     mapping = self.model.inferMapping(field.name);
+                    if (mapping) { mapping.refersTo = mapping.refersTo || field.name; }
+                }
             }
             if (mapping) {
                 if (mapping.associationType=='association' || mapping.associationType=='junction') {
@@ -2505,9 +2655,9 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                         /**
                          * @type {DataModel}
                          */
-                        var associatedModel = self.model.context.model(mapping.parentModel);
+                        var associatedModel = self.model.context.model(mapping.parentModel), keyAttr = self.model.field(mapping.childField);
                         values = [];
-                        var keyField = mapping.childField;
+                        var keyField = keyAttr.property || keyAttr.name;
                         if (util.isArray(result)) {
                             var iterator = function(x) { if (x[keyField]) { if (values.indexOf(x[keyField])==-1) { values.push(x[keyField]); } } };
                             result.forEach(iterator);
@@ -2531,8 +2681,8 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                             return x[mapping.parentField]==key;
                                         },
                                         iterator = function(x) {
-                                            key = x[childField.name];
-                                            if (childField.property) {
+                                            key = x[keyField];
+                                            if (childField.property && childField.property!==childField.name) {
                                                 x[childField.property] = parents.filter(selector)[0];
                                                 delete x[childField.name];
                                             }
@@ -2543,8 +2693,8 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                         result.forEach(iterator);
                                     }
                                     else {
-                                        key = result[childField.name];
-                                        if (childField.property) {
+                                        key = result[keyField];
+                                        if (childField.property && childField.property!==childField.name) {
                                             x[childField.property] = parents.filter(selector)[0];
                                             delete x[childField.name];
                                         }
@@ -2619,7 +2769,7 @@ DataQueryable.prototype.toArrayCallback = function(result, callback) {
         callback(e);
     }
 
-}
+};
 
 
 /**
@@ -2639,7 +2789,7 @@ DataQueryable.prototype.silent = function(value) {
         this.$silent = value;
     }
     return this;
-}
+};
 
 /**
  * @param {Boolean=} value
@@ -2666,20 +2816,22 @@ DataQueryable.prototype.asArray = function(value) {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.expand = function(model) {
+    var self = this;
     if (typeof model === 'undefined' || model===null) {
-        delete this.$expand;
+        delete self.$expand;
     }
     else {
         if (!util.isArray(this.$expand))
-            this.$expand=[];
+            self.$expand=[];
         if (util.isArray(model)) {
-            model.forEach(function(x) { this.$expand.push(x); });
+
+            model.forEach(function(x) { self.$expand.push(x); });
         }
         else {
-            this.$expand.push(model);
+            self.$expand.push(model);
         }
     }
-    return this;
+    return self;
 };
 /**
  * @param {boolean=} value
@@ -2818,7 +2970,6 @@ function DataObject(type, obj)
         util._extend(this, obj);
     }
 
-
 }
 util.inherits(DataObject, __types__.EventEmitter2);
 
@@ -2857,7 +3008,6 @@ DataObject.prototype.property = function(name)
     if (typeof mapping === 'undefined' || mapping ==null)
         throw new Error('The specified association cannot be found.');
     //validate field association
-    var result = null;
     if (mapping.associationType=='association') {
         if (mapping.parentModel==model.name)
             return new HasManyAssociation(self, mapping);
@@ -2875,7 +3025,7 @@ DataObject.prototype.property = function(name)
 
 /**
  * @param {String} name
- * @param {Function(Error, *)} callback
+ * @param {function(Error=,*=)} callback
  */
 DataObject.prototype.attr = function(name, callback)
 {
@@ -2991,7 +3141,6 @@ DataObject.prototype.execute = function(context, fn) {
 
 /**
  * Gets a DataQueryable object that is going to be used in order to get related items.
- * @param context {DataContext} The underlying data context
  * @param attr {string} A string that contains the relation attribute
  * @returns {DataQueryable}
  */
@@ -3055,8 +3204,8 @@ DataObject.prototype.remove = function(context, callback) {
     }
     //register after listeners
     var afterListeners = self.listeners('after.remove');
-    for (var i = 0; i < afterListeners.length; i++) {
-        var afterListener = afterListeners[i];
+    for (var j = 0; j < afterListeners.length; j++) {
+        var afterListener = afterListeners[j];
         model.on('after.remove', afterListener);
     }
     model.delete(self, callback);
@@ -3066,6 +3215,7 @@ DataObject.prototype.remove = function(context, callback) {
  * @constructor
  * @augments DataQueryable
  * @param {DataObject} obj
+ * @param {String} name
  * @property {DataObject} parent Gets or sets the parent data object
  */
 function DataObjectRelation(obj, name)
@@ -3351,6 +3501,7 @@ function HasParentJunction(obj, association) {
      * @private
      */
     var __parent = obj;
+    var self = this;
     /**
      * Gets or sets the parent data object
      * @type DataObject
@@ -3360,7 +3511,7 @@ function HasParentJunction(obj, association) {
     }, set: function (value) {
         __parent = value;
     }, configurable: false, enumerable: false});
-    var self = this;
+
     /**
      * @type {DataAssociationMapping}
      */
@@ -3406,7 +3557,7 @@ function HasParentJunction(obj, association) {
      * @type {DataModel}
      */
     this.baseModel = undefined;
-    var baseModel = null, self = this;
+    var baseModel = null;
     Object.defineProperty(this, 'baseModel', {
         get: function() {
             if (baseModel)
@@ -3423,7 +3574,7 @@ function HasParentJunction(obj, association) {
             var childModel = self.parent.context.model(self.mapping.childModel);
             var childField = childModel.field(self.mapping.childField);
             var adapter = self.mapping.associationAdapter;
-            var tempModel = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
+            cfg.current.models[adapter] = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
                 { name: "id", type:"Counter", primary: true },
                 { name: 'parentId', nullable:false, type:parentField.type },
                 { name: 'valueId', nullable:false, type:childField.type } ],
@@ -3434,8 +3585,6 @@ function HasParentJunction(obj, association) {
                         fields: [ 'parentId', 'valueId' ]
                     }
                 ]};
-            //store temp model in configuration cache
-            cfg.current.models[adapter] = tempModel;
             //initialize base model
             baseModel = new DataModel(cfg.current.models[adapter]);
             baseModel.context = self.parent.context;
@@ -3519,7 +3668,7 @@ HasParentJunction.prototype.insert = function(obj, callback) {
                     //get related model
                     var relatedModel = self.parent.context.model(self.mapping.parentModel);
                     //find object by querying child object
-                    relatedModel.find(child).select([self.mapping.parentField]).first(function (err, result) {
+                    relatedModel.find(item).select([self.mapping.parentField]).first(function (err, result) {
                         if (err) {
                             cb(null);
                         }
@@ -3628,7 +3777,7 @@ HasParentJunction.prototype.remove = function(obj, callback) {
 
 HasParentJunction.prototype.migrate = function(callback) {
     this.baseModel.migrate(callback);
-}
+};
 
 /**
  * @class DataObjectJunction
@@ -3724,19 +3873,21 @@ DataObjectJunction.prototype.getRelationModel = function()
     var relationModel = new DataModel(tempModel);
     relationModel.context = self.parent.context;
     return relationModel;
-}
+};
+
 DataObjectJunction.prototype.migrate = function(callback) {
     var model = this.getRelationModel();
     model.migrate(callback);
-}
+};
 
 DataObjectJunction.prototype.execute = function(callback) {
     var self = this;
     self.migrate(function(err) {
         if (err) { callback(err); return; }
+        //noinspection JSPotentiallyInvalidConstructorUsage
         DataObjectJunction.super_.prototype.execute.call(self, callback);
     });
-}
+};
 
 /**
  * @param {*|Array} obj An item of a collection of items that is going to be related with parent object
@@ -3767,23 +3918,38 @@ DataObjectJunction.prototype.insert = function(obj, callback) {
                     });
                 }
                 else {
-                    //get related model
+                    /**
+                     * Get related model. The related model is the model of any child object of this junction.
+                     * @type {DataModel}
+                     */
                     var relatedModel = self.parent.context.model(self.mapping.childModel);
                     //find object by querying child object
                     relatedModel.find(child).select([self.mapping.childField]).first(function (err, result) {
                         if (err) {
-                            cb(null);
+                            cb(err);
                         }
                         else {
+                            /**
+                             * Validates related object, inserts this object if does not exists
+                             * and finally defines the relation between child and parent objects
+                             */
                             if (!result) {
-                                //child was not found (do nothing or throw exception)
-                                cb(null);
+                                //insert related item if does not exists
+                                relatedModel.insert(child, function(err) {
+                                   if (err) {
+                                       cb(err);
+                                   }
+                                    else {
+                                       //insert relation between child and parent
+                                       self.insertSingleObject(child, function(err) { cb(err); });
+                                   }
+                                });
                             }
                             else {
+                                //set primary key
                                 child[self.mapping.childField] = result[self.mapping.childField];
-                                self.insertSingleObject(child, function(err) {
-                                    cb(err);
-                                });
+                                //insert relation between child and parent
+                                self.insertSingleObject(child, function(err) { cb(err); });
                             }
                         }
                     });
@@ -4057,9 +4223,10 @@ DefaultValueListener.beforeSave = function(e, callback) {
     }
     else {
         //get function context
-        var functionContext = require('./functions');
+        var functions = require('./functions'), functionContext = functions.createContext();
+        util._extend(functionContext, e);
         //find all attributes that have a default value
-        var attrs = array(e.model.attributes).where(function(x) { return (x.value!==undefined) && (x.model== e.model.name); }).toArray();
+        var attrs = array(e.model.attributes).where(function(x) { return (x.value!==undefined); }).toArray();
         async.eachSeries(attrs, function(attr, cb) {
             var expr = attr.value;
             //if attribute is already defined
@@ -4097,7 +4264,18 @@ DefaultValueListener.beforeSave = function(e, callback) {
                 cb(null);
                 return 0;
             }
-            if (expr.indexOf('fn:')==0) {
+            else {
+                functionContext.eval(expr, function(err, result) {
+                    if (err) {
+                        cb(err);
+                    }
+                    else {
+                        e.target[attr.name] = result;
+                        cb(null);
+                    }
+                });
+            }
+            /*if (expr.indexOf('fn:')==0) {
                 expr = expr.substring('fn:'.length);
                 if (expr.indexOf('()')>0)
                     expr = expr.substring(0, expr.indexOf('()'));
@@ -4121,7 +4299,7 @@ DefaultValueListener.beforeSave = function(e, callback) {
             else {
                 //do nothing
                 cb(null);
-            }
+            }*/
         }, function(err) {
             callback(err);
         });
@@ -4142,11 +4320,11 @@ function CalculatedValueListener() {
  * @param {Function} callback
  */
 CalculatedValueListener.beforeSave = function(e, callback) {
-    var self = this;
     //get function context
-    var functionContext = require('./functions');
+    var functions = require('./functions'), functionContext = functions.createContext();
+    util._extend(functionContext, e);
     //find all attributes that have a default value
-    var attrs = array(e.model.attributes).where(function(x) { return (x.calculation!==undefined) && (x.model== e.model.name); }).toArray();
+    var attrs = array(e.model.attributes).where(function(x) { return (x.calculation!==undefined); }).toArray();
     async.eachSeries(attrs, function(attr, cb) {
         var expr = attr.calculation;
         //validate expression
@@ -4178,13 +4356,34 @@ CalculatedValueListener.beforeSave = function(e, callback) {
             cb(null);
             return 0;
         }
-        if (expr.indexOf('fn:')==0) {
-            expr = expr.substring('fn:'.length);
+        else {
+            functionContext.eval(expr, function(err, result) {
+                if (err) {
+                    cb(err);
+                }
+                else {
+                    e.target[attr.name] = result;
+                    cb(null);
+                }
+            });
+        }
+        /*if (expr.indexOf('fn:')==0) {
+            *//*expr = expr.substring('fn:'.length);
             if (expr.indexOf('()')>0)
-                expr = expr.substring(0, expr.indexOf('()'));
-            var fn = functionContext[expr];
+                expr = expr.substring(0, expr.indexOf('()'));*//*
+            *//*functionContext.eval(expr, function(err, result) {
+                if (err) {
+                    cb(err);
+                }
+                else {
+                    e.target[attr.name] = result;
+                    cb(null);
+                }
+            });*//*
+
+            *//*var fn = functionContext[expr];
             if (typeof fn === 'function') {
-                fn.call(self, e, function(err, result) {
+                *//**//*fn.call(self, e, function(err, result) {
                     if (err) {
                         cb(err);
                     }
@@ -4192,17 +4391,17 @@ CalculatedValueListener.beforeSave = function(e, callback) {
                         e.target[attr.name] = result;
                         cb(null);
                     }
-                });
+                });*//**//*
             }
             else {
                 //do nothing
                 cb(null);
-            }
+            }*//*
         }
         else {
             //do nothing
             cb(null);
-        }
+        }*/
     }, function(err) {
         callback(err);
     });
@@ -4242,26 +4441,30 @@ DataObjectAssociationListener.beforeSave = function(e, callback) {
                 function(mapping, cb) {
                     if (mapping.associationType='association') {
                         if (mapping.childModel== e.model.name) {
+                            //get child field
+                            var childAttr = e.model.field(mapping.childField), childField = childAttr.property || childAttr.name;
                             //foreign key association
-                            if (typeof e.target[mapping.childField] !== 'object') {
+                            if (typeof e.target[childField] !== 'object') {
                                 cb(null);
                                 return;
                             }
-                            var value = e.target[mapping.childField][mapping.parentField];
+                            var value = e.target[childField][mapping.parentField];
                             if (value) {
                                 e.target[mapping.childField] = value;
+                                if (childAttr.property)
+                                    delete e.target[childAttr.property];
                                 cb(null);
                             }
                             else {
                                 //try to find foreign item
                                 var associatedModel = e.model.context.model(mapping.parentModel);
-                                associatedModel.find(e.target[mapping.childField]).select(mapping.parentField).silent().first(function(err, result) {
+                                associatedModel.find(e.target[childField]).select(mapping.parentField).silent().first(function(err, result) {
                                     if (err) {
                                         cb(err);
                                     }
                                     else {
                                         if (result) {
-                                            e.target[mapping.childField] = result[mapping.parentField];
+                                            e.target[childField] = result[mapping.parentField];
                                             cb(null);
                                         }
                                         else {
@@ -4380,11 +4583,11 @@ NotNullConstraintListener.beforeSave = function(e, callback) {
     }
     async.eachSeries(attrs, function(attr, cb)
     {
-        var value = e.target[attr.name];
+        var name = attr.property || attr.name, value = e.target[name];
             if ((((value == null) || (value===undefined))  && (e.state==1))
                 || ((value == null) && (typeof value!=='undefined') && (e.state == 2)))
             {
-                cb(new Error(util.format('%s property of %s model cannot be null.', attr.title || attr.name, e.model.title || e.model.name)));
+                cb(new Error(util.format('%s property of %s model cannot be null.', attr.title || name, e.model.title || e.model.name)));
             }
             else
                 cb(null);
@@ -4432,6 +4635,13 @@ UniqueContraintListener.beforeSave = function(e, callback) {
         for (var i = 0; i < constraint.fields.length; i++) {
             var attr = constraint.fields[i];
             var value = e.target[attr];
+            //check field mapping
+            var mapping = e.model.inferMapping(attr);
+            if (typeof mapping !== 'undefined' && mapping !== null) {
+                if (typeof e.target[attr] === 'object') {
+                    value=e.target[attr][mapping.parentField];
+                }
+            }
             if (value===undefined)
                 value = null;
             if (q==null)
@@ -4574,7 +4784,13 @@ var __model__ = {
          * @class DefaultDataContext
          * @constructor
          */
-        DataFilterResolver: DataFilterResolver
+        DataFilterResolver: DataFilterResolver,
+        /**
+         * Represents the default function context.
+         * @class FunctionContext
+         * @constructor
+         */
+        FunctionContext:functions.classes.FunctionContext
     },
     /**
     * Creates an instance of DataModel class that represents a model that is going to be use in database operations.
