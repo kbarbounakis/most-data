@@ -31,7 +31,7 @@
       "async":"0.2.10",
       "q":"~1.1.1",
       "most-query":"~0.1.2",
-      "most-array":"~1.0.1",
+      "most-array":"~1.0.1"
 
   },
   "main": "index",
