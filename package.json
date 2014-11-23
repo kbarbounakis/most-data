@@ -1,8 +1,8 @@
 {
   "name": "most-data",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Most Web Framework Object Relational Mapping Module",
-  "homepage": "https://github.com/kbarbounakis/most-data",
+  "homepage": "http://www.most-framework.com/",
   "repository": {
     "type": "git",
     "url": "https://github.com/kbarbounakis/most-data.git"
@@ -29,11 +29,11 @@
       "mysql":"2.1.0",
       "mssql":"0.5.5",
       "async":"0.2.10",
-      "most-array":"~1.0.1",
-      "most-query":"~0.1.2"
+      "q":"~1.1.1"
+
   },
   "main": "index",
   "scripts": { },
-  "_id": "most-data@0.1.5",
+  "_id": "most-data@0.1.6",
   "_from": "most-data@"
 }

@@ -119,6 +119,13 @@ DataConfiguration.prototype.model = function(name)
         return this.models[name];
     //otherwise open definition file
     var modelPath = path.join(process.cwd(),'config', 'models');
+    if (!fs.existsSync(modelPath)) {
+        //models folder does not exist
+        //so set model to null
+        this.models[name]=null;
+        //and return
+        return null;
+    }
     //read files
     var files = fs.readdirSync(modelPath);
     if (files.length==0)
