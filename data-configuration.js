@@ -25,7 +25,7 @@ function DataConfiguration() {
      * @type {*}
      * @private
      */
-    var __dataTypes__ = null;
+    var dataTypes = null;
     /**
      * Gets or sets an array of items that indicates all the data types that is going to be used in data modeling.
      * @type {*}
@@ -33,35 +33,35 @@ function DataConfiguration() {
     Object.defineProperty(this, 'dataTypes', {
         get: function()
         {
-            if (__dataTypes__)
-                return __dataTypes__;
+            if (dataTypes)
+                return dataTypes;
             //get data types from configuration file
-            __dataTypes__ = DataConfiguration.prototype.loadSync('dataTypes.json',false) || {};
-            return __dataTypes__;
+            dataTypes = DataConfiguration.prototype.loadSync('dataTypes.json',false) || {};
+            return dataTypes;
         }
     });
     /**
      * @type {Array}
      * @private
      */
-    var __adapters__ = null;
+    var adapters = null;
     Object.defineProperty(this, 'adapters', {
         get: function()
         {
-            if (__adapters__)
-                return __adapters__;
+            if (adapters)
+                return adapters;
             /**
              * get data types from configuration file
              * @property {Array} adapters
              * @type {*}
              */
             var config = DataConfiguration.prototype.loadSync('app.json',false) || {};
-            __adapters__ = config.adapters || [];
-            return __adapters__;
+            adapters = config.adapters || [];
+            return adapters;
         }
     });
 
-    var __adaptersTypes__ = {
+    var adapterTypes = {
         mysql: {
             /** Gets the invariant name of this adapter */
             invariantName:"mysql",
@@ -90,10 +90,52 @@ function DataConfiguration() {
         }
     };
 
+    //get application-defined adapter types, if any
+    var config = DataConfiguration.prototype.loadSync('app.json',false) || {};
+    if (config.adapterTypes) {
+        if (util.isArray(config.adapterTypes)) {
+            config.adapterTypes.forEach(function(x) {
+                //first of all validate module
+                x.invariantName = x.invariantName || 'unknown';
+                x.name = x.name || 'Unknown Data Adapter';
+                var valid = false, adapterModule;
+                if (x.type) {
+                    try {
+                        adapterModule = require(x.type);
+                        if (typeof adapterModule.createInstance === 'function') {
+                            valid = true;
+                        }
+                        else {
+                            //adapter type does not export a createInstance(options) function
+                            console.log(util.log("The specified data adapter type (%s) does not have the appropriate constructor. Adapter type cannot be loaded.", x.invariantName));
+                        }
+                    }
+                    catch(e) {
+                        //catch error
+                        console.log(e);
+                        //and log a specific error for this adapter type
+                        console.log(util.log("The specified data adapter type (%s) cannot be instantiated. Adapter type cannot be loaded.", x.invariantName));
+                    }
+                    if (valid) {
+                        //register adapter
+                        adapterTypes[x.invariantName] = {
+                            invariantName:x.invariantName,
+                            name: x.name,
+                            createInstance:adapterModule.createInstance
+                        };
+                    }
+                }
+                else {
+                    console.log(util.log("The specified data adapter type (%s) does not have a type defined. Adapter type cannot be loaded.", x.invariantName));
+                }
+            });
+        }
+    }
+
     Object.defineProperty(this, 'adapterTypes', {
         get: function()
         {
-            return __adaptersTypes__;
+            return adapterTypes;
         }
     });
 

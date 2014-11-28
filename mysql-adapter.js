@@ -298,7 +298,7 @@ MySqlAdapter.prototype.selectIdentity = function(entity, attribute , callback) {
         });
     });
 };
-
+MySqlAdapter.NAME_FORMAT = '`$1`';
 /**
  * @param query {*}
  * @param values {*}
@@ -315,9 +315,11 @@ MySqlAdapter.prototype.execute = function(query, values, callback) {
         }
         else {
             //format query expression or any object that may be act as query expression
-            sql = qry.format(query);
+            var formatter = new qry.classes.SqlFormatter();
+            formatter.settings.nameFormat = MySqlAdapter.NAME_FORMAT;
+            sql = formatter.format(query);
             //todo: pass current database connection in order to calculate custom query expressions
-            //e.g. qry.format(q, db)
+            //e.g. formatter.format(q, db)
         }
         //validate sql statement
         if (typeof sql !== 'string') {
@@ -472,7 +474,9 @@ MySqlAdapter.prototype.createView = function(name, query, callback) {
                 },
                 function(arg, cb) {
                     //format query
-                    var sql = util.format("CREATE VIEW %s AS %s", name, qry.format(query));
+                    var formatter = new qry.classes.SqlFormatter();
+                    formatter.settings.nameFormat = MySqlAdapter.NAME_FORMAT;
+                    var sql = util.format("CREATE VIEW `%s` AS %s", name, formatter.format(query));
                     console.log(util.format('CREATE VIEW: %s', sql));
                     db.query(sql, null, function(err, result) {
                         if (err) { throw err; }
@@ -578,7 +582,7 @@ MySqlAdapter.prototype.migrate = function(obj, callback) {
                                 return MySqlAdapter.format('%f %t', x);
                             }).toArray().join(', ');
                         var key = array(migration.add).firstOrDefault(function(x) { return x.primary; });
-                        var sql = util.format('CREATE TABLE %s (%s, PRIMARY KEY(%s))', migration.appliesTo, strFields, key.name);
+                        var sql = util.format('CREATE TABLE `%s` (%s, PRIMARY KEY(%s))', migration.appliesTo, strFields, key.name);
                         db.query(sql, null, function(err, result)
                         {
                             if (err) { cb(err); return; }
