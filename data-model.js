@@ -1,6 +1,7 @@
 /**
  * Created by Kyriakos Barbounakis on 10/13/13.
  */
+
 var array = require('most-array'),
     string = require('string'),
     util = require('util'),
@@ -13,7 +14,9 @@ var array = require('most-array'),
     cfg = require('./data-configuration'),
     __types__ = require('./types'), functions = require('./functions');
 
-
+/**
+ * Load native object extensions
+ */
 if (typeof Array.prototype.find === 'undefined')
 {
     /**
@@ -21,7 +24,7 @@ if (typeof Array.prototype.find === 'undefined')
      * @param {Object=} [thisObject]
      * @returns {*}
      */
-    Array.prototype.find = function(callback, thisObject) {
+    var find = function(callback, thisObject) {
         if (this == null) {
             throw new TypeError('Array.prototype.find called on null or undefined');
         }
@@ -42,8 +45,19 @@ if (typeof Array.prototype.find === 'undefined')
             }
         }
         return undefined;
+    };
+
+    if (Object.defineProperty) {
+        try {
+            Object.defineProperty(Array.prototype, 'find', {
+                value: find, configurable: true, enumerable: false, writable: true
+            });
+        } catch(e) {}
     }
+
+    if (!Array.prototype.find) { Array.prototype.find = find; }
 }
+
 
 if (typeof Array.prototype.select === 'undefined')
 {
@@ -52,7 +66,7 @@ if (typeof Array.prototype.select === 'undefined')
      * @param {Object=} [thisObject]
      * @returns {*}
      */
-    Array.prototype.select = function(callback, thisObject) {
+    var select = function(callback, thisObject) {
         if (this == null) {
             throw new TypeError('Array.prototype.find called on null or undefined');
         }
@@ -74,6 +88,16 @@ if (typeof Array.prototype.select === 'undefined')
         }
         return res;
     }
+
+    if (Object.defineProperty) {
+        try {
+            Object.defineProperty(Array.prototype, 'select', {
+                value: select, configurable: true, enumerable: false, writable: true
+            });
+        } catch(e) {}
+    }
+
+    if (!Array.prototype.select) { Array.prototype.select = select; }
 }
 
 if (typeof Array.prototype.distinct === 'undefined')
@@ -83,7 +107,7 @@ if (typeof Array.prototype.distinct === 'undefined')
      * @param {Object=} [thisObject]
      * @returns {*}
      */
-    Array.prototype.distinct = function(callback, thisObject) {
+    var distinct = function(callback, thisObject) {
         if (this == null) {
             throw new TypeError('Array.prototype.find called on null or undefined');
         }
@@ -106,6 +130,16 @@ if (typeof Array.prototype.distinct === 'undefined')
         }
         return res;
     }
+
+    if (Object.defineProperty) {
+        try {
+            Object.defineProperty(Array.prototype, 'distinct', {
+                value: select, configurable: true, enumerable: false, writable: true
+            });
+        } catch(e) {}
+    }
+
+    if (!Array.prototype.distinct) { Array.prototype.distinct = distinct; }
 }
 
 /**
