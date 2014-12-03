@@ -1574,6 +1574,11 @@ DataModel.prototype.migrate = function(callback)
         callback();
         return;
     }
+    //do not migrate sealed models
+    if (self.sealed) {
+        callback();
+        return;
+    }
     var context = self.context;
     //do migration
     var fields = array(self.attributes).where(function(x) {
@@ -2606,8 +2611,8 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
             if (mapping) {
                 if (mapping.associationType=='association' || mapping.associationType=='junction') {
 
-                    //1. current model is the parent model
-                    if (mapping.parentModel==self.model.name) {
+                    //1. current model is the parent model and association type is association
+                    if ((mapping.parentModel==self.model.name) && (mapping.associationType=='association')) {
                         var associatedModel = self.model.context.model(mapping.childModel), values=[], keyField = mapping.parentField;
                         if (util.isArray(result)) {
 
@@ -2680,6 +2685,42 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                     var p = junctions.filter(function(y) { return (y.valueId==valueId); }).map(function(r) { return r['parentId']; });
                                     //filter data and set property value (a filtered array of parent objects)
                                     x[field.name] = parents.filter(function(z) { return p.indexOf(z[mapping.parentField])>=0; });
+                                });
+                                cb(null);
+                            });
+                        });
+                    }
+                    else if (mapping.parentModel==self.model.name && mapping.associationType=='junction') {
+                        //create a dummy object
+                        var junction = new DataObjectJunction(self.model.convert({}), mapping),
+                        //ensure array of results
+                            arr = util.isArray(result) ? result : [result],
+                        //get array of key values (for parents)
+                            values = arr.filter(function(x) { return (typeof x[mapping.parentField]!=='undefined') && (x[mapping.parentField]!=null); }).map(function(x) { return x[mapping.parentField] });
+                        //query junction model
+                        junction.baseModel.where('parentId').in(values).silent().all(function(err, junctions) {
+                            if (err) { cb(err); return; }
+                            //get array of child key values
+                            values = junctions.map(function(x) { return x['valueId'] });
+                            //get child model
+                            var childModel = self.model.context.model(mapping.childModel);
+                            //query parent with parent key values
+                            var q = childModel.where(mapping.childField).in(values).silent().flatten();
+                            //if selectable fields are defined
+                            if (mapping.select)
+                            //select these fields
+                                q.select(mapping.select);
+                            //and finally query childs
+                            q.all(function(err, childs) {
+                                if (err) { cb(err); return; }
+                                //loop result array
+                                arr.forEach(function(x) {
+                                    //get parent (key value)
+                                    var parentId = x[mapping.parentField];
+                                    //get parent(s)
+                                    var p = junctions.filter(function(y) { return (y.parentId==parentId); }).map(function(r) { return r['valueId']; });
+                                    //filter data and set property value (a filtered array of parent objects)
+                                    x[field.name] = childs.filter(function(z) { return p.indexOf(z[mapping.childField])>=0; });
                                 });
                                 cb(null);
                             });
@@ -3873,6 +3914,50 @@ function DataObjectJunction(obj, association) {
     var field1 = qry.fields.select(DataObjectJunction.STR_OBJECT_FIELD).from(this.mapping.associationAdapter).$name;
     this.query.join(this.mapping.associationAdapter, []).with([left, right]).where(field1).equal(obj[this.mapping.parentField]).prepare();
 
+    var self = this;
+    /**
+     * Gets the model that holds association data
+     * @type {DataModel}
+     */
+    this.baseModel = undefined;
+    var baseModel = null;
+    Object.defineProperty(this, 'baseModel', {
+        get: function() {
+            if (baseModel)
+                return baseModel;
+            //sarch in cache (configuration.current.cache)
+            if (cfg.current.models[self.mapping.associationAdapter]) {
+                baseModel = new DataModel(cfg.current.models[self.mapping.associationAdapter]);
+                baseModel.context = self.parent.context;
+                return baseModel;
+            }
+            //get parent and child field in order to get junction field types
+            var parentModel = self.parent.getModel();
+            var parentField = parentModel.field(self.mapping.parentField);
+            //todo::child model is optional (e.g. multiple value fields). Sometimes it needs to be ignored.
+            var childModel = self.parent.context.model(self.mapping.childModel);
+            var childField = childModel.field(self.mapping.childField);
+            var adapter = self.mapping.associationAdapter;
+            var tempModel = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
+                { name: "id", type:"Counter", primary: true },
+                { name: DataObjectJunction.STR_OBJECT_FIELD, nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
+                { name: DataObjectJunction.STR_VALUE_FIELD, nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
+                constraints: [
+                    {
+                        description: "The relation between two objects must be unique.",
+                        type:"unique",
+                        fields: [ DataObjectJunction.STR_OBJECT_FIELD, DataObjectJunction.STR_VALUE_FIELD ]
+                    }
+                ]};
+            //cache model
+            cfg.current.models[self.mapping.associationAdapter] = new DataModel(tempModel);
+            //initialize base model
+            baseModel = new DataModel(cfg.current.models[self.mapping.associationAdapter]);
+            baseModel.context = self.parent.context;
+            return baseModel;
+        },configurable:false, enumerable:false
+    });
+
 }
 DataObjectJunction.STR_OBJECT_FIELD = 'parentId';
 DataObjectJunction.STR_VALUE_FIELD = 'valueId';
@@ -4731,7 +4816,7 @@ UniqueContraintListener.beforeSave = function(e, callback) {
  */
 DataModel.MigrationModelDefinition =
 {
-    name:'Migration', title:'Data Model Migrations', id: 14, source:'migrations', view:'migrations', hidden: true, fields:[
+    name:'Migration', title:'Data Model Migrations', id: 14, source:'migrations', view:'migrations', hidden: true, sealed:true, fields:[
     { name:'id', type:'Counter', primary:true },
     { name:'appliesTo', type:'Text', size:180, nullable:false },
     { name:'model', type:'Text', size:120 },
