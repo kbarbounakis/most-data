@@ -2091,13 +2091,47 @@ DataQueryable.prototype.contains = function(value) {
 };
 
 /**
- * @param attrs {Array=}
+ * @param attr {String=|Array=} An array of fields, a field or a view name
  * @returns {DataQueryable}
  */
-DataQueryable.prototype.select = function(attrs) {
+DataQueryable.prototype.select = function(attr) {
 
-    var self = this;
-    if (typeof attrs === 'undefined') {
+    var self = this, arr;
+    if (typeof attr === 'string') {
+        //validate field or model view
+        var field = self.model.field(attr);
+        if (field) {
+
+            if (!field.many) {
+                arr = [];
+                arr.push(field.name);
+            }
+            else
+                self.expand(field.name);
+        }
+        else {
+            var view  = self.model.dataviews(attr);
+            if (view) {
+                arr = [];
+                view.fields.forEach(function(x) {
+                    field = self.model.field(x.name);
+                    if (field)
+                        if (!field.many)
+                            arr.push(field.name);
+                        else
+                            self.expand(field.name);
+                });
+            }
+        }
+        if (util.isArray(arr)) {
+            if (arr.length==0)
+                arr = null;
+        }
+    }
+    else {
+        arr = attr;
+    }
+    if (typeof arr === 'undefined' || arr === null) {
         if (!self.query.hasFields()) {
             //enumerate fields
             var fields = array(self.model.attributes).where(function(x) {
@@ -2113,7 +2147,7 @@ DataQueryable.prototype.select = function(attrs) {
         }
     }
     else {
-        self.query.select(attrs);
+        self.query.select(arr);
     }
 
     return this;
