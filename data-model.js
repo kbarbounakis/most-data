@@ -4788,6 +4788,10 @@ UniqueContraintListener.beforeSave = function(e, callback) {
         for (var i = 0; i < constraint.fields.length; i++) {
             var attr = constraint.fields[i];
             var value = e.target[attr];
+            if (typeof value === 'undefined') {
+                cb(null);
+                return;
+            }
             //check field mapping
             var mapping = e.model.inferMapping(attr);
             if (typeof mapping !== 'undefined' && mapping !== null) {
@@ -4805,7 +4809,7 @@ UniqueContraintListener.beforeSave = function(e, callback) {
         if (q==null)
             cb(null);
         else {
-            q.silent().first(function(err, result) {
+            q.silent().select(e.model.primaryKey).first(function(err, result) {
                 if (err) {
                     cb(err);
                     return;
