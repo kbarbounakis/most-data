@@ -1295,14 +1295,42 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
                                 }
                                 else {
                                     //get inserted id
-                                    if (e.state==1)
-                                        if (result.insertId)
-                                            e.target[self.primaryKey] = result.insertId;
-                                    //execute after update events
-                                    self.emit('after.save',e, function(err, result) {
-                                        //invoke callback
-                                        callback.call(self, err, e.target);
-                                    });
+                                    if (e.state==1) {
+                                        //validate identity primary key
+                                        var pm = e.model.field(self.primaryKey);
+                                        if (pm.type==='Counter') {
+                                            //if data adapter contains lastIdentity function
+                                            var lastIdentity = db.lastIdentity || function(lastCallback) {
+                                                    if (typeof result === 'undefined' || result === null)
+                                                        lastCallback(null, { insertId: null});
+                                                    lastCallback(null, result.insertId);
+                                                };
+                                            lastIdentity(function(err, lastResult) {
+                                                if (lastResult)
+                                                    if (lastResult.insertId)
+                                                        e.target[self.primaryKey] = lastResult.insertId;
+                                                //raise after save listeners
+                                                self.emit('after.save',e, function(err, result) {
+                                                    //invoke callback
+                                                    callback.call(self, err, e.target);
+                                                });
+                                            });
+                                        }
+                                        else {
+                                            //raise after save listeners
+                                            self.emit('after.save',e, function(err, result) {
+                                                //invoke callback
+                                                callback.call(self, err, e.target);
+                                            });
+                                        }
+                                    }
+                                    else {
+                                        //execute after update events
+                                        self.emit('after.save',e, function(err, result) {
+                                            //invoke callback
+                                            callback.call(self, err, e.target);
+                                        });
+                                    }
                                 }
                             });
                         }
@@ -2780,7 +2808,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                         }
                         else {
                             var childField = self.model.field(mapping.childField);
-                            associatedModel.where(mapping.parentField).in(values).flatten().silent().all(function(err, parents) {
+                            associatedModel.where(mapping.parentField).in(values).flatten().silent().select(mapping.select).all(function(err, parents) {
                                 if (err) {
                                     cb(err);
                                 }

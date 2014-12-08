@@ -88,6 +88,16 @@ DataPermissionEventListener.prototype.validate = function(e, callback)
     context.user = context.user || { name:'anonymous',authenticationType:'None' };
     //get user key
     var users = context.model('User'), permissions = context.model('Permission');
+    if (typeof users=== 'undefined' || users===null) {
+        //do nothing
+        callback(null);
+        return;
+    }
+    if (typeof permissions=== 'undefined' || permissions===null) {
+        //do nothing
+        callback(null);
+        return;
+    }
     users.where('name').equal(context.user.name).or('name').equal('anonymous').select(['id', 'name']).silent().take(2,function(err, result) {
         if (err) { callback(err); return; }
         //init user object
@@ -373,6 +383,16 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
         context.user = context.user || { name:'anonymous',authenticationType:'None' };
         //get user key
         var users = context.model('User'), permissions = context.model('Permission');
+        if (typeof users=== 'undefined' || users===null) {
+            //do nothing
+            callback(null);
+            return;
+        }
+        if (typeof permissions=== 'undefined' || permissions===null) {
+            //do nothing
+            callback(null);
+            return;
+        }
         users.where('name').equal(context.user.name).or('name').equal('anonymous').silent().take(2, function(err, result) {
             //init user object
             var user = users.convert({ id:0, enabled:true });
