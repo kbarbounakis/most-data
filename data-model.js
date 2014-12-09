@@ -1305,7 +1305,7 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
                                                         lastCallback(null, { insertId: null});
                                                     lastCallback(null, result.insertId);
                                                 };
-                                            lastIdentity(function(err, lastResult) {
+                                            lastIdentity.call(db, function(err, lastResult) {
                                                 if (lastResult)
                                                     if (lastResult.insertId)
                                                         e.target[self.primaryKey] = lastResult.insertId;
