@@ -752,11 +752,11 @@ DataModel.prototype.where = function(attr) {
     return result.where(attr);
 };
 /**
- * Applies an open data filter and invokes the given callback
- * @param {String} filter
- * @param {Function(Error,DataQueryable)} callback
+ * Applies open data filter, ordering, grouping and paging params and returns the derived data queryable object
+ * @param {String|{$filter:string=, $skip:number=, $order:string=, $inlinecount:string=, $expand:string=,$select:string=, $orderby:string=, $group:string=, $groupby:string=}} params - A string that represents an open data filter or an object with open data parameters
+ * @param {function(Error=,DataQueryable=)} callback
  */
-DataModel.prototype.filter = function(filter, callback) {
+DataModel.prototype.filter = function(params, callback) {
     var self = this;
     var parser = qry.openData.createParser();
     parser.resolveMember = function(member, cb) {
@@ -775,17 +775,121 @@ DataModel.prototype.filter = function(filter, callback) {
         else
             DataFilterResolver.resolveMethod.call(self, name, args, cb);
     };
+    var filter;
+    if (typeof params === 'string') {
+        filter = params;
+    }
+    else if (typeof params === 'object') {
+        filter = params.$filter;
+    }
     parser.parse(filter, function(err, query) {
         if (err) {
             callback(err);
         }
         else {
             //create a DataQueryable instance
-            var result = new DataQueryable(self);
-            result.query.$where = query;
-            result.query.prepare();
-            //and finally return DataQueryable instance
-            callback(null, result);
+            var q = new DataQueryable(self);
+            q.query.$where = query;
+            q.query.prepare();
+
+            if (typeof params === 'object') {
+                //apply query parameters
+                var select = params.$select,
+                    skip = params.$skip || 0,
+                    orderBy = params.$orderby || params.$order,
+                    groupBy = params.$groupby || params.$group,
+                    expand = params.$expand;
+                //set $groupby
+                var arr, fields, item, field;
+                if (typeof groupBy === 'string') {
+                    arr = groupBy.split(',');
+                    fields = [];
+                    arr.filter(function(x) {
+                        return (x.length>0);
+                    }).forEach(function(x) {
+                        field = self.field(x);
+                        if (field) {
+                            fields.push(field.name);
+                        }
+                    });
+                    if (fields.length>0) {
+                        q.query.groupBy(fields);
+                    }
+                }
+                //set $select
+                if (typeof select === 'string') {
+                    arr = select.split(',');
+                    fields = [];
+                    for (var i = 0; i < arr.length; i++) {
+                        item = string(arr[i]).trim().toString();
+                        field = self.field(item);
+                        if (field)
+                            fields.push(field.name);
+                        else {
+                            //validate aggregate functions
+                            if (/(count|avg|sum|min|max)\((.*?)\)/i.test(item)) {
+                                fields.push(q.fieldOf(item));
+                            }
+                        }
+                    }
+                    if (fields.length>0) {
+                        q.select(fields);
+                    }
+                }
+                //set $skip
+                q.skip(skip);
+                //set $orderby
+                if (orderBy) {
+                    arr = orderBy.split(',');
+                    for (var i = 0; i < arr.length; i++) {
+                        item = string(arr[i]).trim().toString(), name = null, direction = 'asc';
+                        if (/ asc$/i.test(item)) {
+                            name=item.substr(0,item.length-4);
+                        }
+                        else if (/ desc$/i.test(item)) {
+                            direction = 'desc';
+                            name=item.substr(0,item.length-5);
+                        }
+                        else if (!/\s/.test(item)) {
+                            name = item;
+                        }
+                        if (name) {
+                            field = self.field(name);
+                            if (field) {
+                                if (direction=='desc')
+                                    q.orderByDescending(name);
+                                else
+                                    q.orderBy(name);
+                            }
+                            else {
+                                //validate aggregate functions
+                                if (/(count|avg|sum|min|max)\((.*?)\)/i.test(name)) {
+                                    if (direction=='desc')
+                                        q.orderByDescending(name);
+                                    else
+                                        q.orderBy(name);
+                                }
+                            }
+
+                        }
+                    }
+                }
+                if (expand) {
+                    if (expand.length>0) {
+                        expand.split(',').map(function(x) { return x.replace(/\s/g,''); }).forEach(function(x) {
+                            if (x.length)
+                                q.expand(x.replace(/\s/g,''));
+                        });
+                    }
+                }
+                //return
+                callback(null, q);
+            }
+            else {
+                //and finally return DataQueryable instance
+                callback(null, q);
+            }
+
         }
     });
 };
