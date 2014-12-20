@@ -1131,7 +1131,7 @@ DataModel.prototype.cast = function(obj)
                     var mapping = self.inferMapping(name);
                     if (typeof mapping === 'undefined' || mapping === null)
                         result[x.name] = obj[name];
-                    else if (mapping.associationType==='association') {
+                    else if ((mapping.associationType==='association') && (mapping.childModel===self.name)) {
                         if (typeof obj[name] === 'object')
                             //set associated key value (e.g. primary key value)
                             result[x.name] = obj[name][mapping.parentField];
