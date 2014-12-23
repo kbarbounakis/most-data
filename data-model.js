@@ -1108,6 +1108,22 @@ DataModel.prototype.convert = function(obj)
         return result;
     }
 }
+/**
+ * Extracts an identifier from the given parameter.
+ * If the parameter is an object then gets the identifier property, otherwise tries to convert the given parameter to an identifier
+ * suitable for this model.
+ * @param {*} obj
+ * @returns {*|undefined}
+ */
+DataModel.prototype.id = function(obj) {
+    if (typeof obj === 'undefined')
+        return;
+    if (obj===null)
+        return;
+    if (typeof obj === 'object')
+        return obj[this.primaryKey];
+    return obj;
+}
 
 DataModel.prototype.cast = function(obj)
 {

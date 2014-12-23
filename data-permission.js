@@ -152,6 +152,16 @@ DataPermissionEventListener.prototype.validate = function(e, callback)
                     }
                     //global
                     if (item.type=='global') {
+                        if (typeof item.account !== 'undefined') {
+                            //check if a privilege is assigned by the model
+                            if (item.account==='*') {
+                                //get permission and exit
+                                cancel=true;
+                                e.result = true;
+                                cb(null);
+                                return;
+                            }
+                        }
                         //try to find user has global permissions assigned
                         permissions.where('privilege').equal(model.name).
                             and('parentPrivilege').equal(null).
@@ -255,10 +265,14 @@ DataPermissionEventListener.prototype.validate = function(e, callback)
                         if (requestMask==PermissionMask.Create) {
                             var query = qry.query(model.viewAdapter);
                             var attrs = model.attributeNames, fields=[];
+                            //cast target
+                            var targetObj = model.cast(e.target);
                             attrs.forEach(function(x) {
-                                var f = {};
-                                f[x] = { $value: e.target[x] };
-                                fields.push(f);
+                                if (targetObj.hasOwnProperty(x)) {
+                                    var f = {};
+                                    f[x] = { $value: targetObj[x] };
+                                    fields.push(f);
+                                }
                             }, attrs);
                             //add fields
                             query.select(fields);
@@ -428,6 +442,14 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                     }
                     try {
                         if (item.type=='global') {
+                            //check if a privilege is assigned by the model
+                            if (item.account==='*') {
+                                //get permission and exit
+                                cancel=true;
+                                assigned=true;
+                                cb(null);
+                                return;
+                            }
                             //try to find user has global permissions assigned
                             permissions.where('privilege').equal(model.name).
                                 and('parentPrivilege').equal(null).

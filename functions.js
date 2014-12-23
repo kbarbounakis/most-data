@@ -71,7 +71,7 @@ FunctionContext.prototype.newid = function(callback) {
 FunctionContext.prototype.user = function(callback) {
     callback = callback || function() {};
     var self = this, context = self.model.context;
-    var user = context.user || { };
+    var user = context.interactiveUser || context.user || { };
     if (user['id']) {
         callback(null, user['id']);
         return;
@@ -87,8 +87,8 @@ FunctionContext.prototype.user = function(callback) {
             var filtered = result.filter(function(x) { return x.name!='anonymous'; }, result);
             //if user was found
             if (filtered.length>0) {
-                context.user.id = result[0].id;
-                callback(null, result[0].id);
+                context.user.id = filtered[0].id;
+                callback(null, filtered[0].id);
             }
             //if anonymous was found
             else if (result.length>0) {
