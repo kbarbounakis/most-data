@@ -63,7 +63,6 @@ DataPermissionEventListener.prototype.beforeRemove = function(e, callback)
     DataPermissionEventListener.prototype.validate(e, callback);
 }
 
-
 DataPermissionEventListener.prototype.validate = function(e, callback)
 {
     var model = e.model,

@@ -2341,7 +2341,7 @@ DataQueryable.prototype.select = function(attr) {
     return this;
 };
 /**
- *
+ * Adds a field or an array of fields to select statement
  * @param {String|Array|DataField|*} attr
  * @return {DataQueryable}
  */
