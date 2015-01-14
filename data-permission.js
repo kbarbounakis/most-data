@@ -536,7 +536,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                             //prepare no access query
                             e.query.prepare();
                             //add no record parameter
-                            e.query.where(e.model.primaryKey).equal(null).prepare();
+                            e.query.where(e.model.fieldOf(e.model.primaryKey)).equal(null).prepare();
                         }
                         else if (expr) {
                             var q = qry.query(model.viewAdapter).select([model.primaryKey]).distinct();

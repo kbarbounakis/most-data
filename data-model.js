@@ -753,7 +753,7 @@ DataModel.prototype.where = function(attr) {
 };
 /**
  * Applies open data filter, ordering, grouping and paging params and returns the derived data queryable object
- * @param {String|{$filter:string=, $skip:number=, $order:string=, $inlinecount:string=, $expand:string=,$select:string=, $orderby:string=, $group:string=, $groupby:string=}} params - A string that represents an open data filter or an object with open data parameters
+ * @param {String|{$filter:string=, $skip:number=, $top:number=, $take:number=, $order:string=, $inlinecount:string=, $expand:string=,$select:string=, $orderby:string=, $group:string=, $groupby:string=}} params - A string that represents an open data filter or an object with open data parameters
  * @param {function(Error=,DataQueryable=)} callback
  */
 DataModel.prototype.filter = function(params, callback) {
@@ -798,7 +798,8 @@ DataModel.prototype.filter = function(params, callback) {
                     skip = params.$skip || 0,
                     orderBy = params.$orderby || params.$order,
                     groupBy = params.$groupby || params.$group,
-                    expand = params.$expand;
+                    expand = params.$expand,
+                    top = params.$top || params.$take;
                 //set $groupby
                 var arr, fields, item, field;
                 if (typeof groupBy === 'string') {
@@ -838,11 +839,13 @@ DataModel.prototype.filter = function(params, callback) {
                 }
                 //set $skip
                 q.skip(skip);
+                if (top)
+                    q.query.take(top);
                 //set $orderby
                 if (orderBy) {
                     arr = orderBy.split(',');
                     for (var i = 0; i < arr.length; i++) {
-                        item = string(arr[i]).trim().toString(), name = null, direction = 'asc';
+                        var item = string(arr[i]).trim().toString(), name = null, direction = 'asc';
                         if (/ asc$/i.test(item)) {
                             name=item.substr(0,item.length-4);
                         }
@@ -966,12 +969,22 @@ DataModel.prototype.orderBy = function(attr) {
  * Returns an array of items based on the given parameter
  * @param {Number} n - The number of items that is going to be retrieved
  * @param {Function} callback - A callback function that will be invoked.
-*/
+ * @returns DataQueryable|undefined
+ */
 DataModel.prototype.take = function(n, callback) {
     //default size (25)
     n = n || 25;
     var result = new DataQueryable(this);
-    result.select(this.attributeNames).take(n, callback)
+    if (typeof callback === 'undefined')
+        return result;
+    result.take(n, callback);
+};
+
+DataModel.prototype.list = function(callback) {
+    //default size (25)
+    n = n || 25;
+    var result = new DataQueryable(this);
+    result.list(callback);
 };
 
 /**
@@ -1884,6 +1897,12 @@ DataModel.prototype.field = function(name)
     return this.attributes.find(function(x) { return (x.name==name) || (x.property==name); });
 };
 
+DataModel.prototype.fieldOf = function(attr) {
+
+    var q = new DataQueryable(this);
+    return q.fieldOf(attr);
+};
+
 /**
  * Gets the specified model view
  * @param {string} name
@@ -2001,6 +2020,24 @@ function DataContextEmitter() {
 DataContextEmitter.prototype.ensureContext = function() {
     return null;
 };
+/**
+ * @class DataResultSet
+ * @constructor
+ */
+function DataResultSet() {
+    /**
+     * @type {number}
+     */
+    this.total = 0;
+    /**
+     * @type {number}
+     */
+    this.skip = 0;
+    /**
+     * @type {Array}
+     */
+    this.records = [];
+}
 
 /**
  * @class DataQueryable
@@ -2096,15 +2133,18 @@ DataQueryable.prototype.join = function(model)
     var joinModel = self.model.context.model(model);
     //validate joined model
     if (typeof joinModel === 'undefined' || joinModel == null)
-        throw new Error(util.format("An internal error occured.The %s model cannot be found", model));
-    var arr = joinModel.attributes.filter(function(x) { return x.type==self.model.name; });
+        throw new Error(util.format("The %s model cannot be found", model));
+    var arr = self.model.attributes.filter(function(x) { return x.type==joinModel.name; });
     if (arr.length==0)
         throw new Error(util.format("An internal error occured. The association between %s and %s cannot be found", this.model.name ,model));
+    var mapping = self.model.inferMapping(arr[0].name);
+    var expr = qry.query();
+    expr.where(self.fieldOf(mapping.childField)).equal(joinModel.fieldOf(mapping.parentField));
     /**
      * @type DataAssociationMapping
      */
-    var mapping = joinModel.inferMapping(arr[0].name);
-    self.select().query.join(model).with([mapping.parentField, mapping.childField]);
+
+    self.select().query.join(joinModel.viewAdapter).with(expr);
     return self;
 };
 
@@ -2239,7 +2279,7 @@ DataQueryable.prototype.contains = function(value) {
 };
 
 /**
- * @param attr {String=|Array=} An array of fields, a field or a view name
+ * @param {*=} attr  An array of fields, a field or a view name
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.select = function(attr) {
@@ -2300,13 +2340,50 @@ DataQueryable.prototype.select = function(attr) {
 
     return this;
 };
+/**
+ *
+ * @param {String|Array|DataField|*} attr
+ * @return {DataQueryable}
+ */
+DataQueryable.prototype.alsoSelect = function(attr) {
+    var self = this;
+    if (!self.query.hasFields()) {
+        return self.select(attr);
+    }
+    else {
+        if (typeof attr === 'undefined' || attr === null)
+            return self;
+        var arr = [];
+        if (typeof attr === 'string') {
+            arr.push(attr);
+        }
+        else if (util.isArray(attr)) {
+            arr = attr.slice(0);
+        }
+        else if (typeof attr === 'object') {
+            arr.push(attr);
+        }
+        var $select = self.query.$select;
+        arr.forEach(function(x) {
+            var field = self.fieldOf(x);
+            if (util.isArray($select[self.model.viewAdapter]))
+                $select[self.model.viewAdapter].push(field);
+
+        });
+        return self;
+    }
+};
 
 /**
- * @param attr {string}
+ * @param attr {string|*}
  * @returns {DataQueryable|QueryField}
  */
 DataQueryable.prototype.fieldOf = function(attr) {
 
+    if (typeof attr ==='undefined' || attr === null)
+        return attr;
+    if (typeof attr !=='string')
+        return attr;
     var matches = /(count|avg|sum|min|max)\((.*?)\)/i.exec(attr);
     if (matches) {
         var field = this.model.field(matches[2]);
@@ -2428,15 +2505,18 @@ DataQueryable.prototype.skip = function(n) {
 };
 
 /**
- * @param callback {Function}
- * @param n {Number} - Defines the number of items to take
+ * @param {Number} n - Defines the number of items to take
+ * @param {function=} callback
  * @returns {*} - A collection of objects that meet the query provided
  */
 DataQueryable.prototype.take = function(n, callback) {
     var self = this;
     self.query.take(n);
+    //if no callback is defined
+    if (typeof callback === 'undefined')
+        //return object to continue query preparation
+        return this;
     callback = callback || function() {};
-
     //validate already selected fields
     if (!self.query.hasFields()) {
         //enumerate fields
@@ -2454,6 +2534,47 @@ DataQueryable.prototype.take = function(n, callback) {
     //execute select
     self.execute(callback);
 };
+/**
+ * Executes current query and returns a result set based on the specified paging parameters.
+ * @param {function(Error=,DataResultSet=} callback - A callback function with arguments (err, result) where the first argument is the error, if any
+ * and the second argument is an object that represents a result set
+ */
+DataQueryable.prototype.list = function(callback) {
+    var self = this;
+    try {
+        callback = callback || function() {};
+        //ensure take attribute
+        var take = self.query.$take || 25;
+        //ensure that fields are already selected (or select all)
+        self.select();
+        //clone object
+        var q1 = self.clone();
+        //take objects
+        self.take(take, function(err, result)
+        {
+            if (err) {
+                callback(err);
+            }
+            else {
+                // get count of records
+                q1.count(function(err, total) {
+                    if (err) {
+                        callback(err);
+                    }
+                    else {
+                        //and finally create result set
+                        var res = { total: total, records: (result || []) };
+                        callback(null, res);
+                    }
+                });
+            }
+        });
+    }
+    catch(e) {
+        callback(e);
+    }
+};
+
 /**
  * @param {String} name
  * @param {STring=} alias
