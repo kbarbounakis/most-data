@@ -1423,7 +1423,7 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
                                             var lastIdentity = db.lastIdentity || function(lastCallback) {
                                                     if (typeof result === 'undefined' || result === null)
                                                         lastCallback(null, { insertId: null});
-                                                    lastCallback(null, result.insertId);
+                                                    lastCallback(null, result);
                                                 };
                                             lastIdentity.call(db, function(err, lastResult) {
                                                 if (lastResult)
