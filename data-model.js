@@ -1128,7 +1128,7 @@ DataModel.prototype.convert = function(obj)
  * @param {*} obj
  * @returns {*|undefined}
  */
-DataModel.prototype.id = function(obj) {
+DataModel.prototype.idOf = function(obj) {
     if (typeof obj === 'undefined')
         return;
     if (obj===null)
