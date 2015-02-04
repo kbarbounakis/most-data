@@ -4861,7 +4861,7 @@ DataObjectAssociationListener.beforeSave = function(e, callback) {
                  * @param {Function(Error=)} cb
                  */
                 function(mapping, cb) {
-                    if (mapping.associationType='association') {
+                    if (mapping.associationType==='association') {
                         if (mapping.childModel== e.model.name) {
                             //get child field
                             var childAttr = e.model.field(mapping.childField), childField = childAttr.property || childAttr.name;
@@ -4939,18 +4939,15 @@ DataObjectAssociationListener.afterSave = function(e, callback) {
                     function(x, cb) {
                     if (x.mapping.associationType=='junction') {
                         var obj = e.model.convert(e.target);
-                        var junction = new DataObjectJunction(obj, x.mapping);
-                        var childs = obj[x.name];
+                        var childs = obj[x.name], junction;
                         if (!util.isArray(childs)) {
-                            cb(null);
+                            cb();
                             return;
                         }
-                        junction.clear(function(err) {
-                            if (err) {
-                                cb(null);
-                                return;
-                            }
+                        if (x.mapping.childModel===e.model.name) {
+                            junction = new HasParentJunction(obj, x.mapping);
                             if (e.state==1 || e.state==2) {
+                                //todo:clear associated items
                                 junction.insert(childs, function(err, result) {
                                     if (err) {
                                         cb(err);
@@ -4963,7 +4960,27 @@ DataObjectAssociationListener.afterSave = function(e, callback) {
                             else  {
                                 cb(null);
                             }
-                        });
+                        }
+                        else if (x.mapping.parentModel===e.model.name) {
+                            junction = new DataObjectJunction(obj, x.mapping);
+                            if (e.state==1 || e.state==2) {
+                                //todo:clear associated items
+                                junction.insert(childs, function(err, result) {
+                                    if (err) {
+                                        cb(err);
+                                    }
+                                    else {
+                                        cb();
+                                    }
+                                });
+                            }
+                            else  {
+                                cb();
+                            }
+                        }
+                        else {
+                            cb();
+                        }
                     }
                     else
                         cb(null);
