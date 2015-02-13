@@ -1,13 +1,20 @@
 /**
- * Created by Kyriakos Barbounakis on 3/2/14.
- * Most Framework Data Library
+ * MOST Web Framework
+ * A JavaScript Web Framework
+ * http://themost.io
+ *
+ * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com, Anthi Oikonomou anthioikonomou@gmail.com
+ *
+ * Released under the BSD3-Clause license
+ * Date: 2014-02-03
  */
 var model = require('./data-model'),
-    __types__ = require('./types'),
+    types = require('./types'),
     mysqlAdapter = require('./mysql-adapter'),
     cfg = require('./data-configuration'),
     perms = require('./data-permission'),
-    mssqlAdapter = require('./mssql-adapter');
+    mssqlAdapter = require('./mssql-adapter'),
+    dataCache = require('./data-cache');
 
 var dat = {
     /**
@@ -27,7 +34,11 @@ var dat = {
     /**
      * @namespace
      */
-    types: __types__,
+    types: types,
+    /**
+     * @namespace
+     */
+    cache:dataCache,
     /**
      * @namespace
      */

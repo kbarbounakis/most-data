@@ -1,7 +1,13 @@
 /**
- * Created by Kyriakos Barbounakis on 10/13/13.
+ * MOST Web Framework
+ * A JavaScript Web Framework
+ * http://themost.io
+ *
+ * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com, Anthi Oikonomou anthioikonomou@gmail.com
+ *
+ * Released under the BSD3-Clause license
+ * Date: 2014-10-13
  */
-
 var array = require('most-array'),
     string = require('string'),
     util = require('util'),

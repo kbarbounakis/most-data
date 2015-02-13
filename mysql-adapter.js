@@ -1,5 +1,12 @@
 /**
- * Created by Kyriakos Barbounakis on 1/25/14.
+ * MOST Web Framework
+ * A JavaScript Web Framework
+ * http://themost.io
+ *
+ * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com, Anthi Oikonomou anthioikonomou@gmail.com
+ *
+ * Released under the BSD3-Clause license
+ * Date: 2014-01-25
  */
 var mysql = require('mysql'),
     async = require('async'),
