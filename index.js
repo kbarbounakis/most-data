@@ -15,7 +15,9 @@ var model = require('./data-model'),
     perms = require('./data-permission'),
     mssqlAdapter = require('./mssql-adapter'),
     dataCache = require('./data-cache');
-
+/**
+ * @module most-data
+ */
 var dat = {
     /**
      * @namespace
@@ -150,5 +152,8 @@ dat.classes.DataPermissionEventArgs = perms.DataPermissionEventArgs;
 
 if (typeof exports !== 'undefined')
 {
-        module.exports = dat;
+    /**
+     * @see dat
+     */
+    module.exports = dat;
 }
