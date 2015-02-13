@@ -25,13 +25,14 @@
     }
   ],
   "dependencies": {
-    "string": "1.5.1",
-    "mysql": "2.1.0",
-    "mssql": "0.5.5",
     "async": "0.2.10",
-    "q": "~1.1.1",
     "most-array": "~1.0.1",
-    "most-query": "~0.1.8"
+    "most-query": "~0.1.8",
+    "mssql": "0.5.5",
+    "mysql": "2.1.0",
+    "node-cache": "^1.1.0",
+    "q": "~1.1.1",
+    "string": "1.5.1"
   },
   "main": "index",
   "scripts": {},

@@ -1077,11 +1077,57 @@ DataModel.prototype.base = function()
     return this.context.model(this.inherits);
 };
 /**
+ * @private
+ * @param {*} obj
+ */
+DataModel.prototype.convertInternal = function(obj) {
+    var self = this;
+    //get type parsers (or default type parsers)
+    var parsers = self.parsers || __types__.parsers, parser, value;
+    self.attributes.forEach(function(x) {
+        value = obj[x.name];
+        if (value) {
+            //get parser for this type
+            parser = parsers['parse'.concat(x.type)];
+            //if a parser exists
+            if (typeof parser === 'function')
+            //parse value
+                obj[x.name] = parser(value);
+            else {
+                //get mapping
+                var mapping = self.inferMapping(x.name);
+                if (mapping) {
+                    if ((mapping.associationType==='association') && (mapping.childModel===self.name)) {
+                        var associatedModel = self.context.model(mapping.parentModel);
+                        if (associatedModel) {
+                            if (typeof value === 'object') {
+                                //set associated key value (e.g. primary key value)
+                                associatedModel.convertInternal(value);
+                            }
+                            else {
+                                var field = associatedModel.field(mapping.parentField);
+                                if (field) {
+                                    //parse raw value
+                                    parser = parsers['parse'.concat(field.type)];
+                                    if (typeof parser === 'function')
+                                        obj[x.name] = parser(value);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    });
+};
+
+/**
  * Converts an object or a collection of objects to the corresponding data instance
  * @param {Array|*} obj
+ * @param {boolean=} typeConvert - Forces property value conversion for each property based on field type.
  * @returns {DataObject|Array}
  */
-DataModel.prototype.convert = function(obj)
+DataModel.prototype.convert = function(obj, typeConvert)
 {
     var self = this;
     if (typeof obj !== 'object' || obj == null)
@@ -1099,6 +1145,7 @@ DataModel.prototype.convert = function(obj)
 
         else
             DataObjectClass = DataObject;
+        //cache DataObjectclass property
         cfg.current.models[self.name]['DataObjectClass'] = self['DataObjectClass'] = DataObjectClass;
     }
 
@@ -1107,6 +1154,8 @@ DataModel.prototype.convert = function(obj)
         obj.forEach(function(x) {
             var o = new DataObjectClass();
             util._extend(o, x);
+            if (typeConvert)
+                self.convertInternal(o);
             o.context = self.context;
             o.type = self.name;
             result.push(o)
@@ -1116,6 +1165,8 @@ DataModel.prototype.convert = function(obj)
     else {
         var result = new DataObjectClass();
         util._extend(result, obj);
+        if (typeConvert)
+            self.convertInternal(result);
         result.context = self.context;
         result.type = self.name;
         return result;
@@ -1920,6 +1971,23 @@ DataModel.prototype.dataviews = function(name, obj) {
         return null;
     return util._extend(new DataView(self), view);
 };
+/**
+ * Caches a mapping associated with the given field
+ * @param {DataField|*} field
+ * @param {DataAssociationMapping|*} mapping
+ * @private
+ */
+DataModel.prototype.cacheMappingInternal  = function(field, mapping) {
+    if (typeof field === 'undefined' || field == null)
+        return;
+    //cache mapping
+    var cachedModel = cfg.current.models[field.model];
+    if (cachedModel) {
+        var cachedField = cachedModel.fields.find(function(x) { return x.name === field.name });
+        if (cachedField)
+            cachedField.mapping = mapping;
+    }
+};
 
 /**
  * Gets a field association mapping based on field attributes, if any. Otherwise returns null.
@@ -1927,15 +1995,13 @@ DataModel.prototype.dataviews = function(name, obj) {
  */
 DataModel.prototype.inferMapping = function(name) {
     var self = this;
-    var field = self.field(name);
+    var field = self.field(name), result;
 
     if (!field)
         return null;
-    if (field.mapping)
-    {
+    if (field.mapping) {
         //validate mapping
-        var result = util._extend(new DataAssociationMapping(), field.mapping);
-        return result;
+        return util._extend(new DataAssociationMapping(), field.mapping);
     }
     else {
         //get field model type
@@ -1954,7 +2020,7 @@ DataModel.prototype.inferMapping = function(name) {
             if (associatedField.many)
             {
                 //return a data relation (parent model is the associated model)
-                return new DataAssociationMapping({
+                result = new DataAssociationMapping({
                     parentModel:associatedModel.name,
                     parentField:associatedModel.primaryKey,
                     childModel:self.name,
@@ -1963,11 +2029,15 @@ DataModel.prototype.inferMapping = function(name) {
                     cascade:'null',
                     oneToOne:false
                 });
+                //cache mapping
+                self.cacheMappingInternal(field, result)
+                //and finally return mapping
+                return result;
             }
             else
             {
                 //return a data relation (parent model is the current model)
-                return new DataAssociationMapping({
+                result = new DataAssociationMapping({
                     parentModel:self.name,
                     parentField:self.primaryKey,
                     childModel:associatedModel.name,
@@ -1977,6 +2047,10 @@ DataModel.prototype.inferMapping = function(name) {
                     oneToOne:false,
                     refersTo:field.property || field.name
                 });
+                //cache mapping
+                self.cacheMappingInternal(field, result)
+                //and finally return mapping
+                return result;
             }
         }
         else {
@@ -1985,7 +2059,7 @@ DataModel.prototype.inferMapping = function(name) {
             var re = new RegExp(DataModel.PluralExpression.source);
             if (re.test(field.name) || field.many) {
                 //return a data junction
-                return new DataAssociationMapping({
+                result = new DataAssociationMapping({
                     associationAdapter: self.name.concat(string(field.name).capitalize()),
                     parentModel: self.name, parentField: self.primaryKey,
                     childModel: associatedModel.name,
@@ -1994,9 +2068,13 @@ DataModel.prototype.inferMapping = function(name) {
                     cascade: 'delete',
                     oneToOne: false
                 });
+                //cache mapping
+                self.cacheMappingInternal(field, result)
+                //and finally return mapping
+                return result;
             }
             else {
-                return new DataAssociationMapping({
+                result = new DataAssociationMapping({
                     parentModel: associatedModel.name,
                     parentField: associatedModel.primaryKey,
                     childModel: self.name,
@@ -2005,6 +2083,10 @@ DataModel.prototype.inferMapping = function(name) {
                     cascade: 'null',
                     oneToOne: false
                 });
+                //cache mapping
+                self.cacheMappingInternal(field, result)
+                //and finally return mapping
+                return result;
             }
         }
     }
@@ -3323,6 +3405,7 @@ function DataModelMigration() {
  * @param {*=} obj The object that is going to be extended
  * @constructor
  * @augments EventEmitter2
+ * @property {DataContext}  context - The HttpContext instance related to this object.
  */
 function DataObject(type, obj)
 {
@@ -3339,10 +3422,13 @@ function DataObject(type, obj)
         enumerable:false,
         configurable:false
     });
-    /**
-     * @type {DataContext}
-     */
-    this.context = undefined;
+    var __context = null;
+    Object.defineProperty(this,'context',{
+        get: function() { return __context; } ,
+        set: function(value) { __context=value; },
+        enumerable:false,
+        configurable:false
+    });
 
     if (typeof obj !== 'undefined' && obj != null) {
         util._extend(this, obj);

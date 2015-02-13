@@ -16,6 +16,7 @@ function DataAdapter(options) {
      */
     this.options = options;
 }
+
 /**
  * Opens a native database connection
  * @param callback
@@ -241,7 +242,15 @@ DataEventListener.prototype.afterRemove = function(e, cb) {
     return this;
 };
 
-var __types__ =
+var DateTimeRegex = /^(\d{4})(?:-?W(\d+)(?:-?(\d+)D?)?|(?:-(\d+))?-(\d+))(?:[T ](\d+):(\d+)(?::(\d+)(?:\.(\d+))?)?)?(?:Z(-?\d*))?$/g;
+var BooleanTrueRegex = /^true$/ig;
+var BooleanFalseRegex = /^false$/ig;
+var NullRegex = /^null$/ig;
+var UndefinedRegex = /^undefined$/ig;
+var IntegerRegex =/^[-+]?\d+$/g;
+var FloatRegex =/^[+-]?\d+(\.\d+)?$/g;
+
+var types =
 {
     /**
     * DataAdapter abstract class
@@ -272,11 +281,90 @@ var __types__ =
      * @class
      * @abstract
      */
-    DataEventListener: DataEventListener
+    DataEventListener: DataEventListener,
+    parsers: {
+        parseInteger: function(val) {
+            if (typeof val === 'undefined' || val == null)
+                return 0;
+            else if (typeof val === 'number')
+                return val;
+            else if (typeof val === 'string') {
+                if (val.match(IntegerRegex) || val.match(FloatRegex)) {
+                    return parseInt(val, 10);
+                }
+                else if (val.match(BooleanTrueRegex))
+                    return 1;
+            }
+            else if (typeof val === 'boolean')
+                return val===true ? 1 : 0;
+            else {
+                return parseInt(val) || 0;
+            }
+        },
+        parseCounter: function(val) {
+            return types.parsers.parseInteger(val);
+        },
+        parseFloat: function(val) {
+            if (typeof val === 'undefined' || val == null)
+                return 0;
+            else if (typeof val === 'number')
+                return val;
+            else if (typeof val === 'string') {
+                if (val.match(IntegerRegex) || val.match(FloatRegex)) {
+                    return parseFloat(val);
+                }
+                else if (val.match(BooleanTrueRegex))
+                    return 1;
+            }
+            else if (typeof val === 'boolean')
+                return val===true ? 1 : 0;
+            else {
+                return parseFloat(val);
+            }
+        },
+        parseNumber: function(val) {
+            return types.parsers.parseFloat(val);
+        },
+        parseDateTime: function(val) {
+            if (typeof val === 'undefined' || val == null)
+                return null;
+            if (val instanceof Date)
+                return val;
+            if (typeof val === 'string') {
+                if (val.match(DateTimeRegex))
+                    return new Date(Date.parse(val));
+            }
+            else if (typeof val === 'number') {
+                return new Date(val);
+            }
+            return null;
+        },
+        parseDate: function(val) {
+            var res = this.parseDateTime(val);
+            if (res instanceof Date) {
+                res.setHours(0,0,0,0);
+                return res;
+            }
+            return res;
+        },
+        parseBoolean: function(val) {
+            return (types.parsers.parseInteger(val)!==0);
+        },
+        parseText: function(val) {
+            if (typeof val === 'undefined' || val == null)
+                return val;
+            else if (typeof val === 'string') {
+                return val;
+            }
+            else {
+                return val.toString();
+            }
+        }
+    }
 };
 
 if (typeof exports !== 'undefined')
 {
-    module.exports = __types__;
+    module.exports = types;
 }
 

@@ -342,7 +342,54 @@ DataPermissionEventListener.prototype.validate = function(e, callback)
             }
         });
     });
-}
+};
+/**
+ * @param {HttpContext} context
+ * @param {function(Error=,*=)} callback
+ */
+DataPermissionEventListener.anonymousUser = function(context, callback) {
+    try {
+        if (typeof context === 'undefined' || context == null) {
+            callback();
+        }
+        else {
+            //get user key
+            var users = context.model('User');
+            if (typeof users === 'undefined' || users == null) {
+                callback();
+                return;
+            }
+            users.where('name').equal('anonymous').silent().first(function(err, result) {
+               if (err) {
+                   callback(err);
+               }
+                else {
+                   //if anonymous user was not found
+                   if (typeof result === 'undefined' || result == null) {
+                       callback();
+                       return;
+                   }
+                   //get anonymous user object
+                   var user = users.convert(result);
+                   //get user groups
+                   user.property('groups').select(['id', 'name']).silent().all(function(err, groups) {
+                       if (err) {
+                           callback(err);
+                           return;
+                       }
+                       //set anonymous user groups
+                       user.groups = groups;
+                       //return user
+                       callback(null, user);
+                   });
+               }
+            });
+        }
+    }
+    catch (e) {
+        callback(e);
+    }
+};
 
 /**
  *
@@ -369,8 +416,6 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
         callback(null);
         return;
     }
-
-    util.log(util.format('Execute custom listener for %s.', model.name));
     //infer permission mask
     if (typeof e.mask !== 'undefined') {
         requestMask = e.mask;
