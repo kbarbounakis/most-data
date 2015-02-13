@@ -9,7 +9,7 @@
  * Date: 2014-02-03
  */
 var model = require('./data-model'),
-    dataTypes = require('./types'),
+    types = require('./types'),
     mysqlAdapter = require('./mysql-adapter'),
     cfg = require('./data-configuration'),
     perms = require('./data-permission'),
@@ -35,10 +35,12 @@ var dat = {
     common: model.common,
     /**
      * @type {types}
+     * @memberOf module:most-data
      */
-    types: dataTypes,
+    types: types,
     /**
      * @type {dataCache}
+     * @memberOf module:most-data
      */
     cache:dataCache,
     /**
