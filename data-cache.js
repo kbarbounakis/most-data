@@ -82,7 +82,7 @@ DataCache.prototype.removeAll = function(callback) {
  * @param {number=} ttl - A TTL in seconds. This parameter is optional.
  * @param {function(Error=,boolean=)} callback - Returns true on success. This parameter is optional.
  */
-DataCache.prototype.set = function(key, value, ttl, callback) {
+DataCache.prototype.add = function(key, value, ttl, callback) {
     var self = this;
     callback = callback || function() {};
     self.init(function(err) {
