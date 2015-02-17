@@ -343,8 +343,8 @@ MsSqlAdapter.prototype.execute = function(query, values, callback) {
             else {
                 //todo: validate statement for sql injection (e.g single statement etc)
                 //log statement (optional)
-                //if (process.env.NODE_ENV==='development')
-                console.log(util.format('SQL:%s, Parameters:%s', sql, JSON.stringify(values)));
+                if (process.env.NODE_ENV==='development')
+                    console.log(util.format('SQL:%s, Parameters:%s', sql, JSON.stringify(values)));
                 //execute raw command
                 var request = self.transaction ? new mssql.Request(self.transaction) : new mssql.Request(self.rawConnection);
                 var preparedSql=self.prepare(sql , values);
