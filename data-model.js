@@ -244,6 +244,21 @@ function DataView(model) {
      */
     this.sealed = true;
     /**
+     * Gets or sets an open data formatted filter string or a query expression object associated with this view.
+     * @type {String|QueryExpression|*}
+     */
+    this.filter = null;
+    /**
+     * Gets or sets an open data formatted order string or an order expression object associated with this view.
+     * @type {String|*}
+     */
+    this.order = null;
+    /**
+     * Gets or sets an open data formatted group string or a group expression object associated with this view.
+     * @type {String|*}
+     */
+    this.group = null;
+    /**
      * Gets or sets the collection of data view's fields
      * @type {Array}
      */
@@ -841,6 +856,15 @@ DataModel.prototype.filter = function(params, callback) {
                     }
                     if (fields.length>0) {
                         q.select(fields);
+                    }
+                    else {
+                        //search for data view
+                        if (arr.length==1) {
+                            var view = self.dataviews(arr[0]);
+                            if (view) {
+                                q.select(view.name);
+                            }
+                        }
                     }
                 }
                 //set $skip
@@ -1972,7 +1996,8 @@ DataModel.prototype.dataviews = function(name, obj) {
     if (typeof obj !== 'undefined')
         throw new Error('Not implemented.');
     var self = this;
-    var view = self.views.filter(function(x) { return x.name==name;})[0];
+    var re = new RegExp('^' + name.replace('$','\$') + '$', 'ig')
+    var view = self.views.filter(function(x) { return re.test(x.name);})[0];
     if (typeof view==='undefined'|| view == null)
         return null;
     return util._extend(new DataView(self), view);
@@ -2185,6 +2210,9 @@ function DataQueryable(model) {
  */
 DataQueryable.prototype.clone = function() {
     var result = new DataQueryable(this.model);
+    //set view if any
+    result.$view = this.$view;
+    //set query
     util._extend(result.query, this.query);
     return result;
 };
@@ -2377,25 +2405,31 @@ DataQueryable.prototype.select = function(attr) {
         //validate field or model view
         var field = self.model.field(attr);
         if (field) {
-
+            //validate field
             if (!field.many) {
                 arr = [];
-                arr.push(field.name);
+                arr.push(self.fieldOf(field.name));
             }
             else
                 self.expand(field.name);
         }
         else {
-            var view  = self.model.dataviews(attr);
-            if (view) {
+            //get data view
+            self.$view  = self.model.dataviews(attr);
+            //if data view was found
+            if (self.$view) {
                 arr = [];
-                view.fields.forEach(function(x) {
+                self.$view.fields.forEach(function(x) {
                     field = self.model.field(x.name);
-                    if (field)
+                    if (field) {
                         if (!field.many)
-                            arr.push(field.name);
+                            arr.push(self.fieldOf(field.name));
                         else
                             self.expand(field.name);
+                    }
+                    else {
+                        arr.push(self.fieldOf(x.name));
+                    }
                 });
             }
         }
@@ -2405,7 +2439,29 @@ DataQueryable.prototype.select = function(attr) {
         }
     }
     else {
-        arr = attr;
+        //get array of attributes
+        if (util.isArray(attr)) {
+            arr = [];
+            attr.forEach(function(x) {
+                if (typeof x === 'string') {
+                    field = self.model.field(x);
+                    if (field) {
+                        if (!field.many)
+                            arr.push(self.fieldOf(field.name));
+                        else
+                            self.expand(field.name);
+                    }
+                    else {
+                        arr.push(self.fieldOf(x));
+                    }
+                }
+                else {
+                    //validate if x is an object (QueryField)
+                    arr.push(x);
+                }
+
+            });
+        }
     }
     if (typeof arr === 'undefined' || arr === null) {
         if (!self.query.hasFields()) {
@@ -2492,7 +2548,10 @@ DataQueryable.prototype.fieldOf = function(attr) {
         var field = this.model.field(attr);
         if (typeof  field === 'undefined' || field === null)
             throw new Error(util.format('The specified field %s cannot be found in target model.', attr));
-        return qry.fields.select(field.name).from(this.model.viewAdapter);
+        var f = qry.fields.select(field.name).from(this.model.viewAdapter);
+        if (field.property)
+            return f.as(field.property)
+        return f;
     }
     return this;
 };
@@ -2857,6 +2916,22 @@ DataQueryable.prototype.__executeCount = function(callback) {
         delete clonedQuery.$take;
         //add wildcard field
         clonedQuery.select([qry.fields.count('*')]);
+        /*//merge view filter. if any
+        if (self.$view) {
+            if (typeof self.$view.filter === 'string') {
+                self.model.filter(self.$view.filter, function(err, q) {
+                    if (err) {
+                        if (err) { callback(err); return; }
+                    }
+                    else {
+                        //prepare current filter
+                        if (clonedQuery.$where)
+                            clonedQuery.prepare();
+                        clonedQuery.$where = q.query.$prepared;
+                    }
+                });
+            }
+        }*/
         //execute count
         context.db.execute(clonedQuery, null, function(err, result) {
             if (err) {
@@ -2949,6 +3024,27 @@ DataQueryable.prototype.execute = function(callback) {
                         }
                     });
                 }
+            }
+        }
+        //merge view filter. if any
+        if (self.$view) {
+            if (typeof self.$view.filter === 'string') {
+                self.model.filter({ $filter: self.$view.filter, $order:self.$view.order, $group:self.$view.group }, function(err, q) {
+                    if (err) {
+                        if (err) { callback(err); return; }
+                    }
+                    else {
+                        //prepare current filter
+                        if (e.query.$where)
+                            e.query.prepare();
+                        e.query.$where = q.query.$prepared;
+                        //replace group fields
+                        e.query.$group = q.query.$group;
+                        //add order fields
+                        if (!util.isArray(e.query.$order))
+                            e.query.$order = q.query.$order;
+                    }
+                });
             }
         }
         if (self.$silent) {

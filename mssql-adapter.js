@@ -343,14 +343,19 @@ MsSqlAdapter.prototype.execute = function(query, values, callback) {
             else {
                 //todo: validate statement for sql injection (e.g single statement etc)
                 //log statement (optional)
-                if (process.env.NODE_ENV==='development')
-                    console.log(util.format('SQL:%s, Parameters:%s', sql, JSON.stringify(values)));
+                var startTime;
+                if (process.env.NODE_ENV==='development') {
+                    startTime = new Date().getTime();
+                }
                 //execute raw command
                 var request = self.transaction ? new mssql.Request(self.transaction) : new mssql.Request(self.rawConnection);
                 var preparedSql=self.prepare(sql , values);
                  if(typeof query.$insert!=='undefined')
-                     preparedSql+= ';SELECT @@IDENTITY as insertId'
+                     preparedSql+= ';SELECT @@IDENTITY as insertId';
                 request.query(preparedSql, function(err, result) {
+                    if (process.env.NODE_ENV==='development') {
+                        console.log(util.format('SQL (Execution Time:%sms):%s, Parameters:%s', (new Date()).getTime()-startTime, sql, JSON.stringify(values)));
+                    }
                     if(typeof query.$insert==='undefined')
                         callback.call(self, err, result);
                     else {
