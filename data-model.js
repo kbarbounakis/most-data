@@ -611,6 +611,10 @@ function DataModel(obj) {
     }, enumerable: false, configurable: false});
 
     var pluralExpression = /([a-zA-Z]+?)([e']s|[^aiou]s)$/;
+    /**
+     * @type {Array}
+     */
+    var attributes;
 
     /**
      * Gets an array that contains all model attributes
@@ -623,26 +627,33 @@ function DataModel(obj) {
      */
     Object.defineProperty(this, 'attributes', { get: function() {
         //validate self field collection
-        array(self.fields).each(function(x) {
-            if (x.many===undefined) {
-                if (cfg.current.dataTypes[x.type]===undefined) {
-                    //set one-to-many attribute
+        if (typeof attributes !== 'undefined')
+            return attributes;
+        //init attributes collection
+        attributes = [];
+        //get base model (if any)
+        var baseModel = self.base(), field;
+        //enumerate fields
+        self.fields.forEach(function(x) {
+            if (typeof x.many === 'undefined') {
+                if (typeof cfg.current.dataTypes[x.type] === 'undefined')
+                    //set one-to-many attribute (based on a naming convention)
                     x.many = pluralExpression.test(x.name);
-                }
                 else
+                    //otherwise set one-to-many attribute to false
                     x.many = false;
             }
-            if (x.model===undefined)
+            //re-define field model attribute
+            if (typeof x.model === 'undefined')
                 x.model = self.name;
-        });
-        //clone self fields
-        var result = [], baseModel = self.base(), field;
-        array(self.fields).each(function(x) {
             var clone = x;
+            //if base model exists and current field is not primary key field
             if (baseModel && !x.primary) {
+                //get base field
                 field = baseModel.field(x.name);
                 if (field) {
-                    clone = new DataField();
+                    //clone field
+                    clone = { };
                     //get all inherited properties
                     util._extend(clone, field);
                     //get all overriden properties
@@ -651,19 +662,20 @@ function DataModel(obj) {
                     clone.model = field.model;
                 }
             }
-            result.push(clone);
+            //finally push field
+            attributes.push(clone);
         });
-        if (baseModel!=null) {
-            array(baseModel.attributes).each(function(x) {
+        if (baseModel) {
+            baseModel.attributes.forEach(function(x) {
                 if (!x.primary) {
                     //check if member is overriden by the current model
-                    field = self.fields.filter(function(y) { return y.name==x.name; })[0];
+                    field = self.fields.find(function(y) { return y.name == x.name; });
                     if (typeof field === 'undefined')
-                        result.push(x);
+                        attributes.push(x);
                 }
             });
         }
-        return result;
+        return attributes;
     }, enumerable: false, configurable: false});
     /**
      * Gets the primary key name
