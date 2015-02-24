@@ -458,7 +458,28 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
             callback(null);
             return;
         }
-        users.where('name').equal(context.user.name).or('name').equal('anonymous').silent().take(2, function(err, result) {
+        //get model privileges
+        var modelPrivileges = model.privileges || [];
+        //if model has no privileges defined
+        if (modelPrivileges.length==0) {
+            //do nothing
+            callback(null);
+            //and exit
+            return;
+        }
+        //tuning up operation
+        //validate request mask permissions against all users privilege { mask:<requestMask>,disabled:false,account:"*" }
+        var allUsersPrivilege = modelPrivileges.find(function(x) {
+            return (((x.mask && requestMask)==requestMask) && !x.disabled && (x.account==='*'));
+        });
+        if (typeof allUsersPrivilege !== 'undefined') {
+            //do nothing
+            callback(null);
+            //and exit
+            return;
+        }
+
+            users.where('name').equal(context.user.name).or('name').equal('anonymous').select(['id', 'name']).silent().take(2, function(err, result) {
             //init user object
             var user = users.convert({ id:0, enabled:true });
             //filter result to exclude anonymous user
@@ -476,13 +497,13 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
             user.property('groups').select('id').silent().all(function(err, groups) {
                 if (err) { throw err; }
                 //create permissions
-                array(groups).each(function(x) {
+                groups.forEach(function(x) {
                     accounts.push(x.id);
-                });
+                })
                 //get all enabled privileges
-                var privileges = array(model.privileges).where(function(x) {
+                var privileges = modelPrivileges.filter(function(x) {
                     return !x.disabled && (x.mask && requestMask == requestMask);
-                }).toArray();
+                });
 
                 var cancel = false, assigned = false, entity = qry.entity(model.viewAdapter),
                     perms1 = qry.entity(permissions.viewAdapter).as('p0'), expr = null;
