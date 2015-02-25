@@ -3111,7 +3111,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                 if (mapping.associationType=='association' || mapping.associationType=='junction') {
 
                     //1. current model is the parent model and association type is association
-                    if ((mapping.parentModel==self.model.name) && (mapping.associationType=='association')) {
+                    if ((mapping.parentModel==self.model.name) && (mapping.associationType=='association') && (mapping.parentModel!=mapping.childModel)) {
                         var associatedModel = self.model.context.model(mapping.childModel), values=[], keyField = mapping.parentField;
                         if (util.isArray(result)) {
 
