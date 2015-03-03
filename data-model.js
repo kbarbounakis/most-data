@@ -622,6 +622,13 @@ function DataModel(obj) {
     */
     this.attributes = undefined;
     /**
+     * @private
+     */
+    this._clearAttributes = function() {
+        attributes = undefined;
+    };
+
+    /**
      * @type {Array} - Gets an array of objects that represents the collection of fields for this model. This collection contains
      * the fields defined in the current model and its parent.
      */
@@ -2024,10 +2031,22 @@ DataModel.prototype.cacheMappingInternal  = function(field, mapping) {
     if (typeof field === 'undefined' || field == null)
         return;
     //cache mapping
-    var cachedModel = cfg.current.models[field.model];
+    var cachedModel = cfg.current.models[this.name];
     if (cachedModel) {
         var cachedField = cachedModel.fields.find(function(x) { return x.name === field.name });
+        if (typeof cachedField === 'undefined') {
+            //search in attributes
+            cachedField = this.attributes.find(function(x) { return x.name === field.name });
+            if (cachedField) {
+                //add overriden field
+                cachedModel.fields.push(util._extend({}, cachedField));
+                cachedField = cachedModel.fields[cachedModel.fields.length-1];
+                //clear attributes
+                this._clearAttributes();
+            }
+        }
         if (cachedField)
+        //add mapping
             cachedField.mapping = mapping;
     }
 };
