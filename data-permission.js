@@ -70,13 +70,14 @@ DataPermissionEventListener.prototype.beforeRemove = function(e, callback)
     DataPermissionEventListener.prototype.validate(e, callback);
 }
 
-DataPermissionEventListener.prototype.validate = function(e, callback)
-{
+DataPermissionEventListener.prototype.validate = function(e, callback) {
     var model = e.model,
         context = e.model.context,
         requestMask = 1,
         workspace = 1;
-    if (e.state==1)
+    if (e.state == 0)
+        requestMask = PermissionMask.Read;
+    else if (e.state==1)
         requestMask = PermissionMask.Create;
     else if (e.state==2)
         requestMask = PermissionMask.Update;
