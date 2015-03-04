@@ -3057,6 +3057,7 @@ DataQueryable.prototype.execute = function(callback) {
                 }
             }
         }
+
         //merge view filter. if any
         if (self.$view) {
             if (typeof self.$view.filter === 'string') {
@@ -3072,33 +3073,51 @@ DataQueryable.prototype.execute = function(callback) {
                         //replace group fields
                         e.query.$group = q.query.$group;
                         //add order fields
-                        if (!util.isArray(e.query.$order))
+                        if (util.isArray(e.query.$order))
                             e.query.$order = q.query.$order;
+                        //execute query
+                        self.finalExecuteInternal(e, callback);
                     }
                 });
             }
-        }
-        if (self.$silent) {
-            context.db.execute(e.query, null, function(err, result) {
-                if (err) { callback(err); return; }
-                self.afterExecute(result, callback);
-            });
+            else {
+                //execute query
+                self.finalExecuteInternal(e, callback);
+            }
         }
         else {
-            self.model.emit('before.execute', e, function(err) {
-                if (err) {
-                    callback(err);
-                }
-                else {
-                    context.db.execute(e.query, null, function(err, result) {
-                        if (err) { callback(err); return; }
-                        self.afterExecute(result, callback);
-                    });
-                }
-            });
+            //execute query
+            self.finalExecuteInternal(e, callback);
         }
     });
 };
+/**
+ * @private
+ * @param {*} e
+ * @param {function(Error=,*=)} callback
+ */
+DataQueryable.prototype.finalExecuteInternal = function(e, callback) {
+    var self = this, context = self.ensureContext();
+    if (self.$silent) {
+        context.db.execute(e.query, null, function(err, result) {
+            if (err) { callback(err); return; }
+            self.afterExecute(result, callback);
+        });
+    }
+    else {
+        self.model.emit('before.execute', e, function(err) {
+            if (err) {
+                callback(err);
+            }
+            else {
+                context.db.execute(e.query, null, function(err, result) {
+                    if (err) { callback(err); return; }
+                    self.afterExecute(result, callback);
+                });
+            }
+        });
+    }
+}
 
 /**
  * @param {*} result
