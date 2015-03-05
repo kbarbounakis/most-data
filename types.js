@@ -304,6 +304,8 @@ var types =
                 }
                 else if (val.match(BooleanTrueRegex))
                     return 1;
+                else if (val.match(BooleanFalseRegex))
+                    return 0;
             }
             else if (typeof val === 'boolean')
                 return val===true ? 1 : 0;
