@@ -2463,6 +2463,10 @@ DataQueryable.prototype.select = function(attr) {
                     }
                 });
             }
+            //select a field from a joined entity
+            else if (/\//.test(attr)) {
+                //todo::select nested attribute
+            }
         }
         if (util.isArray(arr)) {
             if (arr.length==0)
@@ -2515,6 +2519,30 @@ DataQueryable.prototype.select = function(attr) {
 
     return this;
 };
+/**
+ * @private
+ */
+DataQueryable.selectNestedAttributeInternal = function(attr) {
+    var self = this, member = attr.split('/');
+    if (member.length>2) {
+        throw new Error('Nested query selection is not yet implemented');
+    }
+    else {
+        //the first part contains the local field that is related with a model (parent-child relation)
+        var mapping = self.model.inferMapping(member[0]);
+        if (typeof mapping === 'undefined' || mapping == null)
+            throw new Error('The specified field or mapping cannot be found. Ensure that the field exists in the current model.');
+        //get field mapping
+        if ((mapping.childModel!==self.name) || (mapping.associationType!=='association'))
+            throw new Error('The field mapping is of a wrong type. A parent-child relation is required for joining entities.');
+        //get parent model
+        var parentModel = self.model.context.model(mapping.parentModel);
+        if (typeof parentModel === 'undefined' || parentModel == null)
+            throw new Error('The specified fielf has a parent model that is missing or cannot be found.');
+        //todo::try to apply join
+    }
+}
+
 /**
  * Adds a field or an array of fields to select statement
  * @param {String|Array|DataField|*} attr
