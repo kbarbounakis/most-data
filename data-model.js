@@ -5526,9 +5526,6 @@ var __model__ = {
    }
 };
 
-if (typeof exports !== 'undefined')
-{
-    module.exports = __model__;
-}
+if (typeof exports !== 'undefined') { module.exports = __model__; }
 
 
