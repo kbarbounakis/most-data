@@ -2653,13 +2653,19 @@ DataQueryable.prototype.thenByDescending = function(attr) {
 };
 
 /**
- * @param callback {Function}
- * @abstract
- * @returns {*}
+ * @param {function(Error=,*=)} callback
  */
 DataQueryable.prototype.first = function(callback) {
+    this.firstInternal(callback);
+};
+/**
+ * @private
+ * @param {function(Error=,*=)} callback
+ */
+DataQueryable.prototype.firstInternal = function(callback) {
+    var self = this;
     callback = callback || function() {};
-    this.skip(0).take(1, function(err, result) {
+    self.skip(0).take(1, function(err, result) {
         if (err) {
             callback(err);
         }
@@ -2673,10 +2679,16 @@ DataQueryable.prototype.first = function(callback) {
 };
 
 /**
- * @param callback {Function}
- * @returns {Array}
+ * @param {function(Error=,Array=)} callback
  */
 DataQueryable.prototype.all = function(callback) {
+    this.allInternal(callback);
+};
+
+/**
+ * @param {function(Error=,Array=)} callback
+ */
+DataQueryable.prototype.allInternal = function(callback) {
     var self = this;
     //remove skip and take
     delete this.query.$skip;
@@ -2689,7 +2701,7 @@ DataQueryable.prototype.all = function(callback) {
         }).select(function(x) {
             var f = qry.fields.select(x.name).from(self.model.viewAdapter);
             if (x.property)
-                f.as(x.property)
+                f.as(x.property);
             return f;
 
         }).toArray();
@@ -3129,7 +3141,14 @@ DataQueryable.prototype.finalExecuteInternal = function(e, callback) {
     if (self.$silent) {
         context.db.execute(e.query, null, function(err, result) {
             if (err) { callback(err); return; }
-            self.afterExecute(result, callback);
+            self.afterExecute(result, function(err, result) {
+                if (err) { callback(err); return; }
+                //raise after execute event
+                self.model.emit('after.execute', e, function(err) {
+                    if (err) { callback(err); return; }
+                    callback(null, result);
+                });
+            });
         });
     }
     else {
@@ -3140,7 +3159,14 @@ DataQueryable.prototype.finalExecuteInternal = function(e, callback) {
             else {
                 context.db.execute(e.query, null, function(err, result) {
                     if (err) { callback(err); return; }
-                    self.afterExecute(result, callback);
+                    self.afterExecute(result, function(err, result) {
+                        if (err) { callback(err); return; }
+                        //raise after execute event
+                        self.model.emit('after.execute', e, function(err) {
+                            if (err) { callback(err); return; }
+                            callback(null, result);
+                        });
+                    });
                 });
             }
         });
