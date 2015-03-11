@@ -5239,13 +5239,27 @@ DataObjectAssociationListener.afterSave = function(e, callback) {
                         if (x.mapping.childModel===e.model.name) {
                             junction = new HasParentJunction(obj, x.mapping);
                             if (e.state==1 || e.state==2) {
-                                //todo:clear associated items
                                 junction.insert(childs, function(err, result) {
                                     if (err) {
                                         cb(err);
                                     }
                                     else {
-                                        cb(null);
+                                        //delete parent associated items
+                                        if (util.isArray(childs.deleted)){
+                                            junction.remove(childs.deleted, function(err, result) {
+                                                if (err) {
+                                                    cb(err);
+                                                }
+                                                else {
+                                                    delete childs.deleted;
+                                                    cb();
+                                                }
+                                            });
+                                        }
+                                        else
+                                        {
+                                            cb();
+                                        }
                                     }
                                 });
                             }
@@ -5256,13 +5270,27 @@ DataObjectAssociationListener.afterSave = function(e, callback) {
                         else if (x.mapping.parentModel===e.model.name) {
                             junction = new DataObjectJunction(obj, x.mapping);
                             if (e.state==1 || e.state==2) {
-                                //todo:clear associated items
                                 junction.insert(childs, function(err, result) {
                                     if (err) {
                                         cb(err);
                                     }
                                     else {
-                                        cb();
+                                        //delete associated items
+                                        if (util.isArray(childs.deleted)){
+                                            junction.remove(childs.deleted, function(err, result) {
+                                                if (err) {
+                                                    cb(err);
+                                                }
+                                                else {
+                                                    delete childs.deleted;
+                                                    cb();
+                                                }
+                                            });
+                                        }
+                                        else
+                                        {
+                                            cb();
+                                        }
                                     }
                                 });
                             }
