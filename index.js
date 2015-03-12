@@ -14,7 +14,8 @@ var model = require('./data-model'),
     cfg = require('./data-configuration'),
     perms = require('./data-permission'),
     mssqlAdapter = require('./mssql-adapter'),
-    dataCache = require('./data-cache');
+    dataCache = require('./data-cache'),
+    dataCommon = require('./data-common');
 /**
  * @module most-data
  */

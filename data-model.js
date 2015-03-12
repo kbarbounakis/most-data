@@ -18,136 +18,10 @@ var array = require('most-array'),
     events = require('events'),
     qry = require('most-query'),
     cfg = require('./data-configuration'),
-    __types__ = require('./types'), functions = require('./functions');
-
-/**
- * Load native object extensions
- */
-if (typeof Array.prototype.find === 'undefined')
-{
-    /**
-     * @param {Function} callback
-     * @param {Object=} [thisObject]
-     * @returns {*}
-     */
-    var find = function(callback, thisObject) {
-        if (this == null) {
-            throw new TypeError('Array.prototype.find called on null or undefined');
-        }
-        if (typeof callback !== 'function') {
-            throw new TypeError('callback must be a function');
-        }
-        var list = Object(this);
-        var length = list.length >>> 0;
-        var thisObj = arguments[1];
-        var value;
-
-        for (var i = 0; i < length; i++) {
-            if (i in list) {
-                value = list[i];
-                if (callback.call(thisObj, value, i, list)) {
-                    return value;
-                }
-            }
-        }
-        return undefined;
-    };
-
-    if (Object.defineProperty) {
-        try {
-            Object.defineProperty(Array.prototype, 'find', {
-                value: find, configurable: true, enumerable: false, writable: true
-            });
-        } catch(e) {}
-    }
-
-    if (!Array.prototype.find) { Array.prototype.find = find; }
-}
-
-
-if (typeof Array.prototype.select === 'undefined')
-{
-    /**
-     * @param {Function} callback
-     * @param {Object=} [thisObject]
-     * @returns {*}
-     */
-    var select = function(callback, thisObject) {
-        if (this == null) {
-            throw new TypeError('Array.prototype.find called on null or undefined');
-        }
-        if (typeof callback !== 'function') {
-            throw new TypeError('callback must be a function');
-        }
-        var list = Object(this);
-        var length = list.length >>> 0;
-        var thisObj = arguments[1];
-        var value;
-        var res = [];
-        for (var i = 0; i < length; i++) {
-            if (i in list) {
-                value = list[i];
-                var item = callback.call(thisObj, value, i, list);
-                if (item)
-                    res.push(item);
-            }
-        }
-        return res;
-    }
-
-    if (Object.defineProperty) {
-        try {
-            Object.defineProperty(Array.prototype, 'select', {
-                value: select, configurable: true, enumerable: false, writable: true
-            });
-        } catch(e) {}
-    }
-
-    if (!Array.prototype.select) { Array.prototype.select = select; }
-}
-
-if (typeof Array.prototype.distinct === 'undefined')
-{
-    /**
-     * @param {Function} callback
-     * @param {Object=} [thisObject]
-     * @returns {*}
-     */
-    var distinct = function(callback, thisObject) {
-        if (this == null) {
-            throw new TypeError('Array.prototype.find called on null or undefined');
-        }
-        if (typeof callback !== 'function') {
-            throw new TypeError('callback must be a function');
-        }
-        var list = Object(this);
-        var length = list.length >>> 0;
-        var thisObj = arguments[1];
-        var value;
-        var res = [];
-        for (var i = 0; i < length; i++) {
-            if (i in list) {
-                value = list[i];
-                var item = callback.call(thisObj, value, i, list);
-                if (item)
-                    if (res.indexOf(item)<0)
-                        res.push(item);
-            }
-        }
-        return res;
-    }
-
-    if (Object.defineProperty) {
-        try {
-            Object.defineProperty(Array.prototype, 'distinct', {
-                value: select, configurable: true, enumerable: false, writable: true
-            });
-        } catch(e) {}
-    }
-
-    if (!Array.prototype.distinct) { Array.prototype.distinct = distinct; }
-}
-
+    __types__ = require('./types'),
+    functions = require('./functions'),
+    dataCache = require('./data-cache'),
+    dataCommon = require('./data-common');
 /**
  * Represents the default data context.
  * @class
@@ -743,11 +617,20 @@ DataModel.prototype.registerListeners = function() {
     this.on('before.save', CalculatedValueListener.beforeSave);
     //before execute
     this.on('before.execute', perms.DataPermissionEventListener.prototype.beforeExecute);
-
-    //before save
+    //before save (validate permissions)
     this.on('before.save', perms.DataPermissionEventListener.prototype.beforeSave);
-    //before remove
+    //before remove (validate permissions)
     this.on('before.remove', perms.DataPermissionEventListener.prototype.beforeRemove);
+    //after save (clear caching)
+    this.on('after.save', DataObjectCachingListener.afterSave);
+    //after remove (clear caching)
+    this.on('after.remove', DataObjectCachingListener.afterRemove);
+    if (this.type === 'lookup') {
+        //after save (clear lookup caching)
+        this.on('after.save', DataModelLookupCachingListener.afterSave);
+        //after remove (clear lookup caching)
+        this.on('after.remove', DataModelLookupCachingListener.afterRemove);
+    }
     //register configuration listeners
     if (this.eventListeners) {
         for (var i = 0; i < this.eventListeners.length; i++) {
@@ -1232,6 +1115,8 @@ DataModel.prototype.idOf = function(obj) {
     if (typeof obj === 'undefined')
         return;
     if (obj===null)
+        return;
+    if (typeof this.primaryKey === 'undefined' || this.primaryKey == null)
         return;
     if (typeof obj === 'object')
         return obj[this.primaryKey];
@@ -5119,6 +5004,87 @@ CalculatedValueListener.beforeSave = function(e, callback) {
     }, function(err) {
         callback(err);
     });
+};
+
+/**
+ * Gets or sets an object that represents the user of the current data context.
+ * @property {string|undefined}
+ * @name process#NODE_ENV
+ * @memberof process
+ */
+
+/**
+ * @class DataObjectCachingListener
+ * @constructor
+ */
+function DataObjectCachingListener() {
+    //
+}
+
+DataObjectCachingListener.afterSave = function(e, callback) {
+    try {
+        if (Object.isNullOrUndefined(e.target)) {
+            callback();
+            return;
+        }
+        //get object id
+        var id = e.model.idOf(e.target);
+        //validate object id
+        if (Object.isNullOrUndefined(id)) {
+            callback();
+            return;
+        }
+        //get item key
+        var key = '/' + e.model.name + '/' + id.toString();
+        if (dataCache.current) {
+            //remove item by key
+            dataCache.current.remove(key);
+        }
+        callback();
+    }
+    catch (e) {
+        if (process.NODE_ENV==='development')
+            dataCommon.log(e);
+        callback();
+    }
+};
+
+DataObjectCachingListener.afterRemove = function(e, callback) {
+    DataObjectCachingListener.afterSave(e, callback);
+};
+
+
+/**
+ * @class DataModelLookupCachingListener
+ * @constructor
+ */
+function DataModelLookupCachingListener() {
+    //
+}
+
+DataModelLookupCachingListener.afterSave = function(e, callback) {
+    try {
+        if (Object.isNullOrUndefined(e.model)) {
+            callback();
+            return;
+        }
+        //get item key
+        var key = '/' + e.model.name + '/lookup';
+        if (dataCache.current) {
+            //remove item by key
+            dataCache.current.remove(key);
+        }
+        callback();
+    }
+    catch (e) {
+        if (process.NODE_ENV==='development')
+            dataCommon.log(e);
+        callback();
+    }
+};
+
+DataModelLookupCachingListener.afterRemove = function(e, callback) {
+    DataModelLookupCachingListener.afterSave(e, callback);
 };
 
 /**

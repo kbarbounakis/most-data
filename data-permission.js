@@ -15,29 +15,6 @@ var model = require('./data-model'),
     async = require('async'),
     dataCache = require('./data-cache');
 
-/**
- * Load native object extensions
- */
-if (typeof Object.prototype.isNullOrUndefined === 'undefined')
-{
-    /****
-     * @param {*} obj
-     * @returns {boolean}
-     */
-    var isNullOrUndefined = function(obj) {
-        return (typeof obj === 'undefined') || (obj==null);
-    };
-
-    if (Object.defineProperty) {
-        try {
-            Object.defineProperty(Object.prototype, 'isNullOrUndefined', {
-                value: isNullOrUndefined, configurable: true, enumerable: false, writable: true
-            });
-        } catch(e) {}
-    }
-    if (!Object.prototype.isNullOrUndefined) { Object.prototype.isNullOrUndefined = isNullOrUndefined; }
-}
-
 
 function DataPermissionEventArgs() {
     /**
