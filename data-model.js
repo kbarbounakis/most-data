@@ -625,6 +625,7 @@ DataModel.prototype.registerListeners = function() {
     this.on('after.save', DataObjectCachingListener.afterSave);
     //after remove (clear caching)
     this.on('after.remove', DataObjectCachingListener.afterRemove);
+    //register lookup model listeners
     if (this.type === 'lookup') {
         //after save (clear lookup caching)
         this.on('after.save', DataModelLookupCachingListener.afterSave);
