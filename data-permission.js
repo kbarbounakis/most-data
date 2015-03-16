@@ -113,7 +113,7 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
 
         var permEnabled = model.privileges.filter(function(x) { return !x.disabled; }, model.privileges).length>0;
         //get all enabled privileges
-        var privileges = model.privileges.filter(function(x) { return !x.disabled && (x.mask && requestMask == requestMask) }, model.privileges);
+        var privileges = model.privileges.filter(function(x) { return !x.disabled && ((x.mask & requestMask) == requestMask) });
         if (privileges.length==0) {
             if (e.throwError) {
                 //if the target model has privileges but it has no privileges with the requested mask
