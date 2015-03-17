@@ -1250,40 +1250,46 @@ DataModel.prototype.new = function(obj)
 DataModel.prototype.save = function(obj, callback)
 {
     var self = this;
-    if (obj==null) {
+    if (typeof obj=='undefined' || obj == null) {
         callback.call(self, null);
         return;
     }
-    var arr = [];
-    if (util.isArray(obj)) {
-        for (var i = 0; i < obj.length; i++)
-            arr.push(obj[i]);
-    }
-    else
-        arr.push(obj);
-    var db = self.context.db;
-    var res = [];
-    db.executeInTransaction(function(cb) {
-        async.eachSeries(arr, function(item, saveCallback) {
-            self.saveSingleObject(item, function(err, result) {
+    //ensure migration
+    self.migrate(function(err) {
+       if (err) { callback(err); return; }
+        //do save
+        var arr = [];
+        if (util.isArray(obj)) {
+            for (var i = 0; i < obj.length; i++)
+                arr.push(obj[i]);
+        }
+        else
+            arr.push(obj);
+        var db = self.context.db;
+        var res = [];
+        db.executeInTransaction(function(cb) {
+            async.eachSeries(arr, function(item, saveCallback) {
+                self.saveSingleObject(item, function(err, result) {
+                    if (err) {
+                        saveCallback.call(self, err);
+                        return;
+                    }
+                    res.push(result.insertedId);
+                    saveCallback.call(self, null);
+                });
+            }, function(err) {
                 if (err) {
-                    saveCallback.call(self, err);
+                    res = null;
+                    cb(err);
                     return;
                 }
-                res.push(result.insertedId);
-                saveCallback.call(self, null);
+                cb(null);
             });
         }, function(err) {
-            if (err) {
-                res = null;
-                cb(err);
-                return;
-            }
-            cb(null);
+            callback.call(self, err, res);
         });
-    }, function(err) {
-        callback.call(self, err, res);
     });
+
 };
 /**
  * Saves the base object if any.
@@ -1340,10 +1346,10 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
     //self.once('before.save', DataObjectAssociationListener.beforeSave);
     //register data association listener
     self.once('after.save', DataObjectAssociationListener.afterSave);
-    //register not null listener at the end of listeners collection (before emit)
-    self.once('before.save', NotNullConstraintListener.beforeSave);
     //register unique constraint listener at the end of listeners collection (before emit)
     self.once('before.save', UniqueContraintListener.beforeSave);
+    //register not null listener at the end of listeners collection (before emit)
+    self.once('before.save', NotNullConstraintListener.beforeSave);
     //execute before update events
     self.emit('before.save', e, function(err) {
         //if an error occured
@@ -1547,33 +1553,37 @@ DataModel.prototype.remove = function(obj, callback)
         callback.call(self, null);
         return;
     }
-    var arr = [];
-    if (util.isArray(obj)) {
-        for (var i = 0; i < obj.length; i++)
-            arr.push(obj[i]);
-    }
-    else
-        arr.push(obj);
-    //delete objects
-    var db = self.context.db;
-    db.executeInTransaction(function(cb) {
-        async.eachSeries(arr, function(item, removeCallback) {
-            self.removeSingleObject(item, function(err, result) {
+
+    self.migrate(function(err) {
+        if (err) { callback(err); return; }
+        var arr = [];
+        if (util.isArray(obj)) {
+            for (var i = 0; i < obj.length; i++)
+                arr.push(obj[i]);
+        }
+        else
+            arr.push(obj);
+        //delete objects
+        var db = self.context.db;
+        db.executeInTransaction(function(cb) {
+            async.eachSeries(arr, function(item, removeCallback) {
+                self.removeSingleObject(item, function(err, result) {
+                    if (err) {
+                        removeCallback.call(self, err);
+                        return;
+                    }
+                    removeCallback.call(self, null);
+                });
+            }, function(err) {
                 if (err) {
-                    removeCallback.call(self, err);
+                    cb(err);
                     return;
                 }
-                removeCallback.call(self, null);
+                cb(null);
             });
         }, function(err) {
-            if (err) {
-                cb(err);
-                return;
-            }
-            cb(null);
+            callback.call(self, err);
         });
-    }, function(err) {
-        callback.call(self, err);
     });
 }
 
@@ -4477,7 +4487,16 @@ DataObjectJunction.prototype.getRelationModel = function()
 
 DataObjectJunction.prototype.migrate = function(callback) {
     var model = this.getRelationModel();
-    model.migrate(callback);
+    model.migrate(function(err) {
+        if (err) {
+            callback(err);
+        }
+        else {
+            //migrate related model
+            var relatedModel = self.parent.context.model(self.mapping.childModel);
+            relatedModel.migrate(callback);
+        }
+    });
 };
 
 DataObjectJunction.prototype.execute = function(callback) {
@@ -5395,7 +5414,15 @@ UniqueContraintListener.beforeSave = function(e, callback) {
                     var objectExists = true;
                     if (e.state==2) {
                         //validate object id (check if target object is the same with the returned object)
-                        objectExists = result[e.model.primaryKey]!= e.target[e.model.primaryKey];
+                        objectExists = (result[e.model.primaryKey]!= e.target[e.model.primaryKey]);
+                    }
+                    if (e.state==1) {
+                        //set primary key value
+                        e.target[e.model.primaryKey] = result[e.model.primaryKey];
+                        //set state to update
+                        e.state = 2;
+                        //and exit
+                        cb(null); return;
                     }
                     //if object already exists
                     if (objectExists) {
