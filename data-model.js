@@ -5416,14 +5416,6 @@ UniqueContraintListener.beforeSave = function(e, callback) {
                         //validate object id (check if target object is the same with the returned object)
                         objectExists = (result[e.model.primaryKey]!= e.target[e.model.primaryKey]);
                     }
-                    if (e.state==1) {
-                        //set primary key value
-                        e.target[e.model.primaryKey] = result[e.model.primaryKey];
-                        //set state to update
-                        e.state = 2;
-                        //and exit
-                        cb(null); return;
-                    }
                     //if object already exists
                     if (objectExists) {
                         //so throw exception

@@ -440,6 +440,7 @@ DataPermissionEventListener.effectiveAccounts = function(context, callback) {
                 }
                 if (arr.length==0)
                     arr.push(0);
+                callback(null, arr);
             }
         });
     }
