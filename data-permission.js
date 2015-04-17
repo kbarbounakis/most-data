@@ -258,16 +258,35 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
                 else if (item.type=='self') {
                     if (requestMask==PermissionMask.Create) {
                         var query = qry.query(model.viewAdapter);
-                        var attrs = model.attributeNames, fields=[];
+                        var fields=[], field;
                         //cast target
-                        var targetObj = model.cast(e.target);
-                        attrs.forEach(function(x) {
-                            if (targetObj.hasOwnProperty(x)) {
-                                var f = {};
-                                f[x] = { $value: targetObj[x] };
-                                fields.push(f);
+                        var name, obj = e.target;
+                        model.attributes.forEach(function(x) {
+                            name = obj.hasOwnProperty(x.property) ? x.property : x.name;
+                            if (obj.hasOwnProperty(name))
+                            {
+                                var mapping = model.inferMapping(name);
+                                if (typeof mapping === 'undefined' || mapping === null) {
+                                    field = {};
+                                    field[x.name] = { $value: obj[name] };
+                                    fields.push(field);
+                                }
+                                else if ((mapping.associationType==='association') && (mapping.childModel===model.name)) {
+                                    if (typeof obj[name] === 'object') {
+                                        //set associated key value (e.g. primary key value)
+                                        field = {};
+                                        field[x.name] = { $value: obj[name][mapping.parentField] };
+                                        fields.push(field);
+                                    }
+                                    else {
+                                        //set raw value
+                                        field = {};
+                                        field[x.name] = { $value: obj[name] };
+                                        fields.push(field);
+                                    }
+                                }
                             }
-                        }, attrs);
+                        });
                         //add fields
                         query.select(fields);
                         //set fixed query
