@@ -2996,30 +2996,33 @@ DataQueryable.prototype.execute = function(callback) {
 
         //merge view filter. if any
         if (self.$view) {
-            if (typeof self.$view.filter === 'string') {
-                self.model.filter({ $filter: self.$view.filter, $order:self.$view.order, $group:self.$view.group }, function(err, q) {
-                    if (err) {
-                        if (err) { callback(err); return; }
-                    }
-                    else {
-                        //prepare current filter
+            self.model.filter({ $filter: self.$view.filter, $order:self.$view.order, $group:self.$view.group }, function(err, q) {
+                if (err) {
+                    if (err) { callback(err); return; }
+                }
+                else {
+                    //prepare current filter
+                    if (q.query.$prepared) {
                         if (e.query.$where)
                             e.query.prepare();
                         e.query.$where = q.query.$prepared;
+                    }
+                    if (q.query.$group)
                         //replace group fields
                         e.query.$group = q.query.$group;
-                        //add order fields
-                        if (util.isArray(e.query.$order))
+                    //add order fields
+                    if (q.query.$order) {
+                        if (util.isArray(e.query.$order)) {
+                            q.query.$order.forEach(x) (function(x) { e.query.$order.push(x); });
+                        }
+                        else {
                             e.query.$order = q.query.$order;
-                        //execute query
-                        self.finalExecuteInternal(e, callback);
+                        }
                     }
-                });
-            }
-            else {
-                //execute query
-                self.finalExecuteInternal(e, callback);
-            }
+                    //execute query
+                    self.finalExecuteInternal(e, callback);
+                }
+            });
         }
         else {
             //execute query
