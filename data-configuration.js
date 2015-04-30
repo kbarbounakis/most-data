@@ -153,6 +153,7 @@ function DataConfiguration() {
  */
 DataConfiguration.prototype.model = function(name)
 {
+    var self = this;
     if (typeof name !== 'string')
         return null;
     var keys = Object.keys(this.models), mr = new RegExp('^' + name + '$','i');
@@ -182,12 +183,12 @@ DataConfiguration.prototype.model = function(name)
     for (var i = 0; i < files.length; i++) {
         r.lastIndex=0;
         if (r.test(files[i])) {
-            //load JSON formatted configuration file
-            var data = fs.readFileSync(path.join(modelPath, files[i]), 'utf8');
-            //return JSON object
-            var result = JSON.parse(data);
+            //build model file path
+            var finalPath = path.join(modelPath, files[i]);
+            //get model
+            var result = require(finalPath), finalName = result.name;
             //cache model definition
-            this.models[result.name] = result;
+            self.models[finalName] = result;
             //and finally return this definition
             return result;
         }
