@@ -16,9 +16,24 @@ var array = require('most-array'),
     mssqlAdapter = require('./mssql-adapter');
 
 /**
+ * @class
+ * @constructor
+ * @property {string} name
+ * @property {string} defaultUserGroup
+ * @property {string} unattendedExecutionAccount
+ * @property {number} timeout
+ * @property {boolean} slidingExpiration
+ * @property {string} loginPage
+ */
+function DataConfigurationAuth() {
+    //
+}
+
+/**
  * Holds the configuration of data modeling infrastructure
  * @class
  * @constructor
+ * @property {DataConfigurationAuth} auth
  */
 function DataConfiguration() {
     /**
@@ -42,10 +57,34 @@ function DataConfiguration() {
             if (dataTypes)
                 return dataTypes;
             //get data types from configuration file
-            dataTypes = DataConfiguration.prototype.loadSync('dataTypes.json',false) || {};
+            try {
+                dataTypes = require(path.join(process.cwd(), 'config/dataTypes.json'));
+                if (typeof dataTypes === 'undefined' || dataTypes == null) {
+                    console.log('Application data types are empty. The default data types will be loaded instead.');
+                    dataTypes = require('./dataTypes.json');
+                }
+            }
+            catch(e) {
+                console.log('An error occured while loading application data types');
+                console.log(e);
+                console.log('The default data types will be loaded instead.');
+                dataTypes = require('./dataTypes.json');
+            }
             return dataTypes;
         }
     });
+
+    //get application-defined adapter types, if any
+    var config;
+    try {
+        config = require(path.join(process.cwd(), 'config/app.json')) || {};
+    }
+    catch (e) {
+        console.log('An error occured while trying to open application configuation.');
+        console.log(e);
+        config = {};
+    }
+
     /**
      * @type {Array}
      * @private
@@ -61,7 +100,6 @@ function DataConfiguration() {
              * @property {Array} adapters
              * @type {*}
              */
-            var config = DataConfiguration.prototype.loadSync('app.json',false) || {};
             adapters = config.adapters || [];
             return adapters;
         }
@@ -96,8 +134,7 @@ function DataConfiguration() {
         }
     };
 
-    //get application-defined adapter types, if any
-    var config = DataConfiguration.prototype.loadSync('app.json',false) || {};
+
     if (config.adapterTypes) {
         if (util.isArray(config.adapterTypes)) {
             config.adapterTypes.forEach(function(x) {
@@ -142,6 +179,27 @@ function DataConfiguration() {
         get: function()
         {
             return adapterTypes;
+        }
+    });
+
+    var auth;
+    Object.defineProperty(this, 'auth', {
+        get: function()
+        {
+            try {
+                if (auth) { return auth; }
+                if (typeof config.settings === 'undefined' || config.settings== null) {
+                    auth = config.auth || {};
+                    return auth;
+                }
+                auth = config.settings.auth || {};
+                return auth;
+            }
+            catch(e) {
+                console.log('An error occured while trying to load auth configuration');
+                auth = {};
+                return auth;
+            }
         }
     });
 

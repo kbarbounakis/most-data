@@ -167,6 +167,14 @@ var dataCommon = {
         if (data.stack) {
             util.log(data.stack);
         }
+    },
+    /**
+     * Checks if the specified object argument is undefined or null.
+     * @param {*} obj
+     * @returns {boolean}
+     */
+    isNullOrUndefined: function(obj) {
+        return (typeof obj === 'undefined' || obj === null);
     }
 };
 

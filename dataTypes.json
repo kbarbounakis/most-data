@@ -1,0 +1,228 @@
+{
+    "Boolean": {
+        "ancestors": [
+            "DataType"
+        ],
+        "comment": "",
+        "id": "Boolean",
+        "instances": [
+            "False",
+            "True"
+        ],
+        "label": "Boolean",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [],
+        "supertypes": [
+            "DataType"
+        ],
+        "url": "http://schema.org/Boolean",
+        "type": "boolean"
+    },
+    "DataType": {
+        "ancestors": [],
+        "comment": "",
+        "id": "DataType",
+        "label": "Data Type",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [
+            "Boolean",
+            "Date",
+            "DateTime",
+            "Number",
+            "Text",
+            "Time"
+        ],
+        "supertypes": [],
+        "url": "http://schema.org/DataType"
+    },
+    "Date": {
+        "ancestors": [
+            "DataType"
+        ],
+        "comment": "",
+        "id": "Date",
+        "label": "Date",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [],
+        "supertypes": [
+            "DataType"
+        ],
+        "url": "http://schema.org/Date",
+        "type": "Date"
+    },
+    "DateTime": {
+        "ancestors": [
+            "DataType"
+        ],
+        "comment": "",
+        "id": "DateTime",
+        "label": "Date Time",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [],
+        "supertypes": [
+            "DataType"
+        ],
+        "url": "http://schema.org/DateTime",
+        "type": "Date"
+    },
+    "Float": {
+        "ancestors": [
+            "DataType",
+            "Number"
+        ],
+        "comment": "",
+        "id": "Float",
+        "label": "Float",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [],
+        "supertypes": [
+            "Number"
+        ],
+        "url": "http://schema.org/Float",
+        "type": "number"
+    },
+    "Integer": {
+        "ancestors": [
+            "DataType",
+            "Number"
+        ],
+        "comment": "",
+        "id": "Integer",
+        "label": "Integer",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [],
+        "supertypes": [
+            "Number"
+        ],
+        "url": "http://schema.org/Integer",
+        "type": "number"
+    },
+    "Counter": {
+        "ancestors": [
+            "DataType",
+            "Number"
+        ],
+        "comment": "",
+        "id": "Counter",
+        "label": "Counter",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [],
+        "supertypes": [
+            "Number"
+        ],
+        "url": "urn:most:schemas:Counter",
+        "type": "number"
+    },
+    "Duration": {
+        "ancestors": [
+            "DataType",
+            "Number"
+        ],
+        "comment": "",
+        "id": "Duration",
+        "label": "Duration",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [],
+        "supertypes": [
+            "Number"
+        ],
+        "url": "urn:most:schemas:Duration",
+        "type": "number"
+    },
+    "Number": {
+        "ancestors": [
+            "DataType"
+        ],
+        "comment": "",
+        "id": "Number",
+        "label": "Number",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [
+            "Float",
+            "Integer"
+        ],
+        "supertypes": [
+            "DataType"
+        ],
+        "url": "http://schema.org/Number",
+        "type": "number"
+    },
+    "Text": {
+        "ancestors": [
+            "DataType"
+        ],
+        "comment": "",
+        "id": "Text",
+        "label": "Text",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [
+            "URL"
+        ],
+        "supertypes": [
+            "DataType"
+        ],
+        "url": "http://schema.org/Text",
+        "type": "string"
+    },
+    "Time": {
+        "ancestors": [
+            "DataType"
+        ],
+        "comment": "",
+        "id": "Time",
+        "label": "Time",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [],
+        "supertypes": [
+            "DataType"
+        ],
+        "url": "http://schema.org/Time",
+        "type": "Date"
+    },
+    "URL": {
+        "ancestors": [
+            "DataType",
+            "Text"
+        ],
+        "comment": "",
+        "id": "URL",
+        "label": "URL",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [],
+        "supertypes": [
+            "Text"
+        ],
+        "url": "http://schema.org/URL",
+        "type": "string"
+    },
+     "Language": {
+        "ancestors": [
+            "DataType",
+            "Text"
+        ],
+        "comment": "",
+        "id": "Language",
+        "label": "Language",
+        "properties": [],
+        "specific_properties": [],
+        "subtypes": [],
+        "supertypes": [
+            "Text"
+        ],
+        "url": "http://schema.org/URL",
+        "type": "string",
+         "sqlType":"Text"
+    }
+}

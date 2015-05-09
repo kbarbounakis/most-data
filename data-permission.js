@@ -95,16 +95,30 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
     if (typeof e.throwError === 'undefined')
         e.throwError = true;
     context.user = context.user || { name:'anonymous',authenticationType:'None' };
+    //change: 2-May 2015
+    //description: Use unattended execution account as an escape permission check account
+    var cfg = require('./data-configuration');
+    if (typeof cfg.current.auth !== 'undefined' || cfg.current.auth != null)
+    {
+        var unattendedExecutionAccount=cfg.current.auth.unattendedExecutionAccount;
+        if ((typeof unattendedExecutionAccount !== 'undefined'
+            || unattendedExecutionAccount != null)
+            && (unattendedExecutionAccount===context.user.name))
+        {
+            callback();
+            return;
+        }
+    }
     //get user key
     var users = context.model('User'), permissions = context.model('Permission');
     if (typeof users=== 'undefined' || users===null) {
         //do nothing
-        callback(null);
+        callback();
         return;
     }
     if (typeof permissions=== 'undefined' || permissions===null) {
         //do nothing
-        callback(null);
+        callback();
         return;
     }
 
@@ -539,8 +553,24 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                 requestMask=8;
         }
     }
+    //ensure context user
+    context.user = context.user || { name:'anonymous',authenticationType:'None' };
+    //change: 2-May 2015
+    //description: Use unattended execution account as an escape permission check account
+    var cfg = require('./data-configuration');
+    if (typeof cfg.current.auth !== 'undefined' || cfg.current.auth != null)
+    {
+        var unattendedExecutionAccount=cfg.current.auth.unattendedExecutionAccount;
+        if ((typeof unattendedExecutionAccount !== 'undefined'
+            || unattendedExecutionAccount != null)
+            && (unattendedExecutionAccount===context.user.name))
+        {
+            callback();
+            return;
+        }
+    }
     if (e.query) {
-        context.user = context.user || { name:'anonymous',authenticationType:'None' };
+
         //get user key
         var users = context.model('User'), permissions = context.model('Permission');
         if (typeof users=== 'undefined' || users===null) {

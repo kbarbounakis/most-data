@@ -324,16 +324,13 @@ function DataAssociationMapping(obj) {
      * @type {Array}
      */
     this.select = [];
-
     /**
      * Gets or sets a boolean value that indicates whether current relation is one-to-one relation.
      * @type {Boolean}
      */
     this.oneToOne = false;
-
     if (typeof obj === 'object')
         util._extend(this, obj);
-
 }
 /**
  * @class DataFilterResolver
@@ -345,7 +342,12 @@ function DataFilterResolver() {
 }
 
 DataFilterResolver.resolveMember = function(member, callback) {
-    callback(null, this.viewAdapter.concat('.', member))
+    if (/\//.test(member)) {
+        callback(null, member.replace(/\//, '.'));
+    }
+    else {
+        callback(null, this.viewAdapter.concat('.', member))
+    }
 };
 
 DataFilterResolver.resolveMethod = function(name, args, callback) {
@@ -579,6 +581,28 @@ function DataModel(obj) {
             return x.name;
         });
     }, enumerable: false, configurable: false});
+    Object.defineProperty(this, 'constraintCollection' , { get: function() {
+        var arr = [];
+        if (util.isArray(self.constraints)) {
+            //apend constraints to collection
+            self.constraints.forEach(function(x) {
+                arr.push(x);
+            });
+        }
+        //get base model
+        var baseModel = self.base();
+        if (baseModel) {
+            //get base model constraints
+            var baseArr = baseModel.constraintCollection;
+            if (util.isArray(baseArr)) {
+                //apend to collection
+                baseArr.forEach(function(x) {
+                    arr.push(x);
+                });
+            }
+        }
+        return arr;
+    }, enumerable: false, configurable: false});
 
     //register listeners
     this.registerListeners();
@@ -611,9 +635,11 @@ DataModel.prototype.registerListeners = function() {
     //register system event listeners
     //0. Permission Event Listener
     var perms = require('./data-permission');
-    //1. Default values Listener
+    //1. State validator listener
+    this.on('before.save', DataStateValidatorListener.beforeSave);
+    //2. Default values Listener
     this.on('before.save', DefaultValueListener.beforeSave);
-    //2. Calculated values listener
+    //3. Calculated values listener
     this.on('before.save', CalculatedValueListener.beforeSave);
     //before execute
     this.on('before.execute', perms.DataPermissionEventListener.prototype.beforeExecute);
@@ -676,26 +702,86 @@ DataModel.prototype.where = function(attr) {
     return result.where(attr);
 };
 /**
+ *
+ * @param {string} memberExpr - A string that represents a member expression e.g. user/id or article/published etc.
+ * @returns {*} - An object that represents a query join expression
+ */
+function resolveNestedAttributeJoin(memberExpr) {
+    var self = this;
+    if (/\//.test(memberExpr)) {
+        //if the specified member contains '/' e.g. user/name then prepare join
+        var arrMember = memberExpr.split('/');
+        var attrMember = self.field(arrMember[0]);
+        if (dataCommon.isNullOrUndefined(attrMember)) {
+            throw new Error(util.format('The target model does not have an attribute named as %s',arrMember[0]));
+        }
+        //search for field mapping
+        var mapping = self.inferMapping(arrMember[0]);
+        if (dataCommon.isNullOrUndefined(mapping)) {
+            throw new Error(util.format('The target model does not have an association defined for attribute named %s',arrMember[0]));
+        }
+        if (mapping.childModel===self.name && mapping.associationType==='association') {
+            //get parent model
+            var parentModel = self.context.model(mapping.parentModel);
+            if (dataCommon.isNullOrUndefined(parentModel)) {
+                throw new Error(util.format('Association parent model (%s) cannot be found.', mapping.parentModel));
+            }
+            /**
+             * store temp query expression
+             * @type QueryExpression
+             */
+            var res =qry.query(self.viewAdapter).select(['*']);
+            var expr = qry.query().where(qry.fields.select(mapping.childField).from(self.viewAdapter)).equal(qry.fields.select(mapping.parentField).from(mapping.childField));
+            res.join(parentModel.viewAdapter, null, mapping.childField).with(expr);
+            return res.$expand;
+        }
+        else {
+            throw new Error(util.format('The association type between %s and %s model is not supported for filtering, grouping or sorting data.', mapping.parentModel , mapping.childModel));
+        }
+    }
+}
+
+/**
  * Applies open data filter, ordering, grouping and paging params and returns the derived data queryable object
  * @param {String|{$filter:string=, $skip:number=, $top:number=, $take:number=, $order:string=, $inlinecount:string=, $expand:string=,$select:string=, $orderby:string=, $group:string=, $groupby:string=}} params - A string that represents an open data filter or an object with open data parameters
  * @param {function(Error=,DataQueryable=)} callback
  */
 DataModel.prototype.filter = function(params, callback) {
     var self = this;
-    var parser = qry.openData.createParser();
+    var parser = qry.openData.createParser(), $joinExpressions = [];
     parser.resolveMember = function(member, cb) {
         var attr = self.field(member);
         if (attr)
             member = attr.name;
-        //todo:: throw exception for missing field
+        if (/\//.test(member)) {
+            try {
+                var expr = resolveNestedAttributeJoin.call(self, member);
+                if (expr) {
+                    var joinExpr = $joinExpressions.find(function(x) {
+                        if (x.$entity) {
+                            if (x.$entity.$as) {
+                                return (x.$entity.$as === expr.$entity.$as);
+                            }
+                        }
+                        return false;
+                    });
+                    if (dataCommon.isNullOrUndefined(joinExpr))
+                        $joinExpressions.push(expr);
+                }
+            }
+            catch (err) {
+                cb(err);
+                return;
+            }
+        }
         if (typeof self.resolveMember === 'function')
-            self.resolveMember.call(self, member, cb)
+            self.resolveMember.call(self, member, cb);
         else
             DataFilterResolver.resolveMember.call(self, member, cb);
     };
     parser.resolveMethod = function(name, args, cb) {
         if (typeof self.resolveMethod === 'function')
-            self.resolveMethod.call(self, name, args, cb)
+            self.resolveMethod.call(self, name, args, cb);
         else
             DataFilterResolver.resolveMethod.call(self, name, args, cb);
     };
@@ -714,6 +800,9 @@ DataModel.prototype.filter = function(params, callback) {
             //create a DataQueryable instance
             var q = new DataQueryable(self);
             q.query.$where = query;
+            if ($joinExpressions.length>0)
+                q.query.$expand = $joinExpressions;
+            //prepare
             q.query.prepare();
 
             if (typeof params === 'object') {
@@ -799,7 +888,7 @@ DataModel.prototype.filter = function(params, callback) {
                             }
                             else {
                                 //validate aggregate functions
-                                if (/(count|avg|sum|min|max)\((.*?)\)/i.test(name)) {
+                                if (/(count|avg|sum|min|max)\((.*?)\)/i.test(name) || /\//.test(name)) {
                                     if (direction=='desc')
                                         q.orderByDescending(name);
                                     else
@@ -1443,7 +1532,7 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
                                         }
                                         else {
                                             //raise after save listeners
-                                            self.emit('after.save',e, function(err, result) {
+                                            self.emit('after.save',e, function(err) {
                                                 //invoke callback
                                                 callback.call(self, err, e.target);
                                             });
@@ -1451,7 +1540,7 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
                                     }
                                     else {
                                         //execute after update events
-                                        self.emit('after.save',e, function(err, result) {
+                                        self.emit('after.save',e, function(err) {
                                             //invoke callback
                                             callback.call(self, err, e.target);
                                         });
@@ -1585,7 +1674,7 @@ DataModel.prototype.remove = function(obj, callback)
             callback.call(self, err);
         });
     });
-}
+};
 
 /**
  * Deletes a single object and performs all the operation needed.
@@ -1910,7 +1999,6 @@ DataModel.prototype.dataviews = function(name, obj) {
     //todo::add or update data view
     if (typeof obj !== 'undefined')
         throw new Error('Not implemented.');
-    var self = this;
     var re = new RegExp('^' + name.replace('$','\$') + '$', 'ig')
     var view = self.views.filter(function(x) { return re.test(x.name);})[0];
     if (typeof view==='undefined'|| view == null)
@@ -1988,7 +2076,7 @@ DataModel.prototype.inferMapping = function(name) {
                     oneToOne:false
                 });
                 //cache mapping
-                self.cacheMappingInternal(field, result)
+                self.cacheMappingInternal(field, result);
                 //and finally return mapping
                 return result;
             }
@@ -2006,7 +2094,7 @@ DataModel.prototype.inferMapping = function(name) {
                     refersTo:field.property || field.name
                 });
                 //cache mapping
-                self.cacheMappingInternal(field, result)
+                self.cacheMappingInternal(field, result);
                 //and finally return mapping
                 return result;
             }
@@ -2027,7 +2115,7 @@ DataModel.prototype.inferMapping = function(name) {
                     oneToOne: false
                 });
                 //cache mapping
-                self.cacheMappingInternal(field, result)
+                self.cacheMappingInternal(field, result);
                 //and finally return mapping
                 return result;
             }
@@ -2042,7 +2130,7 @@ DataModel.prototype.inferMapping = function(name) {
                     oneToOne: false
                 });
                 //cache mapping
-                self.cacheMappingInternal(field, result)
+                self.cacheMappingInternal(field, result);
                 //and finally return mapping
                 return result;
             }
@@ -2155,12 +2243,64 @@ DataQueryable.prototype.ensureContext = function() {
     return null;
 };
 
+function resolveNestedAttribute(attr) {
+    if (typeof attr === 'string' && /\//.test(attr)) {
+        var expr = resolveNestedAttributeJoin.call(this.model, attr);
+        if (expr) {
+            if (typeof this.query.$expand === 'undefined' || null) {
+                this.query.$expand = expr;
+            }
+            else {
+                if (!util.isArray(this.query.$expand)) {
+                    var arr = [];
+                    arr.push(this.query.$expand);
+                    this.query.$expand = arr;
+                }
+                //add expresssion in join expressions if does not exists
+                var obj = this.query.$expand.find(function(x) {
+                    if (x.$entity) {
+                        if (x.$entity.$as) {
+                            return (x.$entity.$as === expr.$entity.$as);
+                        }
+                    }
+                    return false;
+                });
+                if (typeof obj === 'undefined')
+                    this.query.$expand.push(expr);
+            }
+            //add field
+            var member = attr.split('/');
+            return qry.fields.select(member[1]).from(member[0]);
+        }
+        else {
+            throw new Error('Member join expression cannot be empty at this context');
+        }
+    }
+}
+
+function orderByNestedAttribute(attr) {
+    return resolveNestedAttribute.call(this, attr);
+}
+
+function selecteNestedAttribute(attr) {
+    var expr = resolveNestedAttribute.call(this, attr);
+    if (expr) {
+        expr.as(attr.replace(/\//g,'_'));
+    }
+    return expr;
+}
+
+
 /**
  *
  * @param attr {string}
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.where = function(attr) {
+    if (typeof attr === 'string' && /\//.test(attr)) {
+        this.query.where(resolveNestedAttribute.call(this, attr));
+        return this;
+    }
     this.query.where(this.fieldOf(attr));
     return this;
 };
@@ -2197,6 +2337,10 @@ DataQueryable.prototype.join = function(model)
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.and = function(attr) {
+    if (typeof attr === 'string' && /\//.test(attr)) {
+        this.query.where(resolveNestedAttribute.call(this, attr));
+        return this;
+    }
     this.query.and(this.fieldOf(attr));
     return this;
 };
@@ -2205,6 +2349,10 @@ DataQueryable.prototype.and = function(attr) {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.or = function(attr) {
+    if (typeof attr === 'string' && /\//.test(attr)) {
+        this.query.where(resolveNestedAttribute.call(this, attr));
+        return this;
+    }
     this.query.or(this.fieldOf(attr));
     return this;
 };
@@ -2308,7 +2456,7 @@ DataQueryable.prototype.in = function(objs) {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.mod = function(obj, result) {
-    this.query.mod(obj, result)
+    this.query.mod(obj, result);
     return this;
 };
 
@@ -2361,7 +2509,8 @@ DataQueryable.prototype.select = function(attr) {
             }
             //select a field from a joined entity
             else if (/\//.test(attr)) {
-                //todo::select nested attribute
+                var expr = selecteNestedAttribute.call(self, attr);
+                if (expr) { arr.push(expr); }
             }
         }
         if (util.isArray(arr)) {
@@ -2415,30 +2564,6 @@ DataQueryable.prototype.select = function(attr) {
 
     return this;
 };
-/**
- * @private
- */
-DataQueryable.selectNestedAttributeInternal = function(attr) {
-    var self = this, member = attr.split('/');
-    if (member.length>2) {
-        throw new Error('Nested query selection is not yet implemented');
-    }
-    else {
-        //the first part contains the local field that is related with a model (parent-child relation)
-        var mapping = self.model.inferMapping(member[0]);
-        if (typeof mapping === 'undefined' || mapping == null)
-            throw new Error('The specified field or mapping cannot be found. Ensure that the field exists in the current model.');
-        //get field mapping
-        if ((mapping.childModel!==self.name) || (mapping.associationType!=='association'))
-            throw new Error('The field mapping is of a wrong type. A parent-child relation is required for joining entities.');
-        //get parent model
-        var parentModel = self.model.context.model(mapping.parentModel);
-        if (typeof parentModel === 'undefined' || parentModel == null)
-            throw new Error('The specified fielf has a parent model that is missing or cannot be found.');
-        //todo::try to apply join
-    }
-}
-
 /**
  * Adds a field or an array of fields to select statement
  * @param {String|Array|DataField|*} attr
@@ -2516,7 +2641,10 @@ DataQueryable.prototype.fieldOf = function(attr) {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.orderBy = function(attr) {
-
+    if (typeof attr === 'string' && /\//.test(attr)) {
+        this.query.orderBy(orderByNestedAttribute.call(this, attr));
+        return this;
+    }
     this.query.orderBy(this.fieldOf(attr));
     return this;
 };
@@ -2526,6 +2654,10 @@ DataQueryable.prototype.orderBy = function(attr) {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.thenBy = function(attr) {
+    if (typeof attr === 'string' && /\//.test(attr)) {
+        this.query.thenBy(orderByNestedAttribute.call(this, attr));
+        return this;
+    }
     this.query.thenBy(this.fieldOf(attr));
     return this;
 };
@@ -2535,6 +2667,10 @@ DataQueryable.prototype.thenBy = function(attr) {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.orderByDescending = function(attr) {
+    if (typeof attr === 'string' && /\//.test(attr)) {
+        this.query.orderByDescending(orderByNestedAttribute.call(this, attr));
+        return this;
+    }
     this.query.orderByDescending(this.fieldOf(attr));
     return this;
 };
@@ -2544,6 +2680,10 @@ DataQueryable.prototype.orderByDescending = function(attr) {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.thenByDescending = function(attr) {
+    if (typeof attr === 'string' && /\//.test(attr)) {
+        this.query.thenByDescending(orderByNestedAttribute.call(this, attr));
+        return this;
+    }
     this.query.thenByDescending(this.fieldOf(attr));
     return this;
 };
@@ -2724,7 +2864,7 @@ DataQueryable.prototype.minOf = function(name, alias) {
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
-}
+};
 /**
  * @param {String} name
  * @param {STring=} alias
@@ -2736,7 +2876,7 @@ DataQueryable.prototype.averageOf = function(name, alias) {
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
-}
+};
 /**
  * @param {String} name
  * @param {STring=} alias
@@ -2748,7 +2888,7 @@ DataQueryable.prototype.sumOf = function(name, alias) {
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
-}
+};
 
 /**
  * Executes the underlying query statement and returns the count of object found.
@@ -2946,7 +3086,7 @@ DataQueryable.prototype.postExecute = function(result, callback) {
 
 /**
  * Executes the underlying query statement.
- * @param {Function(Error,*=)} callback
+ * @param {function(Error,*=)} callback
  * @private
  */
 DataQueryable.prototype.execute = function(callback) {
@@ -2998,7 +3138,7 @@ DataQueryable.prototype.execute = function(callback) {
         if (self.$view) {
             self.model.filter({ $filter: self.$view.filter, $order:self.$view.order, $group:self.$view.group }, function(err, q) {
                 if (err) {
-                    if (err) { callback(err); return; }
+                    if (err) { callback(err); }
                 }
                 else {
                     //prepare current filter
@@ -4281,7 +4421,6 @@ HasParentJunction.prototype.removeSingleObject = function(obj, callback) {
     self.baseModel.where('parentId').equal(parentId).and('valueId').equal(childId).first(function(err, result) {
         if (err) {
             callback(err);
-            return;
         }
         else {
             if (!result) {
@@ -5438,7 +5577,147 @@ UniqueContraintListener.beforeSave = function(e, callback) {
     }, function(err) {
         callback(err);
     });
+};
+
+/**
+ * Validates data object's state based on any unique constraint defined.
+ * @class
+ * @constructor
+ */
+function DataStateValidatorListener() {
+    //
 }
+/**
+ *
+ * @param {DataEventArgs} e
+ * @param  {function(Error=)} callback
+ */
+DataStateValidatorListener.beforeSave = function(e, callback) {
+    try {
+        if (dataCommon.isNullOrUndefined(e)) {
+            callback();
+            return;
+        }
+        //if state is different than inserted then do nothing and return
+        if (e.state!=1) {
+            callback();
+            return;
+        }
+        var model = e.model, target = e.target;
+        //if model or target is not defined do nothing and exit
+        if (dataCommon.isNullOrUndefined(model) || dataCommon.isNullOrUndefined(target)) {
+            callback();
+            return;
+        }
+        if (!dataCommon.isNullOrUndefined(model.primaryKey)) {
+            if (!dataCommon.isNullOrUndefined(target[model.primaryKey])) {
+                //The primary key exists, so do nothing
+                callback();
+                return;
+            }
+        }
+        //get constraint collection (from both model and base model)
+        var arr = model.constraintCollection.filter(function(x) { return x.type==='unique' }), context = model.context, objectFound=false;
+        if (arr.length==0) {
+            //do nothing and exit
+            callback();
+            return;
+        }
+        async.eachSeries(arr, function(constraint, cb) {
+            try {
+                if (objectFound) {
+                    cb();
+                    return;
+                }
+                /**
+                 * @type {DataQueryable}
+                 */
+                var q;
+                if (util.isArray(constraint.fields)) {
+                    for (var i = 0; i < constraint.fields.length; i++) {
+                        var attr = constraint.fields[i];
+                        if (!e.target.hasOwnProperty(attr)) {
+                            cb();
+                            return;
+                        }
+                        var value = e.target[attr];
+                        //check field mapping
+                        var mapping = e.model.inferMapping(attr);
+                        if (!dataCommon.isNullOrUndefined(mapping)) {
+                            if (typeof e.target[attr] === 'object') {
+                                value=e.target[attr][mapping.parentField];
+                            }
+                        }
+                        if (dataCommon.isNullOrUndefined(value))
+                            value = null;
+                        if (q)
+                            q.and(attr).equal(value);
+                        else
+                            q = e.model.where(attr).equal(value);
+                    }
+                    if (dataCommon.isNullOrUndefined(q)) {
+                        cb();
+                    }
+                    else {
+                        if (typeof context.unattended === 'function') {
+                            //find object (in unattended model)
+                            context.unattended(function(ccb) {
+                                q.silent().flatten().select([model.primaryKey]).first(function(err, result) {
+                                    if (err) {
+                                        ccb(err);
+                                    }
+                                    else if (result) {
+                                        e.target[model.primaryKey] = result[model.primaryKey];
+                                        //change state (updated)
+                                        e.state = 2;
+                                        //object found
+                                        objectFound = true;
+                                        ccb();
+                                    }
+                                    else {
+                                        ccb();
+                                    }
+                                });
+                            },function(err) {
+                                cb(err);
+                            });
+                        }
+                        else {
+                            q.silent().flatten().select([model.primaryKey]).first(function(err, result) {
+                                if (err) {
+                                    cb(err);
+                                }
+                                else if (result) {
+                                    //set primary key value
+                                    e.target[model.primaryKey] = result[model.primaryKey];
+                                    //change state (updated)
+                                    e.state = 2;
+                                    //object found
+                                    objectFound=true;
+                                    cb();
+                                }
+                                else {
+                                    cb();
+                                }
+                            });
+                        }
+                    }
+                }
+                else {
+                    cb();
+                }
+            }
+            catch(e) {
+                cb(e);
+            }
+        }, function(err) {
+            callback(err);
+        });
+    }
+    catch(e) {
+        callback(e);
+    }
+};
 
 /***********/
 /* globals */
