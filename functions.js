@@ -75,6 +75,77 @@ FunctionContext.prototype.newid = function(callback) {
     this.model.context.db.selectIdentity(this.model.sourceAdapter, this.model.primaryKey, callback);
 };
 
+var UUID_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split('');
+
+function newGuidInternal() {
+    var chars = UUID_CHARS, uuid = [], i;
+    // rfc4122, version 4 form
+    var r;
+    // rfc4122 requires these characters
+    uuid[8] = uuid[13] = uuid[18] = uuid[23] = '-';
+    uuid[14] = '4';
+
+    // Fill in random data.  At i==19 set the high bits of clock sequence as
+    // per rfc4122, sec. 4.1.5
+    for (i = 0; i < 36; i++) {
+        if (!uuid[i]) {
+            r = 0 | Math.random()*16;
+            uuid[i] = chars[(i == 19) ? (r & 0x3) | 0x8 : r];
+        }
+    }
+    return uuid.join('');
+};
+
+FunctionContext.prototype.newGuid = function(callback) {
+    callback = callback || function() {};
+    callback(null, newGuidInternal());
+};
+
+
+function randomIntSync (min, max) {
+    return Math.floor(Math.random()*max) + min;
+}
+/**
+ * Generates a random integer value between the given minimum and maximum value
+ * @param {number} min
+ * @param {number} max
+ * @param {function(Error=,number=)} callback
+ */
+FunctionContext.prototype.int = function(min, max, callback) {
+    callback = callback || function() {};
+    callback(null, randomIntSync(min, max))
+};
+/***
+ * Generates a random string with the specified length. The default length is 8.
+ * @param {number} length
+ * @param {function(Error=,String=)} callback
+ */
+FunctionContext.prototype.chars = function(length, callback) {
+    callback = callback || function() {};
+    length = length || 8;
+    var chars = "abcdefghkmnopqursuvwxz2456789ABCDEFHJKLMNPQURSTUVWXYZ";
+    var str = "";
+    for(var i = 0; i < length; i++) {
+        str += chars.substr(randomIntSync(0, chars.length-1),1);
+    }
+    callback(null, str);
+};
+/***
+ * Generates a random password with the specified length. The default length is 8.
+ * @param {number} length
+ * @param {function(Error=,String=)} callback
+ */
+FunctionContext.prototype.password = function(length, callback) {
+    callback = callback || function() {};
+    length = length || 8;
+    var chars = "abcdefghkmnopqursuvwxz2456789ABCDEFHJKLMNPQURSTUVWXYZ";
+    var str = "";
+    for(var i = 0; i < length; i++) {
+        str += chars.substr(randomIntSync(0, chars.length-1),1);
+    }
+    callback(null, '{clear}' + str);
+};
+
 FunctionContext.prototype.user = function(callback) {
     callback = callback || function() {};
     var self = this, context = self.model.context;
