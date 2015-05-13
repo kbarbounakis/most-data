@@ -366,6 +366,7 @@ function EmptyQueryExpression() {
 /**
  * Database Object Management for node.js
  * @class {DataModel}
+ * @property {Array} seed - An array instance that represents a collection of items to be seeded when the model is being upgraded for the first time
  * @constructor
  * @augments EventEmitter2
  * @param {*=} obj An object instance that holds data model attributes. This parameter is optional.
@@ -700,6 +701,13 @@ DataModel.prototype.join = function(model) {
 DataModel.prototype.where = function(attr) {
     var result = new DataQueryable(this);
     return result.where(attr);
+};
+/**
+ * Returns a DataQueryable instance of the current model
+ * @returns DataQueryable
+ */
+DataModel.prototype.asQueryable = function() {
+    return new DataQueryable(this);
 };
 /**
  *
@@ -1957,8 +1965,67 @@ DataModel.prototype.migrateInternal = function(db, callback) {
         q.$expand.$with.push(to);
     }
     //execute query
-    db.createView(view, q, callback);
+    db.createView(view, q, function(err) {
+        if (err) {
+            callback(err);
+        }
+        else {
+            self.seedInternal(callback);
+        }
+    });
+};
 
+DataModel.prototype.seedInternal = function(callback) {
+    var self = this;
+    try {
+        /**
+         * Gets items to be seeded
+         * @type {Array}
+         */
+        var items = self['seed'];
+        //if model has an array of items to be seeded
+        if (util.isArray(items)) {
+            if (items.length==0) {
+                //if seed array is empty exit
+                callback(); return;
+            }
+            //try to insert items if model does not have any record
+            self.asQueryable().silent().flatten().count(function(err, count) {
+                if (err) {
+                    callback(err); return;
+                }
+                //if model has no data
+                if (count==0) {
+                    //set items state to new
+                    items.forEach(function(x) {x.$state=1; });
+                    //check for unattended execution support
+                    if (typeof self.context.unattended === 'function') {
+                        self.context.unattended(function(cb) {
+                            //seed items
+                            self.save(items, cb);
+                        }, function(err) {
+                            callback(err);
+                        });
+                    }
+                    else {
+                        //seed items
+                        self.save(items, callback);
+                    }
+                }
+                else {
+                    //model was already seeded
+                    callback();
+                }
+            });
+        }
+        else {
+            //do nothing and exit
+            callback();
+        }
+    }
+    catch (e) {
+        callback(e);
+    }
 }
 
 /**
