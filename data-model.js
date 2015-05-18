@@ -2487,7 +2487,8 @@ DataQueryable.prototype.lowerThan = function(obj) {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.lowerOrEqual = function(obj) {
-    return this.query.lowerOrEqual(obj);
+    this.query.lowerOrEqual(obj);
+    return this;
 };
 
 /**
@@ -2504,7 +2505,8 @@ DataQueryable.prototype.startsWith = function(obj) {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.endsWith = function(obj) {
-    return this.query.endsWith(obj);
+    this.query.endsWith(obj);
+    return this;
 };
 
 

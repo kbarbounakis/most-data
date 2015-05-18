@@ -277,9 +277,9 @@ DataConfiguration.prototype.loadSync = function(file, throwOnMissing) {
     return JSON.parse(data);
 };
 
-DataConfiguration.current = (function() {
-    return new DataConfiguration();
-}).call();
+//DataConfiguration.current = (function() {
+//    return new DataConfiguration();
+//}).call();
 
 var cfg = {
     /**
@@ -304,10 +304,17 @@ var cfg = {
        return new DataConfiguration();
     }
 };
+/**
+ * @type DataConfiguration
+ */
+var __cfg;
 
 Object.defineProperty(cfg, 'current', {
     get: function() {
-        return DataConfiguration.current;
+        if (__cfg)
+            return __cfg;
+        __cfg = new DataConfiguration();
+        return __cfg;
     }, configurable:false, enumerable:false
     });
 
