@@ -2357,6 +2357,10 @@ function selecteNestedAttribute(attr) {
     return expr;
 }
 
+DataQueryable.prototype.prepare = function() {
+    this.query.prepare();
+    return this;
+};
 
 /**
  *
