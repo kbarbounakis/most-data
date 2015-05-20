@@ -169,6 +169,24 @@ var dataCommon = {
         }
     },
     /**
+     *
+     * @param {Error|string|{message:string,stack:string}|*} data
+     */
+    debug:function(data) {
+        if (process.env.NODE_ENV==='development')
+            util.log(data);
+    },
+    /**
+     *
+     * @param {String} data
+     */
+    dasherize:function(data) {
+        if (typeof data === 'string')
+        {
+            return data.replace(/(^\s*|\s*$)/g, '').replace(/[_\s]+/g, '-').replace(/([A-Z])/g, '-$1').replace(/-+/g, '-').replace(/^-/,'').toLowerCase();
+        }
+    },
+    /**
      * Checks if the specified object argument is undefined or null.
      * @param {*} obj
      * @returns {boolean}

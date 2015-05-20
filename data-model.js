@@ -926,6 +926,7 @@ DataModel.prototype.filter = function(params, callback) {
         }
     });
 };
+
 /**
  *
  * @param {*} obj An object that is going t
@@ -1169,18 +1170,40 @@ DataModel.prototype.convert = function(obj, typeConvert)
     var DataObjectClass = self['DataObjectClass'];
     if (typeof DataObjectClass === 'undefined')
     {
-        var classPath = path.join(process.cwd(),'app','models',util.format('%s-model.js', self.name.toLowerCase()));
-        if (fs.existsSync(classPath))
+        //try to find class file with data model's name in lower case
+        // e.g. OrderDetail -> orderdetail-model.js (backward compatibility naming convention)
+        var classPath = path.join(process.cwd(),'app','models',self.name.toLowerCase().concat('-model.js'));
+        try {
             DataObjectClass = require(classPath);
-
-        else
-            DataObjectClass = DataObject;
-        //cache DataObjectclass property
+        }
+        catch(e) {
+            if (e.code === 'MODULE_NOT_FOUND') {
+                try {
+                    //if the specified class file was not found try to dasherize model name
+                    // e.g. OrderDetail -> order-detail-model.js
+                    classPath = path.join(process.cwd(),'app','models',dataCommon.dasherize(self.name).concat('-model.js'));
+                    DataObjectClass = require(classPath);
+                }
+                catch(e) {
+                    if (e.code === 'MODULE_NOT_FOUND') {
+                        //if , finally, we are unable to find class file, load default DataObject class
+                        DataObjectClass = DataObject;
+                    }
+                    else {
+                        throw e;
+                    }
+                }
+            }
+            else {
+                throw e;
+            }
+        }
+        //cache DataObject class property
         cfg.current.models[self.name]['DataObjectClass'] = self['DataObjectClass'] = DataObjectClass;
     }
 
     if (util.isArray(obj)) {
-        var result = [];
+        var arr = [];
         obj.forEach(function(x) {
             var o = new DataObjectClass();
             util._extend(o, x);
@@ -1188,9 +1211,9 @@ DataModel.prototype.convert = function(obj, typeConvert)
                 self.convertInternal(o);
             o.context = self.context;
             o.type = self.name;
-            result.push(o)
+            arr.push(o);
         });
-        return result;
+        return arr;
     }
     else {
         var result = new DataObjectClass();
@@ -1219,7 +1242,7 @@ DataModel.prototype.idOf = function(obj) {
     if (typeof obj === 'object')
         return obj[this.primaryKey];
     return obj;
-}
+};
 
 DataModel.prototype.cast = function(obj)
 {
@@ -2356,9 +2379,13 @@ function selecteNestedAttribute(attr) {
     }
     return expr;
 }
-
-DataQueryable.prototype.prepare = function() {
-    this.query.prepare();
+/**
+ * Prepares the underlying query
+ * @param {Boolean=} useOr - Indicates whether a or statement will be used in the resulted statement.
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.prepare = function(useOr) {
+    this.query.prepare(useOr);
     return this;
 };
 
