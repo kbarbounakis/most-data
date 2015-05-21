@@ -129,7 +129,7 @@ if (typeof Array.prototype.distinct === 'undefined')
     if (Object.defineProperty) {
         try {
             Object.defineProperty(Array.prototype, 'distinct', {
-                value: select, configurable: true, enumerable: false, writable: true
+                value: distinct, configurable: true, enumerable: false, writable: true
             });
         } catch(e) {}
     }
