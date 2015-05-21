@@ -3320,7 +3320,9 @@ DataQueryable.prototype.finalExecuteInternal = function(e, callback) {
 DataQueryable.prototype.afterExecute = function(result, callback) {
     var self = this;
     if (self.$expand) {
-        async.eachSeries(self.$expand,function(expand, cb) {
+        //get distinct values
+        var expands = self.$expand.distinct(function(x) { return x; });
+        async.eachSeries(expands,function(expand, cb) {
             /**
              * get mapping
              * @type {DataAssociationMapping}
