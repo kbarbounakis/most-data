@@ -740,7 +740,8 @@ function resolveNestedAttributeJoin(memberExpr) {
              */
             var res =qry.query(self.viewAdapter).select(['*']);
             var expr = qry.query().where(qry.fields.select(mapping.childField).from(self.viewAdapter)).equal(qry.fields.select(mapping.parentField).from(mapping.childField));
-            res.join(parentModel.viewAdapter, null, mapping.childField).with(expr);
+            var entity = qry.entity(parentModel.viewAdapter).as(mapping.childField).left();
+            res.join(entity).with(expr);
             return res.$expand;
         }
         else {
@@ -2424,8 +2425,9 @@ DataQueryable.prototype.join = function(model)
     /**
      * @type DataAssociationMapping
      */
-
-    self.select().query.join(joinModel.viewAdapter).with(expr);
+    var entity = qry.entity(joinModel.viewAdapter).left();
+    //set join entity (without alias and join type)
+    self.select().query.join(entity).with(expr);
     return self;
 };
 
