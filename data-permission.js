@@ -105,6 +105,7 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
             || unattendedExecutionAccount != null)
             && (unattendedExecutionAccount===context.user.name))
         {
+            e.result = true;
             callback();
             return;
         }
