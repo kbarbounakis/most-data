@@ -48,10 +48,10 @@ function DefaultDataContext()
             if (__db__)
                 return __db__;
             //otherwise load database options from configuration
-            var adapter = array(cfg.current.adapters).firstOrDefault(function(x) {
+            var adapter = cfg.current.adapters.find(function(x) {
                 return x.default;
             });
-            if (adapter==null)
+            if (typeof adapter ==='undefined' || adapter==null)
                 throw new Error('Default data adapter is missing.');
             //get data adapter type
             var adapterType = cfg.current.adapterTypes[adapter.invariantName];
@@ -267,7 +267,6 @@ function DataField() {
      */
     this.options = null;
 }
-
 /**
  * @class DataAssociationMapping
  * @param {*=} obj An object that contains relation mapping attributes
@@ -522,7 +521,7 @@ function DataModel(obj) {
             if (typeof x.many === 'undefined') {
                 if (typeof cfg.current.dataTypes[x.type] === 'undefined')
                     //set one-to-many attribute (based on a naming convention)
-                    x.many = pluralExpression.test(x.name);
+                    x.many = pluralExpression.test(x.name) || (x.mapping && x.mapping.associationType === 'junction');
                 else
                     //otherwise set one-to-many attribute to false
                     x.many = false;
@@ -567,10 +566,10 @@ function DataModel(obj) {
     */
     this.primaryKey = undefined;
     Object.defineProperty(this, 'primaryKey' , { get: function() {
-        var p = array(this.fields).firstOrDefault(function(x) { return x.primary==true; });
-        if (p==null) 
-            return null;
-        return p.name;
+        var p = self.fields.find(function(x) { return x.primary==true; });
+        if (p)
+            return p.name;
+        return null;
     }, enumerable: false, configurable: false});
     /**
      * Gets an array that contains model attribute names
@@ -934,10 +933,10 @@ DataModel.prototype.filter = function(params, callback) {
  * @returns DataQueryable
  */
 DataModel.prototype.find = function(obj) {
-    var self = this;
+    var self = this, result;
     if ((obj===undefined) || (obj==null))
     {
-        var result = new DataQueryable(this);
+        result = new DataQueryable(this);
         result.where(self.primaryKey).equal(null);
         return result;
     }
@@ -952,12 +951,12 @@ DataModel.prototype.find = function(obj) {
     });
 
     if (find.hasOwnProperty(self.primaryKey)) {
-        var result = new DataQueryable(this);
+        result = new DataQueryable(this);
         return result.where(self.primaryKey).equal(find[self.primaryKey]);
     }
     else {
-        var result = new DataQueryable(this);
-        var bQueried = false
+        result = new DataQueryable(this);
+        var bQueried = false;
         //enumerate properties and build query
         for(var key in find) {
             if (find.hasOwnProperty(key)) {
@@ -1225,7 +1224,7 @@ DataModel.prototype.convert = function(obj, typeConvert)
         result.type = self.name;
         return result;
     }
-}
+};
 /**
  * Extracts an identifier from the given parameter.
  * If the parameter is an object then gets the identifier property, otherwise tries to convert the given parameter to an identifier
@@ -1635,7 +1634,7 @@ DataModel.prototype.insert = function(obj, callback)
         });
     }
     this.save(obj, callback);
-}
+};
 
 /**
  * Updates an item or an array of items
@@ -1659,7 +1658,7 @@ DataModel.prototype.update = function(obj, callback)
         }
     }
     this.save(obj, callback);
-}
+};
 
 /**
  * Deletes an item or an array of items
@@ -2577,18 +2576,19 @@ DataQueryable.prototype.contains = function(value) {
  */
 DataQueryable.prototype.select = function(attr) {
 
-    var self = this, arr;
+    var self = this, arr, mapped = false;
     if (typeof attr === 'string') {
         //validate field or model view
         var field = self.model.field(attr);
         if (field) {
             //validate field
-            if (!field.many) {
+            if (field.many || (field.mapping && field.mapping.associationType === 'junction')) {
+                self.expand(field.name);
+            }
+            else {
                 arr = [];
                 arr.push(self.fieldOf(field.name));
             }
-            else
-                self.expand(field.name);
         }
         else {
             //get data view
@@ -2599,10 +2599,10 @@ DataQueryable.prototype.select = function(attr) {
                 self.$view.fields.forEach(function(x) {
                     field = self.model.field(x.name);
                     if (field) {
-                        if (!field.many)
-                            arr.push(self.fieldOf(field.name));
-                        else
+                        if (field.many || (field.mapping && field.mapping.associationType === 'junction'))
                             self.expand(field.name);
+                        else
+                            arr.push(self.fieldOf(field.name));
                     }
                     else {
                         arr.push(self.fieldOf(x.name));
@@ -2611,6 +2611,7 @@ DataQueryable.prototype.select = function(attr) {
             }
             //select a field from a joined entity
             else if (/\//.test(attr)) {
+                arr = arr || [];
                 var expr = selecteNestedAttribute.call(self, attr);
                 if (expr) { arr.push(expr); }
             }
@@ -2628,10 +2629,11 @@ DataQueryable.prototype.select = function(attr) {
                 if (typeof x === 'string') {
                     field = self.model.field(x);
                     if (field) {
-                        if (!field.many)
-                            arr.push(self.fieldOf(field.name));
-                        else
+                        if (field.many || (field.mapping && field.mapping.associationType === 'junction'))
                             self.expand(field.name);
+                        else
+                            arr.push(self.fieldOf(field.name));
+
                     }
                     else {
                         arr.push(self.fieldOf(x));
@@ -2649,7 +2651,7 @@ DataQueryable.prototype.select = function(attr) {
         if (!self.query.hasFields()) {
             //enumerate fields
             var fields = array(self.model.attributes).where(function(x) {
-                return (!x.many);
+                return !(x.many || (x.mapping && x.mapping.associationType === 'junction'));
             }).select(function(x) {
                 var f = qry.fields.select(x.name).from(self.model.viewAdapter);
                 if (x.property)
@@ -2833,18 +2835,7 @@ DataQueryable.prototype.allInternal = function(callback) {
     delete this.query.$take;
     //validate already selected fields
     if (!self.query.hasFields()) {
-        //enumerate fields
-        var fields = array(self.model.attributes).where(function(x) {
-            return (!x.many);
-        }).select(function(x) {
-            var f = qry.fields.select(x.name).from(self.model.viewAdapter);
-            if (x.property)
-                f.as(x.property);
-            return f;
-
-        }).toArray();
-        //and select fields
-        self.select(fields);
+        self.select();
     }
     callback = callback || function() {};
     //execute select
@@ -2875,17 +2866,7 @@ DataQueryable.prototype.take = function(n, callback) {
     callback = callback || function() {};
     //validate already selected fields
     if (!self.query.hasFields()) {
-        //enumerate fields
-        var fields = array(self.model.attributes).where(function(x) {
-            return (!x.many);
-        }).select(function(x) {
-            var f = qry.fields.select(x.name).from(self.model.viewAdapter);
-            if (x.property)
-                f.as(x.property);
-            return f;
-        }).toArray();
-        //and select fields
-        self.select(fields);
+        self.select();
     }
     //execute select
     self.execute(callback);
@@ -4995,7 +4976,6 @@ DataObjectJunction.prototype.removeSingleObject = function(obj, callback) {
     relationModel.where(DataObjectJunction.STR_OBJECT_FIELD).equal(parentId).and(DataObjectJunction.STR_VALUE_FIELD).equal(childId).first(function(err, result) {
         if (err) {
             callback(err);
-            return;
         }
         else {
             if (!result) {
@@ -5502,14 +5482,14 @@ DataObjectAssociationListener.afterSave = function(e, callback) {
                         else if (x.mapping.parentModel===e.model.name) {
                             junction = new DataObjectJunction(obj, x.mapping);
                             if (e.state==1 || e.state==2) {
-                                junction.insert(childs, function(err, result) {
+                                junction.insert(childs, function(err) {
                                     if (err) {
                                         cb(err);
                                     }
                                     else {
                                         //delete associated items
                                         if (util.isArray(childs.deleted)){
-                                            junction.remove(childs.deleted, function(err, result) {
+                                            junction.remove(childs.deleted, function(err) {
                                                 if (err) {
                                                     cb(err);
                                                 }
