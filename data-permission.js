@@ -42,6 +42,11 @@ function DataPermissionEventArgs() {
      * @type {String}
      */
     this.privilege = null;
+    /**
+     * The data queryable object that emits the event.
+     * @type {DataQueryable|*}
+     */
+    this.emitter = null;
 }
 
 var PermissionMask = {
@@ -516,7 +521,12 @@ DataPermissionEventListener.effectiveAccounts = function(context, callback) {
 DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
 {
     if (typeof e.model==='undefined' || e.model==null) {
-        callback(null);
+        callback();
+        return;
+    }
+    //ensure silent query operation
+    if (e.emitter && e.emitter.$silent) {
+        callback();
         return;
     }
     var model= e.model, context = e.model.context, requestMask = 1, workspace = 1, privilege = model.name, parentPrivilege=null;

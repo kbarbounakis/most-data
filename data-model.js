@@ -651,13 +651,17 @@ DataModel.prototype.registerListeners = function() {
     this.on('after.save', DataObjectCachingListener.afterSave);
     //after remove (clear caching)
     this.on('after.remove', DataObjectCachingListener.afterRemove);
-    //register lookup model listeners
-    if (this.type === 'lookup') {
-        //after save (clear lookup caching)
-        this.on('after.save', DataModelLookupCachingListener.afterSave);
-        //after remove (clear lookup caching)
-        this.on('after.remove', DataModelLookupCachingListener.afterRemove);
-    }
+    /**
+     * change:8-Jun 2015
+     * description: Set lookup default listeners as obsolete.
+     */
+    ////register lookup model listeners
+    //if (this.type === 'lookup') {
+    //    //after save (clear lookup caching)
+    //    this.on('after.save', DataModelLookupCachingListener.afterSave);
+    //    //after remove (clear lookup caching)
+    //    this.on('after.remove', DataModelLookupCachingListener.afterRemove);
+    //}
     //register configuration listeners
     if (this.eventListeners) {
         for (var i = 0; i < this.eventListeners.length; i++) {
@@ -682,6 +686,12 @@ DataModel.prototype.registerListeners = function() {
                 //if listener exports afterRemove then register this as after.remove event listener
                 if (typeof m.afterRemove == 'function')
                     this.on('after.remove', m.afterRemove);
+                //if listener exports beforeExecute then register this as before.execute event listener
+                if (typeof m.beforeExecute == 'function')
+                    this.on('before.execute', m.beforeExecute);
+                //if listener exports afterExecute then register this as after.execute event listener
+                if (typeof m.afterExecute == 'function')
+                    this.on('after.execute', m.afterExecute);
             }
         }
     }
@@ -3253,6 +3263,7 @@ DataQueryable.prototype.execute = function(callback) {
         }
     });
 };
+
 /**
  * @private
  * @param {*} e
@@ -3260,39 +3271,44 @@ DataQueryable.prototype.execute = function(callback) {
  */
 DataQueryable.prototype.finalExecuteInternal = function(e, callback) {
     var self = this, context = self.ensureContext();
-    if (self.$silent) {
-        context.db.execute(e.query, null, function(err, result) {
-            if (err) { callback(err); return; }
-            self.afterExecute(result, function(err, result) {
-                if (err) { callback(err); return; }
-                //raise after execute event
-                self.model.emit('after.execute', e, function(err) {
+    //pass data queryable to event
+    e.emitter = this;
+    var afterListenerCount = self.model.listeners('after.execute').length;
+    self.model.emit('before.execute', e, function(err) {
+        if (err) {
+            callback(err);
+        }
+        else {
+            //if command has been completed, do not execute the command against the underlying database
+            if (typeof e['result'] !== 'undefined') {
+                //call after execute
+                var result = e['result'];
+                self.afterExecute(result, function(err, result) {
                     if (err) { callback(err); return; }
-                    callback(null, result);
-                });
-            });
-        });
-    }
-    else {
-        self.model.emit('before.execute', e, function(err) {
-            if (err) {
-                callback(err);
-            }
-            else {
-                context.db.execute(e.query, null, function(err, result) {
-                    if (err) { callback(err); return; }
-                    self.afterExecute(result, function(err, result) {
+                    if (afterListenerCount==0) { callback(null, result); return; }
+                    //raise after execute event
+                    self.model.emit('after.execute', e, function(err) {
                         if (err) { callback(err); return; }
-                        //raise after execute event
-                        self.model.emit('after.execute', e, function(err) {
-                            if (err) { callback(err); return; }
-                            callback(null, result);
-                        });
+                        callback(null, result);
                     });
                 });
+                return;
             }
-        });
-    }
+            context.db.execute(e.query, null, function(err, result) {
+                if (err) { callback(err); return; }
+                self.afterExecute(result, function(err, result) {
+                    if (err) { callback(err); return; }
+                    if (afterListenerCount==0) { callback(null, result); return; }
+                    //raise after execute event
+                    e.result = result;
+                    self.model.emit('after.execute', e, function(err) {
+                        if (err) { callback(err); return; }
+                        callback(null, result);
+                    });
+                });
+            });
+        }
+    });
 }
 
 /**
@@ -3350,8 +3366,9 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                 }
                                 else {
                                     var key=null,
+                                        attr = (field.property || field.name),
                                         selector = function(x) {
-                                            return x[field.name]==key;
+                                            return x[attr]==key;
                                         },
                                         iterator = function(x) {
                                             key =x[mapping.parentField];

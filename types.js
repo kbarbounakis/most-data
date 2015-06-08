@@ -171,6 +171,10 @@ function DataEventArgs() {
      * @type {Number|*}
      */
     this.state = undefined;
+    /**
+     * @type {DataQueryable|*}
+     */
+    this.emitter = undefined;
 }
 
 /**
