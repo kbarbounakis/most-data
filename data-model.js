@@ -633,6 +633,13 @@ DataModel.prototype.clone = function(context) {
  */
 DataModel.prototype.registerListeners = function() {
     //register system event listeners
+    this.removeAllListeners('before.save');
+    this.removeAllListeners('after.save');
+    this.removeAllListeners('before.remove');
+    this.removeAllListeners('after.remove');
+    this.removeAllListeners('before.execute');
+    this.removeAllListeners('after.execute');
+
     //0. Permission Event Listener
     var perms = require('./data-permission');
     //1. State validator listener
@@ -3401,7 +3408,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                             //get parent model
                             var parentModel = self.model.context.model(mapping.parentModel);
                             //query parent with parent key values
-                            var q = parentModel.where(mapping.parentField).in(values).silent().flatten();
+                            var q = parentModel.where(mapping.parentField).in(values).flatten().silent();
                             //if selectable fields are defined
                             if (mapping.select)
                                 //select these fields
@@ -3430,7 +3437,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                         //get array of key values (for parents)
                             values = arr.filter(function(x) { return (typeof x[mapping.parentField]!=='undefined') && (x[mapping.parentField]!=null); }).map(function(x) { return x[mapping.parentField] });
                         //query junction model
-                        junction.baseModel.where('parentId').in(values).silent().all(function(err, junctions) {
+                        junction.baseModel.where('parentId').in(values).flatten().silent().all(function(err, junctions) {
                             if (err) { cb(err); return; }
                             //get array of child key values
                             values = junctions.map(function(x) { return x['valueId'] });
@@ -4673,7 +4680,7 @@ function DataObjectJunction(obj, association) {
             var childModel = self.parent.context.model(self.mapping.childModel);
             var childField = childModel.field(self.mapping.childField);
             var adapter = self.mapping.associationAdapter;
-            var tempModel = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
+            cfg.current.models[self.mapping.associationAdapter] = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
                 { name: "id", type:"Counter", primary: true },
                 { name: DataObjectJunction.STR_OBJECT_FIELD, nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
                 { name: DataObjectJunction.STR_VALUE_FIELD, nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
@@ -4684,8 +4691,6 @@ function DataObjectJunction(obj, association) {
                         fields: [ DataObjectJunction.STR_OBJECT_FIELD, DataObjectJunction.STR_VALUE_FIELD ]
                     }
                 ]};
-            //cache model
-            cfg.current.models[self.mapping.associationAdapter] = new DataModel(tempModel);
             //initialize base model
             baseModel = new DataModel(cfg.current.models[self.mapping.associationAdapter]);
             baseModel.context = self.parent.context;
