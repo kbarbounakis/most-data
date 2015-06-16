@@ -2652,6 +2652,11 @@ DataQueryable.prototype.select = function(attr) {
                             arr.push(self.fieldOf(field.name));
 
                     }
+                    else if (/\//.test(x)) {
+                        arr = arr || [];
+                        var expr = selecteNestedAttribute.call(self, x);
+                        if (expr) { arr.push(expr); }
+                    }
                     else {
                         arr.push(self.fieldOf(x));
                     }
@@ -2767,6 +2772,39 @@ DataQueryable.prototype.orderBy = function(attr) {
         return this;
     }
     this.query.orderBy(this.fieldOf(attr));
+    return this;
+};
+
+/**
+ * @param attr {string|Array}
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.groupBy = function(attr) {
+    var arr = [];
+    if (util.isArray(attr)) {
+        for (var i = 0; i < attr.length; i++) {
+            var x = attr[i];
+            if (/\//.test(x)) {
+                //nested group by
+                arr.push(orderByNestedAttribute.call(this, x));
+            }
+            else {
+                arr.push(this.fieldOf(x));
+            }
+        }
+    }
+    else {
+        if (/\//.test(attr)) {
+            //nested group by
+            arr.push(orderByNestedAttribute.call(this, attr));
+        }
+        else {
+            arr.push(this.fieldOf(attr));
+        }
+    }
+    if (arr.length>0) {
+        this.query.groupBy(arr);
+    }
     return this;
 };
 
