@@ -606,7 +606,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
         //tuning up operation
         //validate request mask permissions against all users privilege { mask:<requestMask>,disabled:false,account:"*" }
         var allUsersPrivilege = modelPrivileges.find(function(x) {
-            return (((x.mask && requestMask)==requestMask) && !x.disabled && (x.account==='*'));
+            return (((x.mask & requestMask)==requestMask) && !x.disabled && (x.account==='*'));
         });
         if (typeof allUsersPrivilege !== 'undefined') {
             //do nothing
@@ -619,7 +619,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
             if (err) { callback(err); return; }
             //get all enabled privileges
             var privileges = modelPrivileges.filter(function(x) {
-                return !x.disabled && (x.mask && requestMask == requestMask);
+                return !x.disabled && ((x.mask & requestMask) == requestMask);
             });
 
             var cancel = false, assigned = false, entity = qry.entity(model.viewAdapter),
