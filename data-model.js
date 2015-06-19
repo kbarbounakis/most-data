@@ -2724,40 +2724,80 @@ DataQueryable.prototype.alsoSelect = function(attr) {
     }
 };
 
+DataQueryable.prototype.dateOf = function(attr) {
+    if (typeof attr ==='undefined' || attr === null)
+        return attr;
+    if (typeof attr !=='string')
+        return attr;
+    return this.fieldOf('date(' + attr + ')');
+}
+
 /**
  * @param attr {string|*}
- * @returns {DataQueryable|QueryField}
+ * @param alias {string=}
+ * @returns {DataQueryable|QueryField|*}
  */
-DataQueryable.prototype.fieldOf = function(attr) {
+DataQueryable.prototype.fieldOf = function(attr, alias) {
 
     if (typeof attr ==='undefined' || attr === null)
         return attr;
     if (typeof attr !=='string')
         return attr;
-    var matches = /(count|avg|sum|min|max)\((.*?)\)/i.exec(attr);
+    var matches = /(count|avg|sum|min|max)\((.*?)\)/i.exec(attr), res, field, aggr;
     if (matches) {
-        var field = this.model.field(matches[2]);
+        //get field
+        field = this.model.field(matches[2]);
+        //get aggregate function
+        aggr = matches[1];
         if (typeof  field === 'undefined' || field === null)
             throw new Error(util.format('The specified field %s cannot be found in target model.', matches[2]));
-        if (matches[1]=='count')
-            return qry.fields.count(field.name).from(this.model.viewAdapter).as('countOf'.concat(matches[2]));
-        else if (matches[1]=='avg')
-            return qry.fields.average(field.name).from(this.model.viewAdapter).as('avgOf'.concat(matches[2]));
-        else if (matches[1]=='sum')
-            return qry.fields.sum(field.name).from(this.model.viewAdapter).as('sumOf'.concat(matches[2]));
-        else if (matches[1]=='min')
-            return qry.fields.min(field.name).from(this.model.viewAdapter).as('minOf'.concat(matches[2]));
-        else if (matches[1]=='max')
-            return qry.fields.max(field.name).from(this.model.viewAdapter).as('maxOf'.concat(matches[2]));
+        if (typeof alias === 'undefined' || alias == null) {
+            matches = /as\s(\w+)$/i.exec(attr);
+            if (matches) {
+                alias = matches[1];
+            }
+            else {
+                alias = aggr.concat('Of', field.name);
+            }
+        }
+        if (aggr=='count')
+            return qry.fields.count(field.name).from(this.model.viewAdapter).as(alias);
+        else if (aggr=='avg')
+            return qry.fields.average(field.name).from(this.model.viewAdapter).as(alias);
+        else if (aggr=='sum')
+            return qry.fields.sum(field.name).from(this.model.viewAdapter).as(alias);
+        else if (aggr=='min')
+            return qry.fields.min(field.name).from(this.model.viewAdapter).as(alias);
+        else if (aggr=='max')
+            return qry.fields.max(field.name).from(this.model.viewAdapter).as(alias);
     }
     else {
-        var field = this.model.field(attr);
-        if (typeof  field === 'undefined' || field === null)
-            throw new Error(util.format('The specified field %s cannot be found in target model.', attr));
-        var f = qry.fields.select(field.name).from(this.model.viewAdapter);
-        if (field.property)
-            return f.as(field.property)
-        return f;
+        matches = /(\w+)\((.*?)\)/i.exec(attr);
+        if (matches) {
+            res = { };
+            field = this.model.field(matches[2]);
+            aggr = matches[1];
+            if (typeof  field === 'undefined' || field === null)
+                throw new Error(util.format('The specified field %s cannot be found in target model.', matches[2]));
+            if (typeof alias === 'undefined' || alias == null) {
+                matches = /as\s(\w+)$/i.exec(attr);
+                if (matches) {
+                    alias = matches[1];
+                }
+            }
+            var prop = alias || field.property || field.name;
+            res[prop] = { }; res[prop]['$' + aggr] = [ qry.fields.select(field.name).from(this.model.viewAdapter) ];
+            return res;
+        }
+        else {
+            field = this.model.field(attr);
+            if (typeof  field === 'undefined' || field === null)
+                throw new Error(util.format('The specified field %s cannot be found in target model.', attr));
+            var f = qry.fields.select(field.name).from(this.model.viewAdapter);
+            if (field.property)
+                return f.as(field.property)
+            return f;
+        }
     }
     return this;
 };
