@@ -266,6 +266,11 @@ function DataField() {
      * @type  {{name: string, value: *}[]}
      */
     this.options = null;
+    /**
+     * Gets or sets a boolean that indicates whether this fields is a view only field or not.
+     * @type  {boolean}
+     */
+    this.virtual = false;
 }
 /**
  * @class DataAssociationMapping
@@ -366,6 +371,7 @@ function EmptyQueryExpression() {
  * Database Object Management for node.js
  * @class {DataModel}
  * @property {Array} seed - An array instance that represents a collection of items to be seeded when the model is being upgraded for the first time
+ * @property {string} classPath - Gets or sets a string which represents the path of the DataObject subclass associated with this model.
  * @constructor
  * @augments EventEmitter2
  * @param {*=} obj An object instance that holds data model attributes. This parameter is optional.
@@ -943,6 +949,70 @@ DataModel.prototype.filter = function(params, callback) {
         }
     });
 };
+/**
+ *
+ * @param {string|*} constraint
+ * @param {*} target
+ * @returns {DataQueryable=}
+ */
+function constraintAsQueryable(constraint, target) {
+    /**
+     * @type {DataModel|*}
+     */
+    var self = this, con = constraint;
+    if (typeof constraint === 'string') {
+        self.constraints = self.constraints || [];
+        con = self.constraints.find(function(x) { return x.type === 'constraint'; });
+        if (dataCommon.isNullOrUndefined(con)) {
+            //throw new Error(util.forma('The specified constraint (%s) cannot be found in constraints collection.', constraint));
+            return;
+        }
+    }
+    if (!dataCommon.isNullOrUndefined(target)) {
+        con.fields = con.fields || [];
+        if (con.fields.length==0) { return; }
+        //enumerate fields
+        var find = { }, result = new DataQueryable(self), value, bQueried = false;
+        for (var i = 0; i < con.fields.length; i++) {
+            var x = con.fields[i], field = self.field(x);
+            if (dataCommon.isNullOrUndefined(field)) {
+                throw new Error('A field which is defined in a constraint cannot be found in target model.');
+            }
+            if (target.hasOwnProperty(x)) {
+                if (typeof target[x] !== 'undefined' && target[x] != null) {
+                    var mapping = self.inferMapping(x);
+                    if (typeof mapping === 'undefined' || mapping === null)
+                        value = target[x];
+                    else if ((mapping.associationType==='association') && (mapping.childModel===self.name)) {
+                        if (typeof target[x] === 'object')
+                            value = target[x][mapping.parentField];
+                        else
+                            value = target[x];
+                    }
+                    else {
+                        //unsupported type of mapping
+                        return;
+                    }
+                }
+                else
+                //cannot search by constraint because of null or undefined constraint field
+                    return;
+                //add query expression
+                if (bQueried) {
+                    result.and(x).equal(value);
+                }
+                else {
+                    result.where(x).equal(value);
+                    bQueried = true;
+                }
+            }
+            else {
+                //cannot search by constraint because of missing field
+                return;
+            }
+        }
+    }
+}
 
 /**
  *
@@ -951,7 +1021,7 @@ DataModel.prototype.filter = function(params, callback) {
  */
 DataModel.prototype.find = function(obj) {
     var self = this, result;
-    if ((obj===undefined) || (obj==null))
+    if (dataCommon.isNullOrUndefined(obj))
     {
         result = new DataQueryable(this);
         result.where(self.primaryKey).equal(null);
@@ -1178,7 +1248,7 @@ DataModel.prototype.convertInternal = function(obj) {
 DataModel.prototype.convert = function(obj, typeConvert)
 {
     var self = this;
-    if (typeof obj !== 'object' || obj == null)
+    if (typeof obj === 'undefined' || obj == null)
         return null;
     /**
      * @constructor
@@ -1187,32 +1257,37 @@ DataModel.prototype.convert = function(obj, typeConvert)
     var DataObjectClass = self['DataObjectClass'];
     if (typeof DataObjectClass === 'undefined')
     {
-        //try to find class file with data model's name in lower case
-        // e.g. OrderDetail -> orderdetail-model.js (backward compatibility naming convention)
-        var classPath = path.join(process.cwd(),'app','models',self.name.toLowerCase().concat('-model.js'));
-        try {
-            DataObjectClass = require(classPath);
+        if (typeof self.classPath === 'string') {
+            DataObjectClass = require(self.classPath);
         }
-        catch(e) {
-            if (e.code === 'MODULE_NOT_FOUND') {
-                try {
-                    //if the specified class file was not found try to dasherize model name
-                    // e.g. OrderDetail -> order-detail-model.js
-                    classPath = path.join(process.cwd(),'app','models',dataCommon.dasherize(self.name).concat('-model.js'));
-                    DataObjectClass = require(classPath);
-                }
-                catch(e) {
-                    if (e.code === 'MODULE_NOT_FOUND') {
-                        //if , finally, we are unable to find class file, load default DataObject class
-                        DataObjectClass = DataObject;
-                    }
-                    else {
-                        throw e;
-                    }
-                }
+        else {
+            //try to find class file with data model's name in lower case
+            // e.g. OrderDetail -> orderdetail-model.js (backward compatibility naming convention)
+            var classPath = path.join(process.cwd(),'app','models',self.name.toLowerCase().concat('-model.js'));
+            try {
+                DataObjectClass = require(classPath);
             }
-            else {
-                throw e;
+            catch(e) {
+                if (e.code === 'MODULE_NOT_FOUND') {
+                    try {
+                        //if the specified class file was not found try to dasherize model name
+                        // e.g. OrderDetail -> order-detail-model.js
+                        classPath = path.join(process.cwd(),'app','models',dataCommon.dasherize(self.name).concat('-model.js'));
+                        DataObjectClass = require(classPath);
+                    }
+                    catch(e) {
+                        if (e.code === 'MODULE_NOT_FOUND') {
+                            //if , finally, we are unable to find class file, load default DataObject class
+                            DataObjectClass = DataObject;
+                        }
+                        else {
+                            throw e;
+                        }
+                    }
+                }
+                else {
+                    throw e;
+                }
             }
         }
         //cache DataObject class property
@@ -1220,21 +1295,35 @@ DataModel.prototype.convert = function(obj, typeConvert)
     }
 
     if (util.isArray(obj)) {
-        var arr = [];
+        var arr = [], src;
         obj.forEach(function(x) {
-            var o = new DataObjectClass();
-            util._extend(o, x);
-            if (typeConvert)
-                self.convertInternal(o);
-            o.context = self.context;
-            o.type = self.name;
-            arr.push(o);
+            if (typeof x !== 'undefined' && x!=null) {
+                var o = new DataObjectClass();
+                if (typeof x === 'object') {
+                    util._extend(o, x);
+                }
+                else {
+                    src = {}; src[self.primaryKey] = x;
+                    util._extend(o, src);
+                }
+                if (typeConvert)
+                    self.convertInternal(o);
+                o.context = self.context;
+                o.type = self.name;
+                arr.push(o);
+            }
         });
         return arr;
     }
     else {
         var result = new DataObjectClass();
-        util._extend(result, obj);
+        if (typeof obj === 'object') {
+            util._extend(result, obj);
+        }
+        else {
+            src = {}; src[self.primaryKey] = obj;
+            util._extend(result, src);
+        }
         if (typeConvert)
             self.convertInternal(result);
         result.context = self.context;
@@ -2388,11 +2477,19 @@ function resolveNestedAttribute(attr) {
 function orderByNestedAttribute(attr) {
     return resolveNestedAttribute.call(this, attr);
 }
-
-function selecteNestedAttribute(attr) {
+/**
+ * Returns a select expression based on the given nested attribute and alias.
+ * @param {string|*} attr
+ * @param {string=} alias
+ * @returns {*}
+ */
+function selecteNestedAttribute(attr, alias) {
     var expr = resolveNestedAttribute.call(this, attr);
     if (expr) {
-        expr.as(attr.replace(/\//g,'_'));
+        if (typeof alias === 'undefined' || alias == null)
+            expr.as(attr.replace(/\//g,'_'));
+        else
+            expr.as(alias)
     }
     return expr;
 }
@@ -2615,12 +2712,24 @@ DataQueryable.prototype.select = function(attr) {
                 arr = [];
                 self.$view.fields.forEach(function(x) {
                     field = self.model.field(x.name);
+                    //if a field with the given name exists in target model
                     if (field) {
+                        //check if this field has an association mapping
                         if (field.many || (field.mapping && field.mapping.associationType === 'junction'))
                             self.expand(field.name);
                         else
                             arr.push(self.fieldOf(field.name));
                     }
+                    //test nested attribute expressiom e.g. person/name
+                    else if (/(\w+)\/(\w+)/.test(x.name)) {
+                        var expr = selecteNestedAttribute.call(self, x.name, x.property);
+                        if (expr) { arr.push(expr); }
+                    }
+                    //test aggregate function expression e.g. count(id)
+                    else if (/(\w+)\((\w+)\)/.test(x.name)) {
+                        if (expr) { arr.push(self.fieldOf(x.name, x.property)); }
+                    }
+                    //finally try to select a field with the name provided
                     else {
                         arr.push(self.fieldOf(x.name));
                     }
@@ -2790,6 +2899,7 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
             return res;
         }
         else {
+            //try to match field with expression [field] as [alias] or [nested]/[field] as [alias]
             field = this.model.field(attr);
             if (typeof  field === 'undefined' || field === null)
                 throw new Error(util.format('The specified field %s cannot be found in target model.', attr));
@@ -3888,6 +3998,18 @@ DataObject.prototype.getModel = function() {
 };
 
 /**
+ * @returns {DataModel}
+ */
+DataObject.prototype.idOf = function() {
+    if (this.context) {
+        var model = this.context.model(this.type);
+        if (model) {
+            return this[model.primaryKey];
+        }
+    }
+};
+
+/**
  * @param {String} name The relation name
  * @returns {DataQueryable}
  */
@@ -3918,7 +4040,35 @@ DataObject.prototype.property = function(name)
     }
     return null;
 };
-
+/**
+ * @param {String} name
+ * @param {function(Error=,*=)} callback
+ */
+DataObject.prototype.attrOf = function(name, callback) {
+    var model = this.getModel(),
+        mapping = model.inferMapping(name);
+    if (typeof mapping === 'undefined' || mapping == null) {
+        return callback(null, this[name]);
+    }
+    if (this.hasOwnProperty(name)) {
+        if (typeof this[name] === 'object' && this[name] != null) {
+            callback(null, this[name][mapping.parentField]);
+        }
+        else if (this[name] == null) {
+            callback();
+        }
+        else {
+            callback(null, this[name]);
+        }
+    }
+    else {
+        model.where(model.primaryKey).equal(this[model.primaryKey]).select(mapping.childField).flatten().asArray().first(function(err, result) {
+            if (err) { return callback(err); }
+            this[name] = result;
+            return callback(null, result);
+        });
+    }
+};
 /**
  * @param {String} name
  * @param {function(Error=,*=)} callback
