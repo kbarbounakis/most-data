@@ -844,51 +844,17 @@ DataModel.prototype.filter = function(params, callback) {
                     groupBy = params.$groupby || params.$group,
                     expand = params.$expand,
                     top = params.$top || params.$take;
-                //set $groupby
-                var arr, fields, item, field;
-                if (typeof groupBy === 'string') {
-                    arr = groupBy.split(',');
-                    fields = [];
-                    arr.filter(function(x) {
-                        return (x.length>0);
-                    }).forEach(function(x) {
-                        field = self.field(x);
-                        if (field) {
-                            fields.push(field.name);
-                        }
-                    });
-                    if (fields.length>0) {
-                        q.query.groupBy(fields);
-                    }
-                }
                 //set $select
                 if (typeof select === 'string') {
                     arr = select.split(',');
-                    fields = [];
-                    for (var i = 0; i < arr.length; i++) {
-                        item = string(arr[i]).trim().toString();
-                        field = self.field(item);
-                        if (field)
-                            fields.push(field.name);
-                        else {
-                            //validate aggregate functions
-                            if (/(count|avg|sum|min|max)\((.*?)\)/i.test(item)) {
-                                fields.push(q.fieldOf(item));
-                            }
-                        }
-                    }
-                    if (fields.length>0) {
-                        q.select(fields);
-                    }
-                    else {
-                        //search for data view
-                        if (arr.length==1) {
-                            var view = self.dataviews(arr[0]);
-                            if (view) {
-                                q.select(view.name);
-                            }
-                        }
-                    }
+                    if (arr.length>0)
+                        q.select(arr);
+                }
+                //set $group
+                var arr, fields, item, field;
+                if (typeof groupBy === 'string') {
+                    if (groupBy.length>0)
+                        q.groupBy(groupBy.split(','));
                 }
                 //set $skip
                 q.skip(skip);
@@ -898,7 +864,7 @@ DataModel.prototype.filter = function(params, callback) {
                 if (orderBy) {
                     arr = orderBy.split(',');
                     for (var i = 0; i < arr.length; i++) {
-                        var item = string(arr[i]).trim().toString(), name = null, direction = 'asc';
+                        item = string(arr[i]).trim().toString(), name = null, direction = 'asc';
                         if (/ asc$/i.test(item)) {
                             name=item.substr(0,item.length-4);
                         }
@@ -911,22 +877,10 @@ DataModel.prototype.filter = function(params, callback) {
                         }
                         if (name) {
                             field = self.field(name);
-                            if (field) {
-                                if (direction=='desc')
-                                    q.orderByDescending(name);
-                                else
-                                    q.orderBy(name);
-                            }
-                            else {
-                                //validate aggregate functions
-                                if (/(count|avg|sum|min|max)\((.*?)\)/i.test(name) || /\//.test(name)) {
-                                    if (direction=='desc')
-                                        q.orderByDescending(name);
-                                    else
-                                        q.orderBy(name);
-                                }
-                            }
-
+                            if (direction=='desc')
+                                q.orderByDescending(name);
+                            else
+                                q.orderBy(name);
                         }
                     }
                 }
@@ -2177,18 +2131,23 @@ DataModel.prototype.field = function(name)
         return null;
     return this.attributes.find(function(x) { return (x.name==name) || (x.property==name); });
 };
-
-DataModel.prototype.fieldOf = function(attr) {
+/**
+ *
+ * @param {string|*} attr
+ * @param {string=} alias
+ * @returns {DataQueryable|QueryField|*}
+ */
+DataModel.prototype.fieldOf = function(attr, alias) {
 
     var q = new DataQueryable(this);
-    return q.fieldOf(attr);
+    return q.fieldOf(attr, alias);
 };
 
 /**
  * Gets the specified model view
  * @param {string} name
  * @param {DataView=} obj
- * @returns {DataView}
+ * @returns {DataView=}
  */
 DataModel.prototype.dataviews = function(name, obj) {
     var self = this;
@@ -2197,8 +2156,8 @@ DataModel.prototype.dataviews = function(name, obj) {
         throw new Error('Not implemented.');
     var re = new RegExp('^' + name.replace('$','\$') + '$', 'ig')
     var view = self.views.filter(function(x) { return re.test(x.name);})[0];
-    if (typeof view==='undefined'|| view == null)
-        return null;
+    if (dataCommon.isNullOrUndefined(view))
+        return;
     return util._extend(new DataView(self), view);
 };
 /**
@@ -2683,6 +2642,79 @@ DataQueryable.prototype.contains = function(value) {
     this.query.contains(value);
     return this;
 };
+/**
+ * @param string s
+ * @returns {{name: string, property: string=}=}
+ */
+function testAttribute(s) {
+    if (typeof s !== 'string')
+        return;
+    var matches;
+    /**
+     * attribute aggregate function with alias e.g. f(x) as a
+     */
+    matches = /^(\w+)\((\w+)\)\sas\s(\w+)$/i.exec(s);
+    if (matches) {
+        return { name: matches[1] + '(' + matches[2] + ')' , property:matches[3] };
+    }
+    /**
+     * attribute aggregate function with alias e.g. x as a
+     */
+    matches = /^(\w+)\sas\s(\w+)$/i.exec(s);
+    if (matches) {
+        return { name: matches[1] , property:matches[2] };
+    }
+    /**
+     * attribute aggregate function with alias e.g. f(x)
+     */
+    matches = /^(\w+)\((\w+)\)$/i.exec(s);
+    if (matches) {
+        return { name: matches[1] + '(' + matches[2] + ')' };
+    }
+    // only attribute e.g. x
+    if (/^(\w+)$/.test(s)) {
+        return { name: s};
+    }
+}
+
+/**
+ * @param string s
+ * @returns {{name: string, property: string=}=}
+ */
+function testNestedAttribute(s) {
+    if (typeof s !== 'string')
+        return;
+    var matches;
+    /**
+     * nested attribute aggregate function with alias e.g. f(x/b) as a
+     */
+    matches = /^(\w+)\((\w+)\/(\w+)\)\sas\s(\w+)$/i.exec(s);
+    if (matches) {
+        return { name: matches[1] + '(' + matches[2] + '/' + matches[3]  + ')', property:matches[4] };
+    }
+    /**
+     * nested attribute with alias e.g. x/b as a
+     */
+    matches = /^(\w+)\/(\w+)\sas\s(\w+)$/i.exec(s);
+    if (matches) {
+        return { name: matches[1] + '/' + matches[2], property:matches[3] };
+    }
+    /**
+     * nested attribute aggregate function with alias e.g. f(x/b)
+     */
+    matches = /^(\w+)\((\w+)\/(\w+)\)$/i.exec(s);
+    if (matches) {
+        return { name: matches[1] + '(' + matches[2] + '/' + matches[3]  + ')' };
+    }
+    /**
+     * nested attribute with alias e.g. x/b
+     */
+    matches = /^(\w+)\/(\w+)$/.exec(s);
+    if (matches) {
+        return { name: s };
+    }
+}
+
 
 /**
  * @param {*=} attr  An array of fields, a field or a view name
@@ -2690,7 +2722,7 @@ DataQueryable.prototype.contains = function(value) {
  */
 DataQueryable.prototype.select = function(attr) {
 
-    var self = this, arr, mapped = false;
+    var self = this, arr, mapped = false, expr, matched;
     if (typeof attr === 'string') {
         //validate field or model view
         var field = self.model.field(attr);
@@ -2720,25 +2752,28 @@ DataQueryable.prototype.select = function(attr) {
                         else
                             arr.push(self.fieldOf(field.name));
                     }
-                    //test nested attribute expressiom e.g. person/name
-                    else if (/(\w+)\/(\w+)/.test(x.name)) {
-                        var expr = selecteNestedAttribute.call(self, x.name, x.property);
-                        if (expr) { arr.push(expr); }
-                    }
-                    //test aggregate function expression e.g. count(id)
-                    else if (/(\w+)\((\w+)\)/.test(x.name)) {
-                        if (expr) { arr.push(self.fieldOf(x.name, x.property)); }
-                    }
-                    //finally try to select a field with the name provided
                     else {
-                        arr.push(self.fieldOf(x.name));
+                        var b = testNestedAttribute(x.name);
+                        if (b) {
+                            expr = selecteNestedAttribute.call(self, b.name, x.property);
+                            if (expr) { arr.push(expr); }
+                        }
+                        else {
+                            b = testAttribute(x.name);
+                            if (b) {
+                                arr.push(self.fieldOf(b.name, x.property));
+                            }
+                            else {
+                                arr.push(self.fieldOf(x.name));
+                            }
+                        }
                     }
                 });
             }
             //select a field from a joined entity
             else if (/\//.test(attr)) {
                 arr = arr || [];
-                var expr = selecteNestedAttribute.call(self, attr);
+                expr = selecteNestedAttribute.call(self, attr);
                 if (expr) { arr.push(expr); }
             }
         }
@@ -2749,6 +2784,7 @@ DataQueryable.prototype.select = function(attr) {
     }
     else {
         //get array of attributes
+
         if (util.isArray(attr)) {
             arr = [];
             attr.forEach(function(x) {
@@ -2759,15 +2795,23 @@ DataQueryable.prototype.select = function(attr) {
                             self.expand(field.name);
                         else
                             arr.push(self.fieldOf(field.name));
-
                     }
-                    else if (/\//.test(x)) {
-                        arr = arr || [];
-                        var expr = selecteNestedAttribute.call(self, x);
-                        if (expr) { arr.push(expr); }
-                    }
+                    //test nested attribute and simple attribute expression
                     else {
-                        arr.push(self.fieldOf(x));
+                        var a = testNestedAttribute(x);
+                        if (a) {
+                            expr = selecteNestedAttribute.call(self, a.name, a.property);
+                            if (expr) { arr.push(expr); }
+                        }
+                        else {
+                            a = testAttribute(x);
+                            if (a) {
+                                arr.push(self.fieldOf(a.name, a.property));
+                            }
+                            else {
+                                arr.push(self.fieldOf(x));
+                            }
+                        }
                     }
                 }
                 else {
@@ -3512,7 +3556,7 @@ DataQueryable.prototype.finalExecuteInternal = function(e, callback) {
  * @private
  */
 DataQueryable.prototype.afterExecute = function(result, callback) {
-    var self = this;
+    var self = this, view;
     if (self.$expand) {
         //get distinct values
         var expands = self.$expand.distinct(function(x) { return x; });
@@ -3555,7 +3599,12 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                         else {
                             var field = associatedModel.field(mapping.childField),
                                 parentField = mapping.refersTo;
-                            associatedModel.where(field.name).in(values).flatten().silent().all(function(err, childs) {
+                            //search for view named summary
+                            var qChilds = associatedModel.where(field.name).in(values).flatten().silent();
+                            if (mapping.select) {
+                                qChilds.select(mapping.select);
+                            }
+                            qChilds.all(function(err, childs) {
                                 if (err) {
                                     cb(err);
                                 }
