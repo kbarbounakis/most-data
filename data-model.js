@@ -2742,8 +2742,10 @@ DataQueryable.prototype.select = function(attr) {
             //if data view was found
             if (self.$view) {
                 arr = [];
+                var name;
                 self.$view.fields.forEach(function(x) {
-                    field = self.model.field(x.name);
+                    name = x.name;
+                    field = self.model.field(name);
                     //if a field with the given name exists in target model
                     if (field) {
                         //check if this field has an association mapping
@@ -2753,18 +2755,23 @@ DataQueryable.prototype.select = function(attr) {
                             arr.push(self.fieldOf(field.name));
                     }
                     else {
-                        var b = testNestedAttribute(x.name);
+                        var b = testNestedAttribute(name);
                         if (b) {
                             expr = selecteNestedAttribute.call(self, b.name, x.property);
                             if (expr) { arr.push(expr); }
                         }
                         else {
-                            b = testAttribute(x.name);
+                            b = testAttribute(name);
                             if (b) {
                                 arr.push(self.fieldOf(b.name, x.property));
                             }
-                            else {
-                                arr.push(self.fieldOf(x.name));
+                            else if (/\./g.test(name)) {
+                                name = name.split('.')[0];
+                                arr.push(self.fieldOf(name));
+                            }
+                            else
+                            {
+                                arr.push(self.fieldOf(name));
                             }
                         }
                     }
@@ -3485,7 +3492,7 @@ DataQueryable.prototype.execute = function(callback) {
                     //add order fields
                     if (q.query.$order) {
                         if (util.isArray(e.query.$order)) {
-                            q.query.$order.forEach(x) (function(x) { e.query.$order.push(x); });
+                            q.query.$order.forEach(function(x) { e.query.$order.push(x); });
                         }
                         else {
                             e.query.$order = q.query.$order;
