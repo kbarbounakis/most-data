@@ -22,6 +22,13 @@ var array = require('most-array'),
     functions = require('./functions'),
     dataCache = require('./data-cache'),
     dataCommon = require('./data-common');
+
+/**
+ * CONSTANTS
+ */
+var STR_MISSING_CALLBACK_ARGUMENT = 'Missing argument. Callback function expected.',
+    STR_MISSING_ARGUMENT_CODE = 'EARGM';
+
 /**
  * Represents the default data context.
  * @class
@@ -175,6 +182,39 @@ function DataView(model) {
     });
 
 }
+/**
+ * Casts an object or an array of objects based on view's field collection.
+ * @param {Array|*} obj
+ * @returns {Array|*}
+ */
+DataView.prototype.cast = function(obj) {
+    var self = this, res;
+    var localFields = this.fields.filter(function(y) {
+        return !dataCommon.isNullOrUndefined(self.model.field(y.name));
+    });
+    if (util.isArray(obj)) {
+        var arr = [];
+        obj.forEach(function(x) {
+            res = {};
+            localFields.forEach(function(y) {
+                if (typeof x[y.name] !== 'undefined')
+                    res[y.name] = x[y.name];
+            });
+            arr.push(res);
+        });
+        return arr;
+    }
+    else {
+        res = { };
+        localFields.forEach(function(y) {
+            if (typeof obj[y.name] !== 'undefined')
+                res[y.name] = obj[y.name];
+        });
+        return res;
+    }
+};
+
+
 
 function DataField() {
     /**
@@ -1470,6 +1510,21 @@ DataModel.prototype.save = function(obj, callback)
         });
     });
 
+};
+/**
+ *
+ * @param {DataObject|*} obj
+ * @param {function(Error=,*=)} callback
+ */
+DataModel.prototype.inferState = function(obj, callback) {
+    var self = this;
+    var e = { state:0,model:self, target:obj };
+    DataStateValidatorListener.beforeSave(e, function(err) {
+        //if error return error
+        if (err) { return callback(err); }
+        //otherwise return the calucated state
+        callback(null, e.state);
+    });
 };
 /**
  * Saves the base object if any.
@@ -4004,6 +4059,7 @@ function DataModelMigration() {
  * @constructor
  * @augments EventEmitter2
  * @property {DataContext}  context - The HttpContext instance related to this object.
+ * @property {*}  selector - An object that represents a collection of selectors associated with this data object e.g is(':new'), is(':valid'), is(':enabled') etc
  */
 function DataObject(type, obj)
 {
@@ -4031,9 +4087,88 @@ function DataObject(type, obj)
     if (typeof obj !== 'undefined' && obj != null) {
         util._extend(this, obj);
     }
-
+    this.selector('new', function(callback) {
+        if (typeof callback !== 'function') { return new Error(STR_MISSING_CALLBACK_ARGUMENT, STR_MISSING_ARGUMENT_CODE); }
+        var self = this,
+            model = self.getModel();
+        model.inferState(self, function(err, state) {
+            if (err) { return callback(err); }
+            callback(null, (state==1));
+        });
+    }).selector('live', function(callback) {
+        if (typeof callback !== 'function') { return new Error(STR_MISSING_CALLBACK_ARGUMENT, STR_MISSING_ARGUMENT_CODE); }
+        var self = this,
+            model = self.getModel();
+        model.inferState(self, function(err, state) {
+            if (err) { return callback(err); }
+            callback(null, (state==2));
+        });
+    });
 }
 util.inherits(DataObject, __types__.EventEmitter2);
+
+var STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
+var ARGUMENT_NAMES = /(?:^|,)\s*([^\s,=]+)/g;
+function $args ( func ) {
+    var fnStr = func.toString().replace(STRIP_COMMENTS, '');
+    var argsList = fnStr.slice(fnStr.indexOf('(')+1, fnStr.indexOf(')'));
+    var result = argsList.match( ARGUMENT_NAMES );
+
+    if(result === null) {
+        return [];
+    }
+    else {
+        var stripped = [];
+        for ( var i = 0; i < result.length; i++  ) {
+            stripped.push( result[i].replace(/[\s,]/g, '') );
+        }
+        return stripped;
+    }
+}
+
+/**
+ *
+ * @param {string} name
+ * @param {function=} selector
+ */
+DataObject.prototype.selector = function(name, selector) {
+    /**
+     * @private
+     * @type {{}|*}
+     */
+    this.selectors = this.selectors || {};
+    if (typeof name !== 'string') {
+        return new Error('Invalid argument. String expected.', 'EARG');
+    }
+    if (typeof selector === 'undefined') {
+        return this.selectors[name];
+    }
+    //get arguments
+    this.selectors[name] = selector;
+    return this;
+};
+
+/**
+ *
+ * @param {string} selector
+ * @returns {Q.IPromise|*}
+ */
+DataObject.prototype.is = function(selector) {
+    if (!/^:\w+$/.test(selector)) {
+        throw new Error('Invalid selector. A valid selector should always start with : e.g. :new or :live.');
+    }
+    this.selectors = this.selectors || {};
+    var fn = this.selectors[selector.substr(1)];
+    if (typeof fn !== 'function') {
+        throw new Error('The specified selector is no associated with this object.','EUNDEF');
+    }
+    var Q = require('q'), deferred = Q.defer();
+    fn.call(this, function(err, result) {
+        if (err) { return deferred.reject(err); }
+        deferred.resolve(result);
+    });
+    return deferred.promise;
+};
 
 /**
  * Gets the type of this data object.
@@ -4312,6 +4447,7 @@ DataObject.prototype.remove = function(context, callback) {
     }
     model.delete(self, callback);
 };
+
 /**
  * @class DataObjectRelation
  * @constructor
@@ -6104,8 +6240,8 @@ DataStateValidatorListener.beforeSave = function(e, callback) {
             callback(err);
         });
     }
-    catch(e) {
-        callback(e);
+    catch(er) {
+        callback(er);
     }
 };
 
