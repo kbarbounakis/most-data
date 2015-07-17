@@ -4087,6 +4087,15 @@ function DataObject(type, obj)
     if (typeof obj !== 'undefined' && obj != null) {
         util._extend(this, obj);
     }
+
+    var __selectors = { };
+    Object.defineProperty(this,'selectors',{
+        get: function() { return __selectors; } ,
+        set: function(value) { __selectors=value; },
+        enumerable:false,
+        configurable:false
+    });
+
     this.selector('new', function(callback) {
         if (typeof callback !== 'function') { return new Error(STR_MISSING_CALLBACK_ARGUMENT, STR_MISSING_ARGUMENT_CODE); }
         var self = this,

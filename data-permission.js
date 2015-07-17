@@ -13,6 +13,7 @@ var model = require('./data-model'),
     array = require('most-array'),
     qry = require('most-query'),
     async = require('async'),
+    types = require('./types'),
     dataCache = require('./data-cache');
 
 
@@ -364,8 +365,7 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
                 }
                 else {
                     if (e.throwError && !e.result) {
-                        var error = new Error('Access denied.');
-                        error.status = 401;
+                        var error = new types.AccessDeniedException();
                         callback(error);
                     }
                     else {

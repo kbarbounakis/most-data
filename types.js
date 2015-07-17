@@ -264,6 +264,39 @@ var UndefinedRegex = /^undefined$/ig;
 var IntegerRegex =/^[-+]?\d+$/g;
 var FloatRegex =/^[+-]?\d+(\.\d+)?$/g;
 
+/*
+ * EXCEPTIONS
+ */
+
+/**
+ * @class DataException
+ * @param {string=} code
+ * @param {string=} message
+ * @param {string=} innerMessage
+ * @constructor
+ * @property {number} status
+ * @augments Error
+ */
+function DataException(code, message, innerMessage) {
+    this.code  = code || 'EDATA';
+    this.message = message || 'A general data error occured.';
+    if (typeof innerMessage !== 'undefined')
+        this.innerMessage = innerMessage;
+}
+util.inherits(DataException, Error);
+
+/**
+ * @class AccessDeniedException
+ * @param {string=} message
+ * @param {string=} innerMessage
+ * @constructor
+ */
+function AccessDeniedException(message, innerMessage) {
+    AccessDeniedException.super_.call(this, 'EACCESS', ('Access Denied' || message) , innerMessage);
+    this.status = 401;
+}
+util.inherits(AccessDeniedException, DataException);
+
 var types =
 {
     /**
@@ -376,7 +409,15 @@ var types =
                 return val.toString();
             }
         }
-    }
+    },
+    /**
+     * @constructs DataException
+     */
+    DataException:DataException,
+    /**
+     * @constructs AccessDeniedException
+     */
+    AccessDeniedException:AccessDeniedException
 };
 
 if (typeof exports !== 'undefined')
