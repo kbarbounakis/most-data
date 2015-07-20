@@ -1367,7 +1367,7 @@ DataModel.prototype.cast = function(obj)
                     if (typeof mapping === 'undefined' || mapping === null)
                         result[x.name] = obj[name];
                     else if ((mapping.associationType==='association') && (mapping.childModel===self.name)) {
-                        if (typeof obj[name] === 'object')
+                        if ((typeof obj[name] === 'object') && (obj[name] != null))
                             //set associated key value (e.g. primary key value)
                             result[x.name] = obj[name][mapping.parentField];
                         else
@@ -1410,7 +1410,7 @@ DataModel.prototype.recast = function(dest, src, callback)
                 }
                 else if (mapping.associationType==='association') {
 
-                    if (typeof dest[name] === 'object') {
+                    if (typeof dest[name] === 'object' && dest[name] ) {
                         //check associated object
                         if (dest[name][mapping.parentField]===src[field.name]) {
                             //return
