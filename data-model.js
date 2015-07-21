@@ -3922,6 +3922,38 @@ DataQueryable.prototype.asArray = function(value) {
     }
     return this;
 };
+/**
+ * @param {string=} name
+ * @param {*=} value
+ * @returns {DataQueryable|*}
+ */
+DataQueryable.prototype.data = function(name, value) {
+    this.query.data = this.query.data || {};
+    if (typeof name === 'undefined') {
+        return this.query.data;
+    }
+    if (typeof value === 'undefined') {
+        return this.query.data[name];
+    }
+    else {
+        this.query.data[name] = value;
+    }
+    return this;
+};
+/**
+ * @param {string=} value
+ * @returns {string|DataQueryable}
+ */
+DataQueryable.prototype.title = function(value) {
+    return this.data('title', value);
+};
+/**
+ * @param {string=} value
+ * @returns {string|DataQueryable}
+ */
+DataQueryable.prototype.cache = function(value) {
+    return this.data('cache', value);
+};
 
 /**
  * Sets the expandable model or models.
