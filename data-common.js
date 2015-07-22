@@ -193,6 +193,14 @@ var dataCommon = {
      */
     isNullOrUndefined: function(obj) {
         return (typeof obj === 'undefined' || obj === null);
+    },
+    /**
+     * Returns a random integer between a minimum and a maximum value
+     * @param {number} min
+     * @param {number} max
+     */
+    randomInt: function(min, max) {
+        return Math.floor(Math.random()*max) + min;
     }
 };
 

@@ -14,7 +14,8 @@ var model = require('./data-model'),
     qry = require('most-query'),
     async = require('async'),
     types = require('./types'),
-    dataCache = require('./data-cache');
+    dataCache = require('./data-cache'),
+    common = require('./data-common');
 
 
 function DataPermissionEventArgs() {
@@ -730,7 +731,8 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                     else if (expr) {
                         var q = qry.query(model.viewAdapter).select([model.primaryKey]).distinct();
                         q.join(perms1).with(expr);
-                        e.query.join(q.as('q0')).with(qry.where(entity.select(model.primaryKey)).equal(qry.entity('q0').select(model.primaryKey)));
+                        var pqAlias = 'pq' + common.randomInt(100000,999999).toString();
+                        e.query.join(q.as(pqAlias)).with(qry.where(entity.select(model.primaryKey)).equal(qry.entity(pqAlias).select(model.primaryKey)));
                     }
                 }
                 callback(err);

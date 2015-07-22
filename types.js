@@ -159,7 +159,7 @@ EventEmitter2.prototype.once = function(type, listener) {
  * @constructor
  * @property {DataModel|*} model - Represents the underlying model.
  * @property {DataObject|*} target - Represents the underlying data object.
- * @property {Number|*} target - Represents the operation state (Update, Insert, Delete).
+ * @property {Number|*} state - Represents the operation state (Update, Insert, Delete).
  * @property {DataQueryable|*} emitter - Represents the event emitter, normally a DataQueryable object instance.
  * @property {*} query - Represents the underlying query expression. This property may be null.
  */
