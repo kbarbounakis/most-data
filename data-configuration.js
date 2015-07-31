@@ -204,7 +204,6 @@ function DataConfiguration() {
     });
 
 }
-
 /**
  * @returns {*}
  * @param name {string}
@@ -233,8 +232,12 @@ DataConfiguration.prototype.model = function(name)
         //and return
         return null;
     }
-    //read files
-    var files = fs.readdirSync(modelPath);
+    //read files from models directory
+    var files;
+    //store file list in a private variable
+    if (typeof this._files === 'undefined') { this._files = fs.readdirSync(modelPath); }
+    //and finally get this list of file
+    files = this._files;
     if (files.length==0)
         return null;
     var r = new RegExp('^' + name.concat('.json') + '$','i');
