@@ -63,8 +63,15 @@ function DefaultDataContext()
             //get data adapter type
             var adapterType = cfg.current.adapterTypes[adapter.invariantName];
             //validate data adapter type
-            if ((adapterType==null) || (adapterType===undefined))
-                throw new Error('Default data adapter type cannot be found.');
+            var er;
+            if (typeof adapterType === 'undefined' || adapterType == null) {
+                er = new Error('Invalid adapter type.'); er.code = 'EADAPTER';
+                throw er;
+            }
+            if (typeof adapterType.createInstance !== 'function') {
+                er= new Error('Invalid adapter type. Adapter initialization method is missing.'); er.code = 'EADAPTER';
+                throw er;
+            }
             //otherwise load adapter
             __db__ = adapterType.createInstance(adapter.options);
             return __db__;
@@ -1610,7 +1617,7 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
                 var target = self.cast(e.target);
                 var q = null, key = target[self.primaryKey];
                 if (e.state==1)
-                //create insert statement
+                    //create insert statement
                     q = qry.insert(target).into(self.sourceAdapter);
                 else
                 {
@@ -1641,24 +1648,41 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
                     });
                 }
                 else {
-                    db.execute(q, null, function(err, result) {
-                        if (err) {
-                            callback.call(self, err);
-                        }
-                        else {
-                            if (key)
-                                target[self.primaryKey] = key;
-                            //get updated object
-                            self.recast(e.target, target, function(err) {
-                                if (err) {
-                                    callback.call(self, err);
+                    var pm = e.model.field(self.primaryKey), nextIdentity, adapter = e.model.sourceAdapter;
+                    //search if adapter has a nextIdentity function (also primary key must be a counter and state equal to insert)
+                    if (pm.type === 'Counter' && typeof db.nextIdentity === 'function' && e.state==1) {
+                        nextIdentity = db.nextIdentity;
+                    }
+                    else {
+                        //otherwise use a dummy nextIdentity function
+                        nextIdentity = function(a, b, callback) { return callback(); }
+                    }
+                    nextIdentity.call(db, adapter, pm.name, function(err, insertedId) {
+                        if (err) { return callback.call(self, err); }
+                        if (insertedId) {
+                            //get object to insert
+                            if (q.$insert) {
+                                var o = q.$insert[adapter];
+                                if (o) {
+                                    //set the generated primary key
+                                    o[pm.name] = insertedId;
                                 }
-                                else {
-                                    //get inserted id
-                                    if (e.state==1) {
-                                        //validate identity primary key
-                                        var pm = e.model.field(self.primaryKey);
-                                        if (pm.type==='Counter') {
+                            }
+                        }
+                        db.execute(q, null, function(err, result) {
+                            if (err) {
+                                callback.call(self, err);
+                            }
+                            else {
+                                if (key)
+                                    target[self.primaryKey] = key;
+                                //get updated object
+                                self.recast(e.target, target, function(err) {
+                                    if (err) {
+                                        callback.call(self, err);
+                                    }
+                                    else {
+                                        if (pm.type==='Counter' && typeof db.nextIdentity !== 'function' && e.state==1) {
                                             //if data adapter contains lastIdentity function
                                             var lastIdentity = db.lastIdentity || function(lastCallback) {
                                                     if (typeof result === 'undefined' || result === null)
@@ -1684,17 +1708,11 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
                                             });
                                         }
                                     }
-                                    else {
-                                        //execute after update events
-                                        self.emit('after.save',e, function(err) {
-                                            //invoke callback
-                                            callback.call(self, err, e.target);
-                                        });
-                                    }
-                                }
-                            });
-                        }
+                                });
+                            }
+                        });
                     });
+
                 }
             });
         }

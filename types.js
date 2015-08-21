@@ -28,20 +28,21 @@ function DataAdapter(options) {
 }
 
 /**
- * Opens a native database connection
- * @param callback
+ * Opens a database connection
+ * @param {function(Error=)} callback
  */
 DataAdapter.prototype.open = function(callback) {
     //
 };
 
 /**
- * Closes native database connection
- * @param callback {Function=}
+ * Closes the underlying database connection
+ * @param callback {function(Error=)}
  */
 DataAdapter.prototype.close = function(callback) {
     //
 };
+
 /**
  * Executes a query and returns the result as an array of objects.
  * @param query {string|*}
