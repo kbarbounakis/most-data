@@ -814,10 +814,18 @@ MsSqlFormatter.prototype.$startswith = function(p0, p1)
 {
 
     p1='%' +p1 + '%';
-    // (PATINDEX('%S%',  UserData.alternateName))
     var result= util.format('PATINDEX (%s,%s)', this.escape(p1), this.escape(p0));
     return result;
+};
 
+/**
+ * Implements startsWith(a,b) expression formatter.
+ * @param p0 {*}
+ * @param p1 {*}
+ */
+MsSqlFormatter.prototype.$text = function(p0, p1)
+{
+    return util.format('PATINDEX (%s,%s) >= 1', this.escape('%' + p1 + '%s'), this.escape(p0));
 };
 
 /**

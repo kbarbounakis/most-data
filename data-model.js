@@ -2715,6 +2715,25 @@ DataQueryable.prototype.contains = function(value) {
     this.query.contains(value);
     return this;
 };
+
+/**
+ * @param value {*}
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.notContains = function(value) {
+    this.query.notContains(value);
+    return this;
+};
+
+/**
+ * @param {*} value1
+ * @param {*} value2
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.between = function(value1, value2) {
+    this.query.between(value1, value2);
+    return this;
+};
 /**
  * @param string s
  * @returns {{name: string, property: string=}=}

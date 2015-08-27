@@ -10,7 +10,6 @@
  */
 var model = require('./data-model'),
     types = require('./types'),
-    mysqlAdapter = require('./mysql-adapter'),
     cfg = require('./data-configuration'),
     perms = require('./data-permission'),
     mssqlAdapter = require('./mssql-adapter'),
@@ -48,24 +47,6 @@ var dat = {
      * @namespace
      */
     classes:model.classes,
-    /**
-     * @namespace
-     */
-    mysql: {
-        /**
-         * @class MySqlAdapter
-         * */
-        MySqlAdapter : mysqlAdapter.MySqlAdapter,
-        /**
-         * Creates an instance of MySqlAdapter object that represents a MySql database connection.
-         * @param options An object that represents the properties of the underlying database connection.
-         * @returns {DataAdapter}
-         */
-        createAdapter: function(options)
-        {
-            return mysqlAdapter.createInstance(options);
-        }
-    },
     /**
      * @namespace
      */

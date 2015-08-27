@@ -12,7 +12,6 @@ var array = require('most-array'),
     util = require('util'),
     path = require("path"),
     fs = require("fs"),
-    mysqlAdapter = require('./mysql-adapter'),
     mssqlAdapter = require('./mssql-adapter');
 
 /**
@@ -106,19 +105,6 @@ function DataConfiguration() {
     });
 
     var adapterTypes = {
-        mysql: {
-            /** Gets the invariant name of this adapter */
-            invariantName:"mysql",
-            /** Gets the name of the data adapter */
-            name:"MySQL Data Adapter",
-            /**
-             * @param options {*}
-             * @returns {DataAdapter}
-             */
-            createInstance: function(options) {
-                return mysqlAdapter.createInstance(options);
-            }
-        },
         mssql: {
             /** Gets the invariant name of this adapter */
             invariantName:"mssql",
