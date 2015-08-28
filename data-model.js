@@ -679,7 +679,7 @@ DataModel.prototype.clone = function(context) {
     if (context)
         result.context = context;
     return result;
-}
+};
 /**
  * Registers default model listeners
  * @protected
