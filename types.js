@@ -8,7 +8,7 @@
  * Released under the BSD3-Clause license
  * Date: 2014-01-25
  */
-var events = require('events'), util = require('util'), async = require('async');
+var events = require('events'), util = require('util'), async = require('async'), qry = require('most-query');
 /**
  * Represents a data connection
  * @class DataAdapter
@@ -288,8 +288,234 @@ function AccessDeniedException(message, innerMessage) {
 }
 util.inherits(AccessDeniedException, DataException);
 
+/**
+ * @class {DataQueryableField}
+ * @param name
+ * @constructor
+ */
+function DataQueryableField(name) {
+    if (typeof name !== 'string') {
+        throw new Error('Invalid argument type. Expected string.')
+    }
+    this.name = name;
+}
+
+/**
+ * @returns {DataQueryableField}
+ */
+DataQueryableField.prototype.as = function(s) {
+    if (typeof s === 'undefined' || s==null) {
+        delete this.$as;
+        return this;
+    }
+    /**
+     * @private
+     * @type {string}
+     */
+    this.$as = s;
+    return this;
+};
+
+/**
+ * Returns the alias expression, if any.
+ * @returns {string}
+ * @private
+ */
+DataQueryableField.prototype._as = function() {
+    return (typeof this.$as !== 'undefined' && this.$as != null) ? ' as ' + this.$as : '';
+};
+
+DataQueryableField.prototype.toString = function() {
+    return this.name + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.max = function() {
+    return util.format('max(%s)', this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.min = function() {
+    return util.format('min(%s)', this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.count = function() {
+    return util.format('count(%s)', this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.average = function() {
+    return util.format('avg(%s)', this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.length = function() {
+    return util.format('length(%s)', this.name) + this._as();
+};
+
+///**
+// * @param {String} s
+// * @returns {string}
+// */
+//DataQueryableField.prototype.indexOf = function(s) {
+//    return util.format('indexof(%s,%s)', this.name, qry.escape(s)) + this._as();
+//};
+
+/**
+ * @param {number} pos
+ * @param {number} length
+ * @returns {string}
+ */
+DataQueryableField.prototype.substr = function(pos, length) {
+    return util.format('substring(%s,%s,%s)',this.name, pos, length) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.floor = function() {
+    return util.format('floor(%s)',this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.round = function() {
+    return util.format('round(%s)',this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.getYear = function() {
+    return util.format('year(%s)',this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.getDay = function() {
+    return util.format('day(%s)',this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.getMonth = function() {
+    return util.format('month(%s)',this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.getMinutes = function() {
+    return util.format('minute(%s)',this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.getHours = function() {
+    return util.format('hour(%s)',this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.getSeconds = function() {
+    return util.format('second(%s)',this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.getDate = function() {
+    return util.format('date(%s)',this.name) + this._as();
+};
+
+///**
+// * @returns {string}
+// */
+//DataQueryableField.prototype.ceil = function() {
+//    return util('ceil(%s)',this.name);
+//};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.toLocaleLowerCase = function() {
+    return util.format('tolower(%s)',this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.toLowerCase = function() {
+    return util.format('tolower(%s)',this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.toLocaleUpperCase = function() {
+    return util.format('toupper(%s)',this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.toUpperCase = function() {
+    return util.format('toupper(%s)',this.name) + this._as();
+};
+
+/**
+ * @returns {string}
+ */
+DataQueryableField.prototype.trim = function() {
+    return util.format('trim(%s)',this.name) + this._as();
+};
+
+/** native extensions **/
+if (typeof String.prototype.fieldOf === 'undefined')
+{
+    /**
+     * @returns {DataQueryableField}
+     */
+    var fnFieldOf = function() {
+        if (this == null) {
+            throw new TypeError('String.prototype.fieldOf called on null or undefined');
+        }
+        return new DataQueryableField(this.toString());
+    };
+    if (!String.prototype.fieldOf) { String.prototype.fieldOf = fnFieldOf; }
+}
+
+
+///**
+// * @param {*} s
+// * @returns {string}
+// */
+//DataQueryableField.prototype.substring = function(s) {
+//    return util('substringof(%s,%s)',this.name,MostClientDataQueryable.escape(s));
+//};
+
 var types =
 {
+    /**
+     * @constructs DataQueryableField
+     */
+    DataQueryableField: DataQueryableField,
     /**
     * DataAdapter abstract class
     * @class

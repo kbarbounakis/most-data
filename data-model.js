@@ -2583,7 +2583,7 @@ DataQueryable.prototype.join = function(model)
  */
 DataQueryable.prototype.and = function(attr) {
     if (typeof attr === 'string' && /\//.test(attr)) {
-        this.query.where(resolveNestedAttribute.call(this, attr));
+        this.query.and(resolveNestedAttribute.call(this, attr));
         return this;
     }
     this.query.and(this.fieldOf(attr));
@@ -2595,7 +2595,7 @@ DataQueryable.prototype.and = function(attr) {
  */
 DataQueryable.prototype.or = function(attr) {
     if (typeof attr === 'string' && /\//.test(attr)) {
-        this.query.where(resolveNestedAttribute.call(this, attr));
+        this.query.or(resolveNestedAttribute.call(this, attr));
         return this;
     }
     this.query.or(this.fieldOf(attr));
