@@ -2698,6 +2698,15 @@ DataQueryable.prototype.in = function(objs) {
 };
 
 /**
+ * @param objs {Array}
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.notIn = function(objs) {
+    this.query.notIn(objs);
+    return this;
+};
+
+/**
  * @param {*} obj The value to be compared
  * @param {Number} result The result of modulo expression
  * @returns {DataQueryable}
