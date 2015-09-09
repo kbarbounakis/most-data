@@ -1577,6 +1577,9 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
         callback.call(self, new Error('Invalid argument. Source object cannot be an array.'));
         return 0;
     }
+    if (obj.$state == 4) {
+        return self.removeSingleObject(obj, callback);
+    }
     //get object state before any other operation
     var state = obj.$state ? obj.$state : (obj[self.primaryKey]!=null ? 2 : 1);
     var e = {
