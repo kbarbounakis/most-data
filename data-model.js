@@ -3051,14 +3051,26 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
             return res;
         }
         else {
-            //try to match field with expression [field] as [alias] or [nested]/[field] as [alias]
-            field = this.model.field(attr);
-            if (typeof  field === 'undefined' || field === null)
-                throw new Error(util.format('The specified field %s cannot be found in target model.', attr));
-            var f = qry.fields.select(field.name).from(this.model.viewAdapter);
-            if (field.property)
-                return f.as(field.property)
-            return f;
+            //matche expression [field] as [alias] e.g. itemType as type
+            matches = /^(\w+)\s+as\s+(.*?)$/i.exec(attr);
+            if (matches) {
+                field = this.model.field(matches[1]);
+                if (typeof  field === 'undefined' || field === null)
+                    throw new Error(util.format('The specified field %s cannot be found in target model.', attr));
+                alias = matches[2];
+                var prop = alias || field.property || field.name;
+                return qry.fields.select(field.name).from(this.model.viewAdapter).as(prop);
+            }
+            else {
+                //try to match field with expression [field] as [alias] or [nested]/[field] as [alias]
+                field = this.model.field(attr);
+                if (typeof  field === 'undefined' || field === null)
+                    throw new Error(util.format('The specified field %s cannot be found in target model.', attr));
+                var f = qry.fields.select(field.name).from(this.model.viewAdapter);
+                if (field.property)
+                    return f.as(field.property)
+                return f;
+            }
         }
     }
     return this;
