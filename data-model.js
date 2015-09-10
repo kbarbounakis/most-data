@@ -58,8 +58,10 @@ function DefaultDataContext()
             var adapter = cfg.current.adapters.find(function(x) {
                 return x.default;
             });
-            if (typeof adapter ==='undefined' || adapter==null)
-                throw new Error('Default data adapter is missing.');
+            if (typeof adapter ==='undefined' || adapter==null) {
+                er = new Error('The default data adapter is missing.'); er.code = 'EADAPTER';
+                throw er;
+            }
             //get data adapter type
             var adapterType = cfg.current.adapterTypes[adapter.invariantName];
             //validate data adapter type
@@ -105,6 +107,98 @@ DefaultDataContext.prototype.finalize = function(cb) {
     this.__finalize__();
     cb.call(this);
 };
+
+/**
+ * Represents a data context based on a data adapter's name.
+ * @class NamedDataContext
+ * @constructor
+ * @augments DataContext
+ * @property {DataAdapter} db - Gets the underlying data adapter that is going to used in data operations.
+ */
+function NamedDataContext(name)
+{
+    //call base class
+    NamedDataContext.super_.call();
+    /**
+     * @type {DataAdapter}
+     * @private
+     */
+    var __db__;
+    /**
+     * @private
+     */
+    this.__finalize__ = function() {
+        try {
+            if (__db__)
+                __db__.close();
+        }
+        catch(e) {
+            dataCommon.debug('An error occure while closing the underlying database context.');
+            dataCommon.debug(e);
+        }
+        __db__ = null;
+    };
+    //set the name specified
+    var __name__ = name;
+
+    Object.defineProperty(this, 'db', {
+        get : function() {
+            if (__db__)
+                return __db__;
+            //otherwise load database options from configuration
+            var adapter = cfg.current.adapters.find(function(x) {
+                return x.name == __name__;
+            });
+            var er;
+            if (typeof adapter ==='undefined' || adapter==null) {
+                er = new Error('The specified data adapter is missing.'); er.code = 'EADAPTER';
+                throw er;
+            }
+            //get data adapter type
+            var adapterType = cfg.current.adapterTypes[adapter.invariantName];
+            //validate data adapter type
+            if (typeof adapterType === 'undefined' || adapterType == null) {
+                er = new Error('Invalid adapter type.'); er.code = 'EADAPTER';
+                throw er;
+            }
+            if (typeof adapterType.createInstance !== 'function') {
+                er= new Error('Invalid adapter type. Adapter initialization method is missing.'); er.code = 'EADAPTER';
+                throw er;
+            }
+            //otherwise load adapter
+            __db__ = adapterType.createInstance(adapter.options);
+            return __db__;
+        },
+        configurable : false,
+        enumerable:false });
+
+}
+util.inherits(NamedDataContext, __types__.DataContext);
+
+/**
+ * @param name {string} - A string that represents the model name.
+ * @returns {DataModel}
+ */
+NamedDataContext.prototype.model = function(name) {
+    var self = this;
+    if ((name == null) || (name === undefined))
+        return null;
+    var obj = cfg.current.model(name);
+    if (typeof obj === 'undefined' || obj==null)
+        return null;
+    var model = new DataModel(obj);
+    //set model context
+    model.context = self;
+    //return model
+    return model;
+};
+
+NamedDataContext.prototype.finalize = function(cb) {
+    cb = cb || function () {};
+    this.__finalize__();
+    cb.call(this);
+};
+
 /**
  * @class DataView
  * @param {DataModel} model
@@ -6404,50 +6498,47 @@ var __model__ = {
     classes: {
         /**
          * Represents a data object.
-         * @class
-         * @constructor
+         * @constructs DataObject
          */
         DataObject : DataObject,
         /**
          * Represents a data model.
-         * @class
-         * @constructor
+         * @constructs DataModel
          */
         DataModel : DataModel,
         /**
          * Represents a data batch operation.
-         * @class
-         * @constructor
+         * @constructs DataModelMigration
          */
         DataModelBatch : DataModelBatch,
         /**
          * Represents a data model migration.
-         * @class
-         * @constructor
+         * @constructs DataModelMigration
          */
         DataModelMigration: DataModelMigration,
         /**
          * Represents a data queryable definition.
-         * @class
-         * @constructor
+         * @constructs DataQueryable
          */
         DataQueryable: DataQueryable,
         /**
-         * Represents a data queryable definition.
-         * @class DefaultDataContext
-         * @constructor
+         * Represents the default data context based on the application configuration settings.
+         * @constructs DefaultDataContext
          */
         DefaultDataContext: DefaultDataContext,
         /**
+         * Represents a data context based on the name specified.
+         * @constructs NamedDataContext
+         */
+        NamedDataContext: NamedDataContext,
+        /**
          * Represents the main data filter resolver.
-         * @class DefaultDataContext
-         * @constructor
+         * @constructs DataFilterResolver
          */
         DataFilterResolver: DataFilterResolver,
         /**
          * Represents the default function context.
-         * @class FunctionContext
-         * @constructor
+         * @constructs FunctionContext
          */
         FunctionContext:functions.classes.FunctionContext
     },
@@ -6468,11 +6559,15 @@ var __model__ = {
        return new DataModel();
    },
    /**
-    * Creates an instance of DataContext class that represents the current data context.
+    * Creates an instance of DataContext class which represents the default data context. If parameter [name] is specified, returns the named data context specified in application configuration.
+    * @param {string=} name
     * @returns {DataContext}
     */
-   createContext: function() {
-       return new DefaultDataContext();
+   createContext: function(name) {
+       if (typeof name === 'undefined' || name == null)
+            return new DefaultDataContext();
+       else
+           return new NamedDataContext(name);
    }
 };
 
