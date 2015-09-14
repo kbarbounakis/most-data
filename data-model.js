@@ -2992,6 +2992,12 @@ DataQueryable.prototype.select = function(attr) {
 
         if (util.isArray(attr)) {
             arr = [];
+            //check if field is a model dataview
+            if (attr.length == 1) {
+                if (self.model.dataviews(attr[0])) {
+                    return self.select(attr[0]);
+                }
+            }
             attr.forEach(function(x) {
                 if (typeof x === 'string') {
                     field = self.model.field(x);
@@ -3003,6 +3009,7 @@ DataQueryable.prototype.select = function(attr) {
                     }
                     //test nested attribute and simple attribute expression
                     else {
+
                         var a = testNestedAttribute(x);
                         if (a) {
                             expr = selecteNestedAttribute.call(self, a.name, a.property);
