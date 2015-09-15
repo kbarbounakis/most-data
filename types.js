@@ -502,6 +502,167 @@ if (typeof String.prototype.fieldOf === 'undefined')
 }
 
 
+/**
+ * @class DataModelMigration
+ * @constructor
+ * Represents a model migration scheme against data adapters
+ */
+function DataModelMigration() {
+    /**
+     * Gets an array that contains the definition of fields that are going to be added
+     * @type {Array}
+     */
+    this.add = [];
+    /**
+     * Gets an array that contains the definition of fields that are going to be deleted
+     * @type {Array}
+     */
+    this.remove = [];
+    /**
+     * Gets an array that contains the definition of fields that are going to be changed
+     * @type {Array}
+     */
+    this.change = [];
+    /**
+     * Gets or sets a string that contains the internal version of this migration. This property cannot be null.
+     * @type {string}
+     */
+    this.version = '0.0';
+    /**
+     * Gets or sets a string that represents a short description of this migration
+     * @type {string}
+     */
+    this.description = null;
+    /**
+     * Gets or sets a string that represents the adapter that is going to be migrated through this operation.
+     * This property cannot be null.
+     */
+    this.appliesTo = null;
+    /**
+     * Gets or sets a string that represents the model that is going to be migrated through this operation.
+     * This property may be null.
+     */
+    this.model = null;
+}
+/**
+ * @class DataModelBatch
+ * @constructor
+ */
+function DataModelBatch() {
+    /**
+     * Gets or sets a string that represents the data table that is going to be used in this operation.
+     * This property cannot be null.
+     */
+    this.appliesTo = null;
+    /**
+     * Gets an array that contains the items to be added
+     */
+    this.add = [];
+    /**
+     * Gets an array that contains the items to be updated
+     */
+    this.change = [];
+    /**
+     * Gets an array that contains the items to be updated
+     */
+    this.remove = [];
+    /**
+     * Gets or sets the target model
+     * @type {DataModel}
+     */
+    this.model = null;
+}
+/**
+ * @param {*} obj
+ */
+DataModelBatch.prototype.prepare = function(obj) {
+    var self = this;
+    if (self.model==null)
+        throw new Error('The model of a batch operation cannot be empty at this context.');
+    var key = self.model.key();
+    if (!obj)
+        return;
+    var items = util.isArray(obj) ? obj : [obj];
+    array(items).each(function(x) {
+        if (x[key.name]!=null) {
+            //state is modified
+            self.change = self.change || [];
+            self.change.push(x);
+        }
+        else {
+            //state is added
+            self.add = self.add || [];
+            self.add.push(x);
+        }
+    });
+};
+
+/**
+ * @class DataAssociationMapping
+ * @param {*=} obj An object that contains relation mapping attributes
+ * @constructor
+ */
+function DataAssociationMapping(obj) {
+    /**
+     * Gets or set the storage adapter of a relation.
+     * @type {string}
+     */
+    this.associationAdapter = undefined;
+    /**
+     * Gets or sets the parent model name
+     * @type {string}
+     */
+    this.parentModel = undefined;
+    /**
+     * Gets or sets the child model name
+     * @type {string}
+     */
+    this.childModel = undefined;
+    /**
+     * Gets or sets the parent field that is going to be used as label for this association
+     * @type {string}
+     */
+    this.parentLabel = undefined;
+    /**
+     * Gets or sets the parent field name or an array of field names
+     * @type {string|Array}
+     */
+    this.parentField = undefined;
+    /**
+     * Gets or sets the parent property where this association refers to
+     * @type {string}
+     */
+    this.refersTo = undefined;
+    /**
+     * Gets or sets the child field name or an array of field names
+     * @type {string|Array}
+     */
+    this.childField = undefined;
+    /**
+     * Gets or sets the action that occurs when parent item is going to be deleted (all|none|null|delete).
+     * @type {string}
+     */
+    this.cascade = 'none';
+    /**
+     * Gets or sets the type of this association (junction|association|multivalues|lookup).
+     * @type {string}
+     */
+    this.associationType = 'association';
+    /**
+     * Gets or sets an array of fields to select from associated model. If this property is empty then all associated model fields will be selected.
+     * @type {Array}
+     */
+    this.select = [];
+    /**
+     * Gets or sets a boolean value that indicates whether current relation is one-to-one relation.
+     * @type {Boolean}
+     */
+    this.oneToOne = false;
+    if (typeof obj === 'object')
+        util._extend(this, obj);
+}
+
+
 ///**
 // * @param {*} s
 // * @returns {string}
@@ -517,35 +678,37 @@ var types =
      */
     DataQueryableField: DataQueryableField,
     /**
-    * DataAdapter abstract class
-    * @class
-    * @constructor
+    * @constructs DataAdapter
     */
    DataAdapter: DataAdapter,
    /**
-    * DataContext abstract class
-    * @class DataContext
-    * @constructor
+    * @constructs DataContext
     */
    DataContext: DataContext,
    /**
-    * EventEmitter2 class
-    * @class
-    * @constructor
+    * @constructs EventEmitter2
     */
    EventEmitter2: EventEmitter2,
     /**
-     * DataEventArgs class
-     * @class
-     * @constructor
+     * @constructs DataEventArgs
      */
     DataEventArgs: DataEventArgs,
     /**
-     * DataEventListener abstract class
-     * @class
-     * @abstract
+     * @constructs DataModelMigration
      */
     DataEventListener: DataEventListener,
+    /**
+     * @constructs DataModelMigration
+     */
+    DataModelMigration: DataModelMigration,
+    /**
+     * @constructs DataAssociationMapping
+     */
+    DataAssociationMapping:DataAssociationMapping,
+    /**
+     * @constructs DataModelBatch
+     */
+    DataModelBatch: DataModelBatch,
     parsers: {
         parseInteger: function(val) {
             if (typeof val === 'undefined' || val == null)

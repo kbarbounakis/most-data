@@ -18,10 +18,12 @@ var array = require('most-array'),
     events = require('events'),
     qry = require('most-query'),
     cfg = require('./data-configuration'),
-    __types__ = require('./types'),
+    types = require('./types'),
     functions = require('./functions'),
     dataCache = require('./data-cache'),
-    dataCommon = require('./data-common');
+    dataCommon = require('./data-common'),
+    DataObjectCachingListener = require('./data-object-caching-listener').DataObjectCachingListener,
+    DataStateValidatorListener = require('./data-state-validator').DataStateValidatorListener;
 
 /**
  * CONSTANTS
@@ -33,14 +35,14 @@ var STR_MISSING_CALLBACK_ARGUMENT = 'Missing argument. Callback function expecte
  * Represents the default data context.
  * @class
  * @constructor
- * @augments __types__.DataContext
+ * @augments types.DataContext
  * @augments DataContext
- * @property {__types__.classes.DataAdapter} db - Gets the data adapter that is going to used in data operations.
+ * @property {types.classes.DataAdapter} db - Gets the data adapter that is going to used in data operations.
  */
 function DefaultDataContext()
 {
     /**
-     * @type {__types__.DataAdapter|DataAdapter}
+     * @type {types.DataAdapter|DataAdapter}
      * @private
      */
     var __db__= null;
@@ -82,7 +84,7 @@ function DefaultDataContext()
         enumerable:false });
 }
 
-util.inherits(DefaultDataContext, __types__.DataContext);
+util.inherits(DefaultDataContext, types.DataContext);
 
 /**
  * @param name {string} - A string that represents the model name.
@@ -173,7 +175,7 @@ function NamedDataContext(name)
         enumerable:false });
 
 }
-util.inherits(NamedDataContext, __types__.DataContext);
+util.inherits(NamedDataContext, types.DataContext);
 
 /**
  * @param name {string} - A string that represents the model name.
@@ -413,70 +415,7 @@ function DataField() {
      */
     this.virtual = false;
 }
-/**
- * @class DataAssociationMapping
- * @param {*=} obj An object that contains relation mapping attributes
- * @constructor
- */
-function DataAssociationMapping(obj) {
-    /**
-     * Gets or set the storage adapter of a relation.
-     * @type {string}
-     */
-    this.associationAdapter = undefined;
-    /**
-     * Gets or sets the parent model name
-     * @type {string}
-     */
-    this.parentModel = undefined;
-    /**
-     * Gets or sets the child model name
-     * @type {string}
-     */
-    this.childModel = undefined;
-    /**
-     * Gets or sets the parent field that is going to be used as label for this association
-     * @type {string}
-     */
-    this.parentLabel = undefined;
-    /**
-     * Gets or sets the parent field name or an array of field names
-     * @type {string|Array}
-     */
-    this.parentField = undefined;
-    /**
-     * Gets or sets the parent property where this association refers to
-     * @type {string}
-     */
-    this.refersTo = undefined;
-    /**
-     * Gets or sets the child field name or an array of field names
-     * @type {string|Array}
-     */
-    this.childField = undefined;
-    /**
-     * Gets or sets the action that occurs when parent item is going to be deleted (all|none|null|delete).
-     * @type {string}
-     */
-    this.cascade = 'none';
-    /**
-     * Gets or sets the type of this association (junction|association|multivalues|lookup).
-     * @type {string}
-     */
-    this.associationType = 'association';
-    /**
-     * Gets or sets an array of fields to select from associated model. If this property is empty then all associated model fields will be selected.
-     * @type {Array}
-     */
-    this.select = [];
-    /**
-     * Gets or sets a boolean value that indicates whether current relation is one-to-one relation.
-     * @type {Boolean}
-     */
-    this.oneToOne = false;
-    if (typeof obj === 'object')
-        util._extend(this, obj);
-}
+
 /**
  * @class DataFilterResolver
  * @abstract
@@ -757,7 +696,7 @@ function DataModel(obj) {
     if (typeof this.initialize === 'function')
         this.initialize();
 }
-util.inherits(DataModel, __types__.EventEmitter2);
+util.inherits(DataModel, types.EventEmitter2);
 
 DataModel.prototype.initialize = function() {
     //
@@ -790,7 +729,7 @@ DataModel.prototype.registerListeners = function() {
     //0. Permission Event Listener
     var perms = require('./data-permission');
     //1. State validator listener
-    this.on('before.save', DataStateValidatorListener.beforeSave);
+    this.on('before.save', DataStateValidatorListener.prototype.beforeSave);
     //2. Default values Listener
     this.on('before.save', DefaultValueListener.beforeSave);
     //3. Calculated values listener
@@ -802,9 +741,9 @@ DataModel.prototype.registerListeners = function() {
     //before remove (validate permissions)
     this.on('before.remove', perms.DataPermissionEventListener.prototype.beforeRemove);
     //after save (clear caching)
-    this.on('after.save', DataObjectCachingListener.afterSave);
+    this.on('after.save', DataObjectCachingListener.prototype.afterSave);
     //after remove (clear caching)
-    this.on('after.remove', DataObjectCachingListener.afterRemove);
+    this.on('after.remove', DataObjectCachingListener.prototype.afterRemove);
     /**
      * change:8-Jun 2015
      * description: Set lookup default listeners as obsolete.
@@ -1296,7 +1235,7 @@ DataModel.prototype.base = function()
 DataModel.prototype.convertInternal = function(obj) {
     var self = this;
     //get type parsers (or default type parsers)
-    var parsers = self.parsers || __types__.parsers, parser, value;
+    var parsers = self.parsers || types.parsers, parser, value;
     self.attributes.forEach(function(x) {
         value = obj[x.name];
         if (value) {
@@ -1619,8 +1558,8 @@ DataModel.prototype.save = function(obj, callback)
  */
 DataModel.prototype.inferState = function(obj, callback) {
     var self = this;
-    var e = { state:0,model:self, target:obj };
-    DataStateValidatorListener.beforeSave(e, function(err) {
+    var e = { model:self, target:obj };
+    DataStateValidatorListener.prototype.beforeSave(e, function(err) {
         //if error return error
         if (err) { return callback(err); }
         //otherwise return the calucated state
@@ -2094,7 +2033,7 @@ DataModel.prototype.migrate = function(callback)
 
     if ((fields==null) || (fields.length==0))
         throw new Error("Migration is not valid for this model. The model has no fields.");
-    var migration = new DataModelMigration();
+    var migration = new types.DataModelMigration();
     migration.add = fields;
     migration.version = self.version!=null ? self.version : '0.0';
     migration.appliesTo = self.sourceAdapter;
@@ -2372,7 +2311,7 @@ DataModel.prototype.inferMapping = function(name) {
         return null;
     if (field.mapping) {
         //validate mapping
-        return util._extend(new DataAssociationMapping(), field.mapping);
+        return util._extend(new types.DataAssociationMapping(), field.mapping);
     }
     else {
         //get field model type
@@ -2391,7 +2330,7 @@ DataModel.prototype.inferMapping = function(name) {
             if (associatedField.many)
             {
                 //return a data relation (parent model is the associated model)
-                result = new DataAssociationMapping({
+                result = new types.DataAssociationMapping({
                     parentModel:associatedModel.name,
                     parentField:associatedModel.primaryKey,
                     childModel:self.name,
@@ -2408,7 +2347,7 @@ DataModel.prototype.inferMapping = function(name) {
             else
             {
                 //return a data relation (parent model is the current model)
-                result = new DataAssociationMapping({
+                result = new types.DataAssociationMapping({
                     parentModel:self.name,
                     parentField:self.primaryKey,
                     childModel:associatedModel.name,
@@ -2430,7 +2369,7 @@ DataModel.prototype.inferMapping = function(name) {
             var re = new RegExp(DataModel.PluralExpression.source);
             if (re.test(field.name) || field.many) {
                 //return a data junction
-                result = new DataAssociationMapping({
+                result = new types.DataAssociationMapping({
                     associationAdapter: self.name.concat(string(field.name).capitalize()),
                     parentModel: self.name, parentField: self.primaryKey,
                     childModel: associatedModel.name,
@@ -2445,7 +2384,7 @@ DataModel.prototype.inferMapping = function(name) {
                 return result;
             }
             else {
-                result = new DataAssociationMapping({
+                result = new types.DataAssociationMapping({
                     parentModel: associatedModel.name,
                     parentField: associatedModel.primaryKey,
                     childModel: self.name,
@@ -3790,7 +3729,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
              * @type {DataAssociationMapping}
              */
             var mapping = null;
-            if (expand instanceof DataAssociationMapping) {
+            if (expand instanceof types.DataAssociationMapping) {
                 mapping = expand;
             }
             else {
@@ -4158,93 +4097,7 @@ DataQueryable.prototype.flatten = function(value) {
     return this;
 };
 
-function DataModelBatch() {
-    /**
-     * Gets or sets a string that represents the data table that is going to be used in this operation.
-     * This property cannot be null.
-     */
-    this.appliesTo = null;
-    /**
-     * Gets an array that contains the items to be added
-     */
-    this.add = [];
-    /**
-     * Gets an array that contains the items to be updated
-     */
-    this.change = [];
-    /**
-     * Gets an array that contains the items to be updated
-     */
-    this.remove = [];
-    /**
-     * Gets or sets the target model
-     * @type {DataModel}
-     */
-    this.model = null;
-}
 
-DataModelBatch.prototype.prepare = function(obj) {
-    var self = this;
-    if (self.model==null)
-        throw new Error('The model of a batch operation cannot be empty at this context.');
-    var key = self.model.key();
-    if (!obj)
-        return;
-    var items = util.isArray(obj) ? obj : [obj];
-    array(items).each(function(x) {
-        if (x[key.name]!=null) {
-        //state is modified
-            self.change = self.change || [];
-            self.change.push(x);
-        }
-        else {
-        //state is added
-            self.add = self.add || [];
-            self.add.push(x);
-        }
-    });
-};
-/**
- * @constructor
- * Represents a model migration scheme against data adapters
- */
-function DataModelMigration() {
-    /**
-     * Gets an array that contains the definition of fields that are going to be added
-     * @type {Array}
-     */
-    this.add = [];
-    /**
-     * Gets an array that contains the definition of fields that are going to be deleted
-     * @type {Array}
-     */
-    this.remove = [];
-    /**
-     * Gets an array that contains the definition of fields that are going to be changed
-     * @type {Array}
-     */
-    this.change = [];
-    /**
-     * Gets or sets a string that contains the internal version of this migration. This property cannot be null.
-     * @type {string}
-     */
-    this.version = '0.0';
-    /**
-     * Gets or sets a string that represents a short description of this migration
-     * @type {string}
-     */
-    this.description = null;
-    /**
-     * Gets or sets a string that represents the adapter that is going to be migrated through this operation.
-     * This property cannot be null.
-     */
-    this.appliesTo = null;
-    /**
-     * Gets or sets a string that represents the model that is going to be migrated through this operation.
-     * This property may be null.
-     */
-    this.model = null;
-}
 /**
  * DataObject class represents a data object that is going to be used in data and other operations
  * @class DataObject
@@ -4308,7 +4161,7 @@ function DataObject(type, obj)
         });
     });
 }
-util.inherits(DataObject, __types__.EventEmitter2);
+util.inherits(DataObject, types.EventEmitter2);
 
 var STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
 var ARGUMENT_NAMES = /(?:^|,)\s*([^\s,=]+)/g;
@@ -4810,10 +4663,10 @@ function HasManyAssociation(obj, association)
     }
     else if (typeof association === 'object' && association !=null) {
         //get the specified mapping
-        if (association instanceof DataAssociationMapping)
+        if (association instanceof types.DataAssociationMapping)
             self.mapping = association;
         else
-            self.mapping = util._extend(new DataAssociationMapping(), association);
+            self.mapping = util._extend(new types.DataAssociationMapping(), association);
     }
 
     var q = null;
@@ -4890,10 +4743,10 @@ function HasOneAssociation(obj, association)
     }
     else if (typeof association === 'object' && association !=null) {
         //get the specified mapping
-        if (association instanceof DataAssociationMapping)
+        if (association instanceof types.DataAssociationMapping)
             self.mapping = association;
         else
-            self.mapping = util._extend(new DataAssociationMapping(), association);
+            self.mapping = util._extend(new types.DataAssociationMapping(), association);
     }
 
     var q = null;
@@ -4968,10 +4821,10 @@ function HasParentJunction(obj, association) {
     }
     else if (typeof association === 'object' && association !=null) {
         //get the specified mapping
-        if (association instanceof DataAssociationMapping)
+        if (association instanceof types.DataAssociationMapping)
             self.mapping = association;
         else
-            self.mapping = util._extend(new DataAssociationMapping(), association);
+            self.mapping = util._extend(new types.DataAssociationMapping(), association);
     }
 
     //get related model
@@ -5015,20 +4868,23 @@ function HasParentJunction(obj, association) {
             var childModel = self.parent.context.model(self.mapping.childModel);
             var childField = childModel.field(self.mapping.childField);
             var adapter = self.mapping.associationAdapter;
-            cfg.current.models[adapter] = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
-                { name: "id", type:"Counter", primary: true },
-                { name: 'parentId', nullable:false, type:parentField.type },
-                { name: 'valueId', nullable:false, type:childField.type } ],
-                constraints: [
-                    {
-                        description: "The relation between two objects must be unique.",
-                        type:"unique",
-                        fields: [ 'parentId', 'valueId' ]
-                    }
-                ]};
-            //initialize base model
-            baseModel = new DataModel(cfg.current.models[adapter]);
-            baseModel.context = self.parent.context;
+            baseModel = self.parent.context.model(adapter);
+            if (dataCommon.isNullOrUndefined(baseModel)) {
+                cfg.current.models[adapter] = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
+                    { name: "id", type:"Counter", primary: true },
+                    { name: 'parentId', nullable:false, type:parentField.type },
+                    { name: 'valueId', nullable:false, type:childField.type } ],
+                    constraints: [
+                        {
+                            description: "The relation between two objects must be unique.",
+                            type:"unique",
+                            fields: [ 'parentId', 'valueId' ]
+                        }
+                    ]};
+                //initialize base model
+                baseModel = new DataModel(cfg.current.models[adapter]);
+                baseModel.context = self.parent.context;
+            }
             return baseModel;
         },configurable:false, enumerable:false
     });
@@ -5257,10 +5113,10 @@ function DataObjectJunction(obj, association) {
     }
     else if (typeof association === 'object' && association !=null) {
         //get the specified mapping
-        if (association instanceof DataAssociationMapping)
+        if (association instanceof types.DataAssociationMapping)
             self.mapping = association;
         else
-            self.mapping = util._extend(new DataAssociationMapping(), association);
+            self.mapping = util._extend(new types.DataAssociationMapping(), association);
     }
     //get related model
     var relatedModel = this.parent.context.model(self.mapping.childModel);
@@ -5303,20 +5159,23 @@ function DataObjectJunction(obj, association) {
             var childModel = self.parent.context.model(self.mapping.childModel);
             var childField = childModel.field(self.mapping.childField);
             var adapter = self.mapping.associationAdapter;
-            cfg.current.models[self.mapping.associationAdapter] = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
-                { name: "id", type:"Counter", primary: true },
-                { name: DataObjectJunction.STR_OBJECT_FIELD, nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
-                { name: DataObjectJunction.STR_VALUE_FIELD, nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
-                constraints: [
-                    {
-                        description: "The relation between two objects must be unique.",
-                        type:"unique",
-                        fields: [ DataObjectJunction.STR_OBJECT_FIELD, DataObjectJunction.STR_VALUE_FIELD ]
-                    }
-                ]};
-            //initialize base model
-            baseModel = new DataModel(cfg.current.models[self.mapping.associationAdapter]);
-            baseModel.context = self.parent.context;
+            baseModel = self.parent.context.model(adapter);
+            if (dataCommon.isNullOrUndefined(baseModel)) {
+                cfg.current.models[self.mapping.associationAdapter] = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
+                    { name: "id", type:"Counter", primary: true },
+                    { name: DataObjectJunction.STR_OBJECT_FIELD, nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
+                    { name: DataObjectJunction.STR_VALUE_FIELD, nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
+                    constraints: [
+                        {
+                            description: "The relation between two objects must be unique.",
+                            type:"unique",
+                            fields: [ DataObjectJunction.STR_OBJECT_FIELD, DataObjectJunction.STR_VALUE_FIELD ]
+                        }
+                    ]};
+                //initialize base model
+                baseModel = new DataModel(cfg.current.models[self.mapping.associationAdapter]);
+                baseModel.context = self.parent.context;
+            }
             return baseModel;
         },configurable:false, enumerable:false
     });
@@ -5341,19 +5200,22 @@ DataObjectJunction.prototype.getRelationModel = function()
     var childModel = self.parent.context.model(self.mapping.childModel);
     var childField = childModel.field(self.mapping.childField);
     var adapter = self.mapping.associationAdapter;
-    var tempModel = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
-        { name: "id", type:"Counter", primary: true },
-        { name: DataObjectJunction.STR_OBJECT_FIELD, nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
-        { name: DataObjectJunction.STR_VALUE_FIELD, nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
-        constraints: [
-            {
-                description: "The relation between two objects must be unique.",
-                type:"unique",
-                fields: [ DataObjectJunction.STR_OBJECT_FIELD, DataObjectJunction.STR_VALUE_FIELD ]
-            }
-        ]};
-    var relationModel = new DataModel(tempModel);
-    relationModel.context = self.parent.context;
+    var relationModel = self.parent.context.model(adapter);
+    if (dataCommon.isNullOrUndefined(relationModel)) {
+        var tempModel = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
+            { name: "id", type:"Counter", primary: true },
+            { name: DataObjectJunction.STR_OBJECT_FIELD, nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
+            { name: DataObjectJunction.STR_VALUE_FIELD, nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
+            constraints: [
+                {
+                    description: "The relation between two objects must be unique.",
+                    type:"unique",
+                    fields: [ DataObjectJunction.STR_OBJECT_FIELD, DataObjectJunction.STR_VALUE_FIELD ]
+                }
+            ]};
+        relationModel = new DataModel(tempModel);
+        relationModel.context = self.parent.context;
+    }
     return relationModel;
 };
 
@@ -5664,7 +5526,7 @@ function DataObjectValues(obj, name) {
      * Gets data relation mapping
      * @type {DataAssociationMapping}
      */
-    this.mapping = new DataAssociationMapping(
+    this.mapping = new types.DataAssociationMapping(
         {
             parentModel: model.name,
             parentField: model.primaryKey,
@@ -5857,41 +5719,7 @@ CalculatedValueListener.beforeSave = function(e, callback) {
                 }
             });
         }
-        /*if (expr.indexOf('fn:')==0) {
-            *//*expr = expr.substring('fn:'.length);
-            if (expr.indexOf('()')>0)
-                expr = expr.substring(0, expr.indexOf('()'));*//*
-            *//*functionContext.eval(expr, function(err, result) {
-                if (err) {
-                    cb(err);
-                }
-                else {
-                    e.target[attr.name] = result;
-                    cb(null);
-                }
-            });*//*
 
-            *//*var fn = functionContext[expr];
-            if (typeof fn === 'function') {
-                *//**//*fn.call(self, e, function(err, result) {
-                    if (err) {
-                        cb(err);
-                    }
-                    else {
-                        e.target[attr.name] = result;
-                        cb(null);
-                    }
-                });*//**//*
-            }
-            else {
-                //do nothing
-                cb(null);
-            }*//*
-        }
-        else {
-            //do nothing
-            cb(null);
-        }*/
     }, function(err) {
         callback(err);
     });
@@ -5904,45 +5732,7 @@ CalculatedValueListener.beforeSave = function(e, callback) {
  * @memberof process
  */
 
-/**
- * @class DataObjectCachingListener
- * @constructor
- */
-function DataObjectCachingListener() {
-    //
-}
 
-DataObjectCachingListener.afterSave = function(e, callback) {
-    try {
-        if (Object.isNullOrUndefined(e.target)) {
-            callback();
-            return;
-        }
-        //get object id
-        var id = e.model.idOf(e.target);
-        //validate object id
-        if (Object.isNullOrUndefined(id)) {
-            callback();
-            return;
-        }
-        //get item key
-        var key = '/' + e.model.name + '/' + id.toString();
-        if (dataCache.current) {
-            //remove item by key
-            dataCache.current.remove(key);
-        }
-        callback();
-    }
-    catch (e) {
-        if (process.NODE_ENV==='development')
-            dataCommon.log(e);
-        callback();
-    }
-};
-
-DataObjectCachingListener.afterRemove = function(e, callback) {
-    DataObjectCachingListener.afterSave(e, callback);
-};
 
 
 /**
@@ -6007,7 +5797,7 @@ DataObjectAssociationListener.beforeSave = function(e, callback) {
             async.eachSeries(mappings,
                 /**
                  * @param {DataAssociationMapping} mapping
-                 * @param {Function(Error=)} cb
+                 * @param {function(Error=)} cb
                  */
                 function(mapping, cb) {
                     if (mapping.associationType==='association') {
@@ -6308,146 +6098,6 @@ UniqueContraintListener.beforeSave = function(e, callback) {
     });
 };
 
-/**
- * Validates data object's state based on any unique constraint defined.
- * @class
- * @constructor
- */
-function DataStateValidatorListener() {
-    //
-}
-/**
- *
- * @param {DataEventArgs} e
- * @param  {function(Error=)} callback
- */
-DataStateValidatorListener.beforeSave = function(e, callback) {
-    try {
-        if (dataCommon.isNullOrUndefined(e)) {
-            callback();
-            return;
-        }
-        //if state is different than inserted then do nothing and return
-        if (e.state!=1) {
-            callback();
-            return;
-        }
-        var model = e.model, target = e.target;
-        //if model or target is not defined do nothing and exit
-        if (dataCommon.isNullOrUndefined(model) || dataCommon.isNullOrUndefined(target)) {
-            callback();
-            return;
-        }
-        if (!dataCommon.isNullOrUndefined(model.primaryKey)) {
-            if (!dataCommon.isNullOrUndefined(target[model.primaryKey])) {
-                //The primary key exists, so do nothing
-                callback();
-                return;
-            }
-        }
-        //get constraint collection (from both model and base model)
-        var arr = model.constraintCollection.filter(function(x) { return x.type==='unique' }), context = model.context, objectFound=false;
-        if (arr.length==0) {
-            //do nothing and exit
-            callback();
-            return;
-        }
-        async.eachSeries(arr, function(constraint, cb) {
-            try {
-                if (objectFound) {
-                    cb();
-                    return;
-                }
-                /**
-                 * @type {DataQueryable}
-                 */
-                var q;
-                if (util.isArray(constraint.fields)) {
-                    for (var i = 0; i < constraint.fields.length; i++) {
-                        var attr = constraint.fields[i];
-                        if (!e.target.hasOwnProperty(attr)) {
-                            cb();
-                            return;
-                        }
-                        var value = e.target[attr];
-                        //check field mapping
-                        var mapping = e.model.inferMapping(attr);
-                        if (!dataCommon.isNullOrUndefined(mapping)) {
-                            if (typeof e.target[attr] === 'object') {
-                                value=e.target[attr][mapping.parentField];
-                            }
-                        }
-                        if (dataCommon.isNullOrUndefined(value))
-                            value = null;
-                        if (q)
-                            q.and(attr).equal(value);
-                        else
-                            q = e.model.where(attr).equal(value);
-                    }
-                    if (dataCommon.isNullOrUndefined(q)) {
-                        cb();
-                    }
-                    else {
-                        if (typeof context.unattended === 'function') {
-                            //find object (in unattended model)
-                            context.unattended(function(ccb) {
-                                q.silent().flatten().select([model.primaryKey]).first(function(err, result) {
-                                    if (err) {
-                                        ccb(err);
-                                    }
-                                    else if (result) {
-                                        e.target[model.primaryKey] = result[model.primaryKey];
-                                        //change state (updated)
-                                        e.state = 2;
-                                        //object found
-                                        objectFound = true;
-                                        ccb();
-                                    }
-                                    else {
-                                        ccb();
-                                    }
-                                });
-                            },function(err) {
-                                cb(err);
-                            });
-                        }
-                        else {
-                            q.silent().flatten().select([model.primaryKey]).first(function(err, result) {
-                                if (err) {
-                                    cb(err);
-                                }
-                                else if (result) {
-                                    //set primary key value
-                                    e.target[model.primaryKey] = result[model.primaryKey];
-                                    //change state (updated)
-                                    e.state = 2;
-                                    //object found
-                                    objectFound=true;
-                                    cb();
-                                }
-                                else {
-                                    cb();
-                                }
-                            });
-                        }
-                    }
-                }
-                else {
-                    cb();
-                }
-            }
-            catch(e) {
-                cb(e);
-            }
-        }, function(err) {
-            callback(err);
-        });
-    }
-    catch(er) {
-        callback(er);
-    }
-};
-
 /***********/
 /* globals */
 /***********/
@@ -6495,7 +6145,7 @@ var __model__ = {
                 , len = chars.length;
             for (var i = 0; i < howMany; i++) {
                 value[i] = chars[rnd[i] % len]
-            };
+            }
             return value.join('');
         }
     },
@@ -6513,16 +6163,6 @@ var __model__ = {
          * @constructs DataModel
          */
         DataModel : DataModel,
-        /**
-         * Represents a data batch operation.
-         * @constructs DataModelMigration
-         */
-        DataModelBatch : DataModelBatch,
-        /**
-         * Represents a data model migration.
-         * @constructs DataModelMigration
-         */
-        DataModelMigration: DataModelMigration,
         /**
          * Represents a data queryable definition.
          * @constructs DataQueryable
