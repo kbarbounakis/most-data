@@ -2993,7 +2993,7 @@ DataQueryable.prototype.select = function(attr) {
         if (util.isArray(attr)) {
             arr = [];
             //check if field is a model dataview
-            if (attr.length == 1) {
+            if (attr.length == 1 && typeof attr[0] === 'string')
                 if (self.model.dataviews(attr[0])) {
                     return self.select(attr[0]);
                 }
