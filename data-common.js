@@ -8,7 +8,7 @@
  * Released under the BSD3-Clause license
  * Date: 2015-03-12
  */
-
+var util = require('util');
 /**
  * Load native object extensions
  */

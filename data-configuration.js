@@ -9,6 +9,7 @@
  * Date: 13/2/2015
  */
 var array = require('most-array'),
+    dataCommon = require('./data-common'),
     util = require('util'),
     path = require("path"),
     fs = require("fs"),
@@ -73,22 +74,41 @@ function DataConfiguration() {
         }
     });
 
-    //get application-defined adapter types, if any
+    //get application adapter types, if any
     var config;
     try {
-        config = require(path.join(process.cwd(), 'config/app.json')) || {};
+        var env = process.env['NODE_ENV'] || 'production';
+        config = require(path.join(process.cwd(), 'config/app.' + env + '.json'));
     }
     catch (e) {
-        console.log('An error occured while trying to open application configuation.');
-        console.log(e);
-        config = {};
+        if (e.code === 'MODULE_NOT_FOUND') {
+            dataCommon.log('Data: The environment specific configuration cannot be found or is inaccesible.');
+            try {
+                config = require(path.join(process.cwd(), 'config/app.json'));
+            }
+            catch(e) {
+                if (e.code === 'MODULE_NOT_FOUND') {
+                    dataCommon.log('Data: The default application configuration cannot be found or is inaccesible.');
+                }
+                else {
+                    dataCommon.log('Data: An error occured while trying to open default application configuration.');
+                    dataCommon.log(e);
+                }
+                config = { adapters:[], adapterTypes:[]  };
+            }
+        }
+        else {
+            dataCommon.log('Data: An error occured while trying to open application configuration.');
+            dataCommon.log(e);
+            config = { adapters:[], adapterTypes:[]  };
+        }
     }
 
     /**
      * @type {Array}
      * @private
      */
-    var adapters = null;
+    var adapters;
     Object.defineProperty(this, 'adapters', {
         get: function()
         {
@@ -104,22 +124,7 @@ function DataConfiguration() {
         }
     });
 
-    var adapterTypes = {
-        mssql: {
-            /** Gets the invariant name of this adapter */
-            invariantName:"mssql",
-            /** Gets the name of the data adapter */
-            name:"Microsoft SQL Server Data Provider",
-            /**
-             * @param options {*}
-             * @returns {DataAdapter}
-             */
-            createInstance: function(options) {
-                return mssqlAdapter.createInstance(options);
-            }
-        }
-    };
-
+    var adapterTypes = { };
 
     if (config.adapterTypes) {
         if (util.isArray(config.adapterTypes)) {
