@@ -1642,7 +1642,7 @@ DataQueryable.prototype.toMD5 = function() {
     if (typeof this.$expand !== 'undefined') { q.$expand =this.$expand; }
     if (typeof this.$flatten!== 'undefined') { q.$flatten =this.$flatten; }
     if (typeof this.$silent!== 'undefined') { q.$silent =this.$silent; }
-    if (typeof this.$asArray!== 'undefined') { q.$silent =this.$asArray; }
+    if (typeof this.$asArray!== 'undefined') { q.$asArray =this.$asArray; }
     return dataCommon.md5(q);
 };
 
