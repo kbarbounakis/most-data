@@ -242,6 +242,22 @@ var dataCommon = {
             value[i] = chars[rnd[i] % len]
         }
         return value.join('');
+    },
+    md5 : function(value) {
+        if (typeof value === 'undefined' || value == null) {
+            return;
+        }
+        var crypto = require('crypto'), md5 = crypto.createHash('md5');
+        if (typeof value === 'string') {
+            md5.update(value);
+        }
+        else if (value instanceof Date) {
+            md5.update(value.toUTCString());
+        }
+        else {
+            md5.update(JSON.stringify(value));
+        }
+        return md5.digest('hex');
     }
 };
 
