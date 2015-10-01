@@ -2,11 +2,31 @@
  * MOST Web Framework
  * A JavaScript Web Framework
  * http://themost.io
+ * Created by Kyriakos Barbounakis<k.barbounakis@gmail.com> on 2014-01-25.
  *
- * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com, Anthi Oikonomou anthioikonomou@gmail.com
- *
- * Released under the BSD3-Clause license
- * Date: 2014-01-25
+ * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com
+ Anthi Oikonomou anthioikonomou@gmail.com
+ All rights reserved.
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ * Redistributions of source code must retain the above copyright notice, this
+ list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright notice,
+ this list of conditions and the following disclaimer in the documentation
+ and/or other materials provided with the distribution.
+ * Neither the name of MOST Web Framework nor the names of its
+ contributors may be used to endorse or promote products derived from
+ this software without specific prior written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 var events = require('events'), util = require('util'), async = require('async'), qry = require('most-query');
 /**
@@ -37,7 +57,7 @@ DataAdapter.prototype.open = function(callback) {
 
 /**
  * Closes the underlying database connection
- * @param callback {function(Error=)}
+ * @param callback {function(Error=)=}
  */
 DataAdapter.prototype.close = function(callback) {
     //
@@ -663,13 +683,69 @@ function DataAssociationMapping(obj) {
 }
 
 
-///**
-// * @param {*} s
-// * @returns {string}
-// */
-//DataQueryableField.prototype.substring = function(s) {
-//    return util('substringof(%s,%s)',this.name,MostClientDataQueryable.escape(s));
-//};
+/**
+ * @class DataField
+ * @constructor
+ * @property {string} name - Gets or sets the internal name of this field.
+ * @property {string} property - Gets or sets the property name for this field.
+ * @property {string} title - Gets or sets the title of this field.
+ * @property {boolean} nullable - Gets or sets a boolean that indicates whether field is nullable or not.
+ * @property {string} type - Gets or sets the type of this field.
+ * @property {boolean} primary - Gets or sets a boolean that indicates whether field is primary key or not.
+ * @property {boolean} many - Gets or sets a boolean that indicates whether field defines an one-to-many relationship between models.
+ * @property {boolean} model - Gets or sets the parent model of this field.
+ * @property {*} value - Gets or sets the default value of this field.
+ * @property {*} calculation - Gets or sets the calculated value of this field.
+ * @property {boolean} readonly - Gets or sets a boolean that indicates whether a field is readonly.
+ * @property {DataAssociationMapping} mapping - Get or sets a relation mapping for this field.
+ * @property {string} coltype - Gets or sets a string that indicates the data field's column type. This attribute is used in data view definition
+ * @property {boolean} expandable - Get or sets whether the current field defines an association mapping and the associated data object(s) must be included while getting data.
+ * @property {string} section - Gets or sets the section where the field belongs.
+ * @property {string} description - Gets or sets a short description for this field.
+ * @property {string} help - Gets or sets a short help for this field.
+ * @property {string} appearance - Gets or sets the appearance template of this field, if any.
+ * @property {*} options - Gets or sets the available options for this field.
+ * @property {boolean} virtual - Gets or sets a boolean that indicates whether this fields is a view only field or not.
+ */
+function DataField() {
+    this.nullable = true;
+    this.primary = false;
+    this.readonly = false;
+    this.expandable = false;
+    this.virtual = false;
+}
+
+/**
+ * @class DataResultSet
+ * @constructor
+ */
+function DataResultSet() {
+    /**
+     * @type {number}
+     */
+    this.total = 0;
+    /**
+     * @type {number}
+     */
+    this.skip = 0;
+    /**
+     * @type {Array}
+     */
+    this.records = [];
+}
+
+
+/**
+ * @abstract DataContextEmitter
+ * @constructor
+ */
+function DataContextEmitter() {
+    //
+}
+DataContextEmitter.prototype.ensureContext = function() {
+    return null;
+};
+
 
 var types =
 {
@@ -685,6 +761,10 @@ var types =
     * @constructs DataContext
     */
    DataContext: DataContext,
+    /**
+     * @constructs DataContextEmitter
+     */
+    DataContextEmitter: DataContextEmitter,
    /**
     * @constructs EventEmitter2
     */
@@ -797,7 +877,15 @@ var types =
     /**
      * @constructs AccessDeniedException
      */
-    AccessDeniedException:AccessDeniedException
+    AccessDeniedException:AccessDeniedException,
+    /**
+     * @constructs DataField
+     */
+    DataField:DataField,
+    /**
+     * @constructs DataResultSet
+     */
+    DataResultSet:DataResultSet
 };
 
 if (typeof exports !== 'undefined')

@@ -2,14 +2,33 @@
  * MOST Web Framework
  * A JavaScript Web Framework
  * http://themost.io
+ * Created by Kyriakos Barbounakis<k.barbounakis@gmail.com> on 2014-06-19.
  *
- * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com, Anthi Oikonomou anthioikonomou@gmail.com
- *
- * Released under the BSD3-Clause license
- * Date: 2014-06-19
+ * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com
+ Anthi Oikonomou anthioikonomou@gmail.com
+ All rights reserved.
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ * Redistributions of source code must retain the above copyright notice, this
+ list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright notice,
+ this list of conditions and the following disclaimer in the documentation
+ and/or other materials provided with the distribution.
+ * Neither the name of MOST Web Framework nor the names of its
+ contributors may be used to endorse or promote products derived from
+ this software without specific prior written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-var model = require('./data-model'),
-    util=require('util'),
+var util=require('util'),
     array = require('most-array'),
     qry = require('most-query'),
     async = require('async'),
@@ -71,7 +90,7 @@ function DataPermissionEventListener() {
 DataPermissionEventListener.prototype.beforeSave = function(e, callback)
 {
     DataPermissionEventListener.prototype.validate(e, callback);
-}
+};
 
 
 DataPermissionEventListener.prototype.beforeRemove = function(e, callback)
@@ -623,7 +642,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                 return !x.disabled && ((x.mask & requestMask) == requestMask);
             });
 
-            var cancel = false, assigned = false, entity = qry.entity(model.viewAdapter),
+            var cancel = false, assigned = false, entity = qry.entity(model.viewAdapter), expand = null,
                 perms1 = qry.entity(permissions.viewAdapter).as('p0'), expr = null;
             async.eachSeries(privileges, function(item, cb) {
                 if (cancel) {
@@ -700,6 +719,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                                         if (expr==null)
                                             expr = qry.query();
                                         expr.$where = q.query.$prepared;
+                                        if (q.query.$expand) { expand = q.query.$expand; }
                                         expr.prepare(true);
                                         assigned=true;
                                         cb(null);
@@ -730,6 +750,9 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                     }
                     else if (expr) {
                         var q = qry.query(model.viewAdapter).select([model.primaryKey]).distinct();
+                        if (expand) {
+                            q.join(expand[0].$entity).with(expand[0].$with);
+                        }
                         q.join(perms1).with(expr);
                         var pqAlias = 'pq' + common.randomInt(100000,999999).toString();
                         e.query.join(q.as(pqAlias)).with(qry.where(entity.select(model.primaryKey)).equal(qry.entity(pqAlias).select(model.primaryKey)));
@@ -744,7 +767,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
     else {
         callback(null);
     }
-}
+};
 
 var perms = {
     /**
@@ -758,7 +781,7 @@ var perms = {
      */
     DataPermissionEventListener:DataPermissionEventListener
 
-}
+};
 
 if (typeof exports !== 'undefined') {
     module.exports = perms;

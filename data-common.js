@@ -2,11 +2,31 @@
  * MOST Web Framework
  * A JavaScript Web Framework
  * http://themost.io
+ * Created by Kyriakos Barbounakis<k.barbounakis@gmail.com> on 2015-03-12.
  *
- * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com, Anthi Oikonomou anthioikonomou@gmail.com
- *
- * Released under the BSD3-Clause license
- * Date: 2015-03-12
+ * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com
+ Anthi Oikonomou anthioikonomou@gmail.com
+ All rights reserved.
+ Redistribution and use in source and binary forms, with or without
+ modification, are permitted provided that the following conditions are met:
+ * Redistributions of source code must retain the above copyright notice, this
+ list of conditions and the following disclaimer.
+ * Redistributions in binary form must reproduce the above copyright notice,
+ this list of conditions and the following disclaimer in the documentation
+ and/or other materials provided with the distribution.
+ * Neither the name of MOST Web Framework nor the names of its
+ contributors may be used to endorse or promote products derived from
+ this software without specific prior written permission.
+ THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+ OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+ OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 var util = require('util');
 /**
@@ -124,7 +144,7 @@ if (typeof Array.prototype.distinct === 'undefined')
             }
         }
         return res;
-    }
+    };
 
     if (Object.defineProperty) {
         try {
@@ -201,6 +221,27 @@ var dataCommon = {
      */
     randomInt: function(min, max) {
         return Math.floor(Math.random()*max) + min;
+    },
+    /**
+     *
+     * @param {Number} howMany - The length of the random sequence of characters
+     * @param {string=} chars - A sequence of characters to be used in random sequence
+     * @returns {string}
+     */
+    randomChars: function(howMany, chars) {
+        /**
+         * @type {{randomBytes:Function}|*}
+         */
+        var crypto = require('crypto');
+        chars = chars
+            || "abcdefghijklmnopqrstuwxyzABCDEFGHIJKLMNOPQRSTUWXYZ0123456789";
+        var rnd = crypto.randomBytes(howMany)
+            , value = new Array(howMany)
+            , len = chars.length;
+        for (var i = 0; i < howMany; i++) {
+            value[i] = chars[rnd[i] % len]
+        }
+        return value.join('');
     }
 };
 
