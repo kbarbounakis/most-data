@@ -461,8 +461,20 @@ DataModel.prototype.asQueryable = function() {
  */
 DataModel.prototype.filter = function(params, callback) {
     var self = this;
-    var parser = qry.openData.createParser(), $joinExpressions = [];
+    var parser = qry.openData.createParser(), $joinExpressions = [], view;
+    if (typeof params !== 'undefined' && params != null && typeof params.$select === 'string') {
+        //split select
+        var arr = params.$select.split(',');
+        if (arr.length==1) {
+            //try to get data view
+            view = self.dataviews(arr[0]);
+        }
+    }
     parser.resolveMember = function(member, cb) {
+        if (view) {
+            var field = view.fields.find(function(x) { return x.property === member });
+            if (field) { member = field.name; }
+        }
         var attr = self.field(member);
         if (attr)
             member = attr.name;
@@ -1854,7 +1866,7 @@ DataModel.prototype.fieldOf = function(attr, alias) {
 /**
  * Gets the specified model view
  * @param {string} name
- * @param {DataModelView} obj
+ * @param {DataModelView=} obj
  * @returns {DataModelView|undefined}
  */
 DataModel.prototype.dataviews = function(name, obj) {
