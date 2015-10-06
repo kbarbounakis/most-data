@@ -56,32 +56,40 @@ DataAttributeResolver.prototype.selecteNestedAttribute = function(attr, alias) {
 };
 
 DataAttributeResolver.prototype.resolveNestedAttribute = function(attr) {
+    var self = this;
     if (typeof attr === 'string' && /\//.test(attr)) {
-        var expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(this.model, attr);
+        var expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(this.model, attr), arr, obj;
         if (expr) {
             if (typeof this.query.$expand === 'undefined' || null) {
                 this.query.$expand = expr;
             }
             else {
-                if (!util.isArray(this.query.$expand)) {
-                    var arr = [];
-                    arr.push(this.query.$expand);
+                arr = [];
+                if (!util.isArray(self.query.$expand)) {
+                    arr.push(self.query.$expand);
                     this.query.$expand = arr;
                 }
-                //add expresssion in join expressions if does not exists
-                var obj = this.query.$expand.find(function(x) {
-                    if (x.$entity) {
-                        if (x.$entity.$as) {
-                            return (x.$entity.$as === expr.$entity.$as);
-                        }
-                    }
-                    return false;
+                arr = [];
+                if (util.isArray(expr))
+                    arr.push.apply(arr, expr);
+                else
+                    arr.push(expr);
+                arr.forEach(function(y) {
+                    obj = self.query.$expand.find(function(x) {
+                        if (x.$entity && x.$entity.$as) {
+                                return (x.$entity.$as === y.$entity.$as);
+                            }
+                        return false;
+                    });
+                    if (typeof obj === 'undefined')
+                        self.query.$expand.push(y);
                 });
-                if (typeof obj === 'undefined')
-                    this.query.$expand.push(expr);
             }
             //add field
             var member = attr.split('/');
+            if (member.length>2) {
+                return qry.fields.select(member[2]).from(member[1]);
+            }
             return qry.fields.select(member[1]).from(member[0]);
         }
         else {
@@ -121,9 +129,17 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
              * @type QueryExpression
              */
             var res =qry.query(self.viewAdapter).select(['*']);
-            var expr = qry.query().where(qry.fields.select(mapping.childField).from(self.viewAdapter)).equal(qry.fields.select(mapping.parentField).from(mapping.childField));
+            var expr = qry.query().where(qry.fields.select(mapping.childField).from(self._alias || self.viewAdapter)).equal(qry.fields.select(mapping.parentField).from(mapping.childField));
             var entity = qry.entity(parentModel.viewAdapter).as(mapping.childField).left();
             res.join(entity).with(expr);
+            if (arrMember.length>2) {
+                parentModel._alias = mapping.childField;
+                var expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(parentModel, arrMember[1] + '/' + arrMember[2]);
+                var arr = [];
+                arr.push(res.$expand);
+                arr.push(expr);
+                return arr;
+            }
             return res.$expand;
         }
         else {
@@ -183,11 +199,25 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
         return { name: matches[1] + '(' + matches[2] + '/' + matches[3]  + ')', property:matches[4] };
     }
     /**
+     * nested attribute aggregate function with alias e.g. f(x/b/c) as a
+     */
+    matches = /^(\w+)\((\w+)\/(\w+)\/(\w+)\)\sas\s(\w+)$/i.exec(s);
+    if (matches) {
+        return { name: matches[1] + '(' + matches[2] + '/' + matches[3] + '/' + matches[4]  + ')', property:matches[5] };
+    }
+    /**
      * nested attribute with alias e.g. x/b as a
      */
     matches = /^(\w+)\/(\w+)\sas\s(\w+)$/i.exec(s);
     if (matches) {
         return { name: matches[1] + '/' + matches[2], property:matches[3] };
+    }
+    /**
+     * nested attribute with alias e.g. x/b/c as a
+     */
+    matches = /^(\w+)\/(\w+)\/(\w+)\sas\s(\w+)$/i.exec(s);
+    if (matches) {
+        return { name: matches[1] + '/' + matches[2] + '/' + matches[3], property:matches[4] };
     }
     /**
      * nested attribute aggregate function with alias e.g. f(x/b)
@@ -197,12 +227,28 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
         return { name: matches[1] + '(' + matches[2] + '/' + matches[3]  + ')' };
     }
     /**
+     * nested attribute aggregate function with alias e.g. f(x/b/c)
+     */
+    matches = /^(\w+)\((\w+)\/(\w+)\/(\w+)\)$/i.exec(s);
+    if (matches) {
+        return { name: matches[1] + '('  + matches[2] + '/' + matches[3] + '/' + matches[4]  +  + ')' };
+    }
+    /**
      * nested attribute with alias e.g. x/b
      */
     matches = /^(\w+)\/(\w+)$/.exec(s);
     if (matches) {
         return { name: s };
     }
+
+    /**
+     * nested attribute with alias e.g. x/b/c
+     */
+    matches = /^(\w+)\/(\w+)\/(\w+)$/.exec(s);
+    if (matches) {
+        return { name: s };
+    }
+
 };
 
 

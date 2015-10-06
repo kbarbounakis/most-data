@@ -61,7 +61,8 @@ function DataFilterResolver() {
 
 DataFilterResolver.resolveMember = function(member, callback) {
     if (/\//.test(member)) {
-        callback(null, member.replace(/\//, '.'));
+        var arr = member.split('/');
+        callback(null, arr.slice(arr.length-2).join('.'));
     }
     else {
         callback(null, this.viewAdapter.concat('.', member))
@@ -465,20 +466,25 @@ DataModel.prototype.filter = function(params, callback) {
         var attr = self.field(member);
         if (attr)
             member = attr.name;
-        if (/\//.test(member)) {
+        if (DataAttributeResolver.prototype.testNestedAttribute.call(self,member)) {
             try {
                 var expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(self, member);
                 if (expr) {
-                    var joinExpr = $joinExpressions.find(function(x) {
-                        if (x.$entity) {
-                            if (x.$entity.$as) {
-                                return (x.$entity.$as === expr.$entity.$as);
-                            }
-                        }
-                        return false;
+                    var arrExpr = [];
+                    if (util.isArray(expr))
+                        arrExpr.push.apply(arrExpr, expr);
+                    else
+                        arrExpr.push(expr);
+                    arrExpr.forEach(function(y) {
+                        var joinExpr = $joinExpressions.find(function(x) {
+                            if (x.$entity && x.$entity.$as) {
+                                    return (x.$entity.$as === y.$entity.$as);
+                                }
+                            return false;
+                        });
+                        if (dataCommon.isNullOrUndefined(joinExpr))
+                            $joinExpressions.push(y);
                     });
-                    if (dataCommon.isNullOrUndefined(joinExpr))
-                        $joinExpressions.push(expr);
                 }
             }
             catch (err) {
