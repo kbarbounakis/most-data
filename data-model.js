@@ -44,34 +44,13 @@ var string = require('string'),
     dataAssociations = require('./data-associations'),
     DataObject = require('./data-object').DataObject,
     DataQueryable = require('./data-queryable').DataQueryable,
-    DataAttributeResolver = require('./data-queryable').DataAttributeResolver
+    DataAttributeResolver = require('./data-queryable').DataAttributeResolver,
     DataObjectAssociationListener = dataAssociations.DataObjectAssociationListener,
     DataField = types.DataField,
-    DataModelView = require('./data-model-view').DataModelView;
+    DataModelView = require('./data-model-view').DataModelView,
+    DataFilterResolver = require('./data-filter-resolver').DataFilterResolver;
 
 
-/**
- * @class DataFilterResolver
- * @abstract
- * @constructor
- */
-function DataFilterResolver() {
-    //
-}
-
-DataFilterResolver.resolveMember = function(member, callback) {
-    if (/\//.test(member)) {
-        var arr = member.split('/');
-        callback(null, arr.slice(arr.length-2).join('.'));
-    }
-    else {
-        callback(null, this.viewAdapter.concat('.', member))
-    }
-};
-
-DataFilterResolver.resolveMethod = function(name, args, callback) {
-    callback();
-};
 
 /**
  * @class EmptyQueryExpression
@@ -507,13 +486,13 @@ DataModel.prototype.filter = function(params, callback) {
         if (typeof self.resolveMember === 'function')
             self.resolveMember.call(self, member, cb);
         else
-            DataFilterResolver.resolveMember.call(self, member, cb);
+            DataFilterResolver.prototype.resolveMember.call(self, member, cb);
     };
     parser.resolveMethod = function(name, args, cb) {
         if (typeof self.resolveMethod === 'function')
             self.resolveMethod.call(self, name, args, cb);
         else
-            DataFilterResolver.resolveMethod.call(self, name, args, cb);
+            DataFilterResolver.prototype.resolveMethod.call(self, name, args, cb);
     };
     var filter;
     if (typeof params === 'string') {
@@ -2034,12 +2013,7 @@ if (typeof exports !== 'undefined') {
          * DataModel class constructor.
          * @constructs DataModel
          */
-        DataModel : DataModel,
-        /**
-         * DataFilterResolver class constructor.
-         * @constructs DataFilterResolver
-         */
-        DataFilterResolver: DataFilterResolver
+        DataModel : DataModel
     }
 
 ; }

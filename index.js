@@ -46,7 +46,7 @@ var model = require('./data-model'),
     /**
      * @constructs {DataFilterResolver}
      */
-    DataFilterResolver = model.DataFilterResolver;
+    DataFilterResolver = require('./data-filter-resolver').DataFilterResolver;
 /**
  * @module most-data
  */
@@ -109,6 +109,11 @@ var dat = {
          * @constructs DataModel
          */
         DataModel: DataModel,
+        /**
+         * DataFilterResolver class constructor
+         * @constructs DataFilterResolver
+         */
+        DataFilterResolver: DataFilterResolver,
         /**
          * DataPermissionEventListener class constructor
          * @constructs DataPermissionEventListener

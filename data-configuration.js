@@ -79,14 +79,18 @@ function DataConfiguration() {
             try {
                 dataTypes = require(path.join(process.cwd(), 'config/dataTypes.json'));
                 if (typeof dataTypes === 'undefined' || dataTypes == null) {
-                    console.log('Application data types are empty. The default data types will be loaded instead.');
+                    dataCommon.log('Data: Application data types are empty. The default data types will be loaded instead.');
                     dataTypes = require('./dataTypes.json');
                 }
             }
             catch(e) {
-                console.log('An error occured while loading application data types');
-                console.log(e);
-                console.log('The default data types will be loaded instead.');
+                if (e.code === 'MODULE_NOT_FOUND') {
+                    dataCommon.log('Data: Application specific data types are missing. The default data types will be loaded instead.');
+                }
+                else {
+                    dataCommon.log('Data: An error occured while loading application data types.');
+                    throw e;
+                }
                 dataTypes = require('./dataTypes.json');
             }
             return dataTypes;

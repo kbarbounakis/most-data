@@ -31,21 +31,28 @@
 var __types__ = require('./types'), util = require('util');
 /**
  * @class FunctionContext
+ * @param {DataContext|*=} context
+ * @param {DataModel|*=} model
+ * @param {*=} target
  * @constructor
 */
-function FunctionContext() {
+function FunctionContext(context, model, target) {
     /**
-     * @type __model__.classes.DataContext
+     * @type {DataContext}
     */
-    this.context = undefined;
+    this.context = context;
      /**
-      * @type DataModel
+      * @type {DataModel}
       */
-    this.model = undefined;
+    this.model = model;
+    if ((typeof context === 'undefined' || context == null) && typeof model !=='undefined' && typeof model != null) {
+        //get current context from DataModel.context property
+        this.context = model.context;
+    }
     /**
-     * @type *
+     * @type {*}
      */
-    this.target = undefined;
+    this.target = target;
 }
 
 FunctionContext.prototype.eval = function(expr, callback) {
@@ -197,6 +204,11 @@ FunctionContext.prototype.user = function(callback) {
         }
     });
 };
+/**
+ * Returns the current context user identifier
+ * @param {Function} callback
+ */
+FunctionContext.prototype.me = FunctionContext.prototype.user;
 
 var functions = {
     /**
@@ -241,13 +253,13 @@ var functions = {
      */
     user: function(e, callback) {
         callback = callback || function() {};
-        var user = e.model.context.user || { };
+        var user = e.model.context.user || e.model.context.interactiveUser || { name:'anonymous' };
         if (user['id']) {
             callback(null, user['id']);
             return;
         }
         var userModel = e.model.context.model('User');
-        userModel.where('name').equal(user.name).or('name').equal('anonymous').silent().select(['id','name']).take(2, function(err, result) {
+        userModel.where('name').equal(user.name).silent().select(['id','name']).first(function(err, result) {
             if (err) {
                 console.log(err);
                 callback();
