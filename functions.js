@@ -28,7 +28,9 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-var __types__ = require('./types'), util = require('util');
+var types = require('./types'),
+    util = require('util'),
+    dataCommon = require('./data-common');
 /**
  * @class FunctionContext
  * @param {DataContext|*=} context
@@ -178,29 +180,27 @@ FunctionContext.prototype.user = function(callback) {
     var self = this, context = self.model.context;
     var user = context.interactiveUser || context.user || { };
     if (user['id']) {
-        callback(null, user['id']);
-        return;
+        return callback(null, user['id']);
     }
-    var userModel = context.model('User');
-    userModel.where('name').equal(user.name).or('name').equal('anonymous').silent().select(['id','name']).take(2, function(err, result) {
+    var userModel = context.model('User'), parser, undefinedUser = null;
+    userModel.where('name').equal(user.name).silent().select(['id','name']).first(function(err, result) {
         if (err) {
-            console.log(err);
-            callback();
+            dataCommon.log(err);
+            //try to get undefined user
+            parser = types.parsers['parse' + userModel.field('id').type];
+            if (typeof parser === 'function')
+                undefinedUser = parser(null);
+            return callback(null, undefinedUser);
+        }
+        else if (dataCommon.isNullOrUndefined(result)) {
+            //try to get undefined user
+            parser = types.parsers['parse' + userModel.field('id').type];
+            if (typeof parser === 'function')
+                undefinedUser = parser(null);
+            return callback();
         }
         else {
-            //filter result to exclude anonymous user
-            var filtered = result.filter(function(x) { return x.name!='anonymous'; }, result);
-            //if user was found
-            if (filtered.length>0) {
-                context.user.id = filtered[0].id;
-                callback(null, filtered[0].id);
-            }
-            //if anonymous was found
-            else if (result.length>0) {
-                callback(null, result[0].id);
-            }
-            else
-                callback();
+            callback(null, result.id);
         }
     });
 };
@@ -253,10 +253,11 @@ var functions = {
      */
     user: function(e, callback) {
         callback = callback || function() {};
-        var user = e.model.context.user || e.model.context.interactiveUser || { name:'anonymous' };
+        var user = e.model.context.interactiveUser || e.model.context.user || {  };
+        //ensure user name (or anonymous)
+        user.name = user.name || 'anonymous';
         if (user['id']) {
-            callback(null, user['id']);
-            return;
+            return callback(null, user['id']);
         }
         var userModel = e.model.context.model('User');
         userModel.where('name').equal(user.name).silent().select(['id','name']).first(function(err, result) {
@@ -282,7 +283,7 @@ var functions = {
         });
 
     }
-}
+};
 /**
  *
  */
