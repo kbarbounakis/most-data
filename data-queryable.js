@@ -142,6 +142,17 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
             }
             return res.$expand;
         }
+        else if (mapping.parentModel===self.name && mapping.associationType==='association') {
+            var childModel = self.context.model(mapping.childModel);
+            if (dataCommon.isNullOrUndefined(childModel)) {
+                throw new Error(util.format('Association child model (%s) cannot be found.', mapping.childModel));
+            }
+            var res =qry.query('Unknown').select(['*']);
+            var expr = qry.query().where(qry.fields.select(mapping.parentField).from(self.viewAdapter)).equal(qry.fields.select(mapping.childField).from(arrMember[0]));
+            var entity = qry.entity(childModel.viewAdapter).as(arrMember[0]).left();
+            res.join(entity).with(expr);
+            return res.$expand;
+        }
         else {
             throw new Error(util.format('The association type between %s and %s model is not supported for filtering, grouping or sorting data.', mapping.parentModel , mapping.childModel));
         }
