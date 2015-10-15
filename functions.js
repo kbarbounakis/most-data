@@ -90,12 +90,12 @@ FunctionContext.prototype.eval = function(expr, callback) {
 };
 
 FunctionContext.prototype.now = function(callback) {
-    callback = callback || function() {};
+    if (typeof callback === 'undefined') { return (new Date()); }
     callback(null, new Date());
 };
 
 FunctionContext.prototype.today = function(callback) {
-    callback = callback || function() {};
+    if (typeof callback === 'undefined') { return (new Date()).getDate(); }
     callback(null, (new Date()).getDate());
 };
 
@@ -126,7 +126,7 @@ function newGuidInternal() {
 };
 
 FunctionContext.prototype.newGuid = function(callback) {
-    callback = callback || function() {};
+    if (typeof callback === 'undefined') { return newGuidInternal(); }
     callback(null, newGuidInternal());
 };
 
@@ -138,25 +138,26 @@ function randomIntSync (min, max) {
  * Generates a random integer value between the given minimum and maximum value
  * @param {number} min
  * @param {number} max
- * @param {function(Error=,number=)} callback
+ * @param {function(Error=,number=)=} callback
  */
 FunctionContext.prototype.int = function(min, max, callback) {
-    callback = callback || function() {};
+    if (typeof callback === 'undefined') { return randomIntSync(min, max); }
     callback(null, randomIntSync(min, max))
 };
 /***
  * Generates a random string with the specified length. The default length is 8.
  * @param {number} length
- * @param {function(Error=,String=)} callback
+ * @param {function(Error=,String=)=} callback
  */
 FunctionContext.prototype.chars = function(length, callback) {
-    callback = callback || function() {};
+
     length = length || 8;
     var chars = "abcdefghkmnopqursuvwxz2456789ABCDEFHJKLMNPQURSTUVWXYZ";
     var str = "";
     for(var i = 0; i < length; i++) {
         str += chars.substr(randomIntSync(0, chars.length-1),1);
     }
+    if (typeof callback === 'undefined') { return str; }
     callback(null, str);
 };
 /***
@@ -165,13 +166,13 @@ FunctionContext.prototype.chars = function(length, callback) {
  * @param {function(Error=,String=)} callback
  */
 FunctionContext.prototype.password = function(length, callback) {
-    callback = callback || function() {};
     length = length || 8;
     var chars = "abcdefghkmnopqursuvwxz2456789ABCDEFHJKLMNPQURSTUVWXYZ";
     var str = "";
     for(var i = 0; i < length; i++) {
         str += chars.substr(randomIntSync(0, chars.length-1),1);
     }
+    if (typeof callback === 'undefined') { return '{clear}' + str; }
     callback(null, '{clear}' + str);
 };
 

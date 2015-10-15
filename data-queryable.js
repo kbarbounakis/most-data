@@ -1794,6 +1794,153 @@ DataQueryable.prototype.flatten = function(value) {
     }
     return this;
 };
+/**
+ * @param {number|*} x
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.add = function(x) {
+    this.query.add(x); return this;
+};
+/**
+ * @param {number|*} x
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.subtract = function(x) {
+    this.query.subtract(x); return this;
+};
+
+/**
+ * @param {number} x
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.multiply = function(x) {
+    this.query.multiply(x); return this;
+};
+
+/**
+ * @param {number} x
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.divide = function(x) {
+    this.query.divide(x); return this;
+};
+
+/**
+ * @param {number=} n
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.round = function(n) {
+    this.query.round(x); return this;
+};
+/**
+ * @param {number} start
+ * @param {number=} length
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.substr = function(start,length) {
+    this.query.substr(start,length); return this;
+};
+/**
+ * @param {string} s
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.indexOf = function(s) {
+    this.query.indexOf(s); return this;
+};
+/**
+ * @param {string} s
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.concat = function(s) {
+    this.query.concat(s); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.trim = function() {
+    this.query.trim(); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.length = function() {
+    this.query.length(); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.getDate = function() {
+    this.query.getDate(); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.getYear = function() {
+    this.query.getYear(); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.getMonth = function() {
+    this.query.getMonth(); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.getDay = function() {
+    this.query.getDay(); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.getHours = function() {
+    this.query.getHours(); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.getMinutes = function() {
+    this.query.getMinutes(); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.getSeconds = function() {
+    this.query.getSeconds(); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.floor = function() {
+    this.query.floor(); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.ceil = function() {
+    this.query.ceil(); return this;
+};
+
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.toLocaleLowerCase = function() {
+    this.query.toLocaleLowerCase(); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.toLowerCase = DataQueryable.prototype.toLocaleLowerCase;
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.toLocaleUpperCase = function() {
+    this.query.toLocaleUpperCase(); return this;
+};
+/**
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.toUpperCase = DataQueryable.prototype.toLocaleUpperCase;
 
 if (typeof exports !== 'undefined')
 {

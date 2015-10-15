@@ -55,13 +55,11 @@ DataObjectAssociationListener.prototype.beforeSave = function(e, callback) {
             var keys = Object.keys(e.target);
             var mappings = [];
             keys.forEach(function(x) {
-                if (e.target.hasOwnProperty(x)) {
-                    if (typeof e.target[x] === 'object' && e.target[x]!=null) {
+                if (e.target.hasOwnProperty(x) && typeof e.target[x] === 'object' && e.target[x] != null) {
                         //try to find field mapping, if any
                         var mapping = e.model.inferMapping(x);
-                        if (mapping)
+                        if (mapping && mapping.associationType==='association' && mapping.childModel===e.model.name)
                             mappings.push(mapping);
-                    }
                 }
             });
             async.eachSeries(mappings,
@@ -70,44 +68,47 @@ DataObjectAssociationListener.prototype.beforeSave = function(e, callback) {
                  * @param {function(Error=)} cb
                  */
                 function(mapping, cb) {
-                    if (mapping.associationType==='association') {
-                        if (mapping.childModel== e.model.name) {
-                            //get child field
-                            var childAttr = e.model.field(mapping.childField), childField = childAttr.property || childAttr.name;
-                            //foreign key association
-                            if (typeof e.target[childField] !== 'object') {
-                                cb(null);
-                                return;
+                    if (mapping.associationType==='association' && mapping.childModel===e.model.name) {
+                        /**
+                         * @type {DataField|*}
+                         */
+                        var field = e.model.field(mapping.childField),
+                            childField = field.property || field.name;
+                        //foreign key association
+                        if (typeof e.target[childField] !== 'object') {
+                            return cb();
+                        }
+                        if (e.target[childField].hasOwnProperty(mapping.parentField)) {
+                            return cb();
+                        }
+                        //get associated mode
+                        var associatedModel = e.model.context.model(mapping.parentModel),
+                            er;
+                        associatedModel.find(e.target[childField]).select(mapping.parentField).silent().flatten().take(1).list(function(err, result) {
+                            if (err) {
+                                cb(err);
                             }
-                            var value = e.target[childField][mapping.parentField];
-                            if (value) {
-                                e.target[mapping.childField] = value;
-                                if (childAttr.property)
-                                    delete e.target[childAttr.property];
-                                cb(null);
+                            else if (dataCommon.isNullOrUndefined(result)) {
+                                er = new Error('An associated object cannot be found.');er.code = 'EDATA';er.model = associatedModel.name;
+                                cb(er);
+                            }
+                            else if (result.total==0) {
+                                er = new Error('An associated object cannot be found.');er.code = 'EDATA';er.model = associatedModel.name;
+                                cb(er);
+                            }
+                            else if (result.total>1) {
+                                er = new Error('An associated object is defined more than once and cannot be bound.'); er.code = 'EDATA';er.model = associatedModel.name;
+                                cb(er);
                             }
                             else {
-                                //try to find foreign item
-                                var associatedModel = e.model.context.model(mapping.parentModel);
-                                associatedModel.find(e.target[childField]).select(mapping.parentField).silent().first(function(err, result) {
-                                    if (err) {
-                                        cb(err);
-                                    }
-                                    else {
-                                        if (result) {
-                                            e.target[childField] = result[mapping.parentField];
-                                            cb(null);
-                                        }
-                                        else {
-                                            cb(new Error(util.format('The associated object of type %s cannot be found.',associatedModel.name)))
-                                        }
-                                    }
-                                });
+                                e.target[childField][mapping.parentField]=result.records[0][mapping.parentField];
+                                cb();
                             }
-                            return;
-                        }
+                        });
                     }
-                    cb(null);
+                    else {
+                       cb();
+                    }
 
                 }, function(err) {
                     callback(err);

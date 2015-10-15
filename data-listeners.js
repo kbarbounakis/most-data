@@ -194,8 +194,7 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
         //validate expression
         if (typeof expr !== 'string') {
             e.target[attr.name] = expr;
-            cb(null);
-            return 0;
+            return cb();
         }
         //check javascript: keyword for code evaluation
         if (expr.indexOf('javascript:')==0) {
@@ -211,14 +210,39 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
             }
             var value = eval(fnstr);
             //if value is function
-            if (typeof value === 'function')
-            //then call function against the target object
-                e.target[attr.name] = value.call(e.target);
-            else
-            //otherwise get value
+            if (typeof value === 'function') {
+                //then call function against the target object
+                var value1 = value.call(functionContext);
+                if (typeof value1 !== 'undefined' && value1 !=null && typeof value1.then === 'function') {
+                    //we have a promise, so we need to wait for answer
+                    value1.then(function(result) {
+                        //otherwise set result
+                        e.target[attr.name] = result;
+                        return cb();
+                    }).catch(function(err) {
+                        cb(err);
+                    });
+                }
+                else {
+                    e.target[attr.name] = value1;
+                    return cb();
+                }
+            }
+            else if (typeof value !== 'undefined' && value !=null && typeof value.then === 'function') {
+                //we have a promise, so we need to wait for answer
+                value.then(function(result) {
+                    //otherwise set result
+                    e.target[attr.name] = result;
+                    return cb();
+                }).catch(function(err) {
+                    cb(err);
+                });
+            }
+            else {
+                //otherwise get value
                 e.target[attr.name] = value;
-            cb(null);
-            return 0;
+                return cb();
+            }
         }
         else {
             functionContext.eval(expr, function(err, result) {
@@ -317,8 +341,7 @@ DefaultValueListener.prototype.beforeSave = function(e, callback) {
             //validate expression
             if (typeof expr !== 'string') {
                 e.target[attr.name] = expr;
-                cb(null);
-                return 0;
+                return cb();
             }
             //check javascript: keyword for code evaluation
             if (expr.indexOf('javascript:')==0) {
@@ -334,14 +357,39 @@ DefaultValueListener.prototype.beforeSave = function(e, callback) {
                 }
                 var value = eval(fnstr);
                 //if value is function
-                if (typeof value === 'function')
-                //then call function against the target object
-                    e.target[attr.name] = value.call(e.target);
-                else
-                //otherwise get value
+                if (typeof value === 'function') {
+                    //then call function against the target object
+                    var value1 = value.call(functionContext);
+                    if (typeof value1 !== 'undefined' && value1 !=null && typeof value1.then === 'function') {
+                        //we have a promise, so we need to wait for answer
+                        value1.then(function(result) {
+                            //otherwise set result
+                            e.target[attr.name] = result;
+                            return cb();
+                        }).catch(function(err) {
+                            cb(err);
+                        });
+                    }
+                    else {
+                        e.target[attr.name] = value1;
+                        return cb();
+                    }
+                }
+                else if (typeof value !== 'undefined' && value !=null && typeof value.then === 'function') {
+                    //we have a promise, so we need to wait for answer
+                    value.then(function(result) {
+                        //otherwise set result
+                        e.target[attr.name] = result;
+                        return cb();
+                    }).catch(function(err) {
+                       cb(err);
+                    });
+                }
+                else {
+                    //otherwise get value
                     e.target[attr.name] = value;
-                cb(null);
-                return 0;
+                    return cb();
+                }
             }
             else {
                 functionContext.eval(expr, function(err, result) {

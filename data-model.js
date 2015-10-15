@@ -1221,6 +1221,8 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
         target: obj,
         state:state
     };
+    //register data association listener (before save)
+    self.once('before.save', DataObjectAssociationListener.prototype.beforeSave);
     //register data association listener
     self.once('after.save', DataObjectAssociationListener.prototype.afterSave);
     //register unique constraint listener at the end of listeners collection (before emit)
