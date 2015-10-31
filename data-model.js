@@ -265,11 +265,15 @@ function DataModel(obj) {
      * @type String
     */
     this.primaryKey = undefined;
+    //local variable for DateModel.primaryKey
+    var _primaryKey;
     Object.defineProperty(this, 'primaryKey' , { get: function() {
+        if (typeof _primaryKey !== 'undefined') { return _primaryKey; }
         var p = self.fields.find(function(x) { return x.primary==true; });
-        if (p)
-            return p.name;
-        return null;
+        if (p) {
+            _primaryKey = p.name;
+            return _primaryKey;
+        }
     }, enumerable: false, configurable: false});
     /**
      * Gets an array that contains model attribute names

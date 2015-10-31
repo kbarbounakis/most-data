@@ -208,22 +208,68 @@ DataObject.prototype.idOf = function() {
     }
 };
 
+DataObject.prototype.removeProperty = function(name) {
+    var model = this.getModel(), field = model.field(name);
+    if (dataCommon.isNullOrUndefined(field)) {
+        var er = new Error('The specified field cannot be found.'); er.code = 'EDATA';
+        throw er;
+    }
+    //safe delete property
+    delete this[name];
+    return this;
+};
+
 /**
  * @param {String} name The relation name
- * @returns {DataQueryable}
+ * @returns {DataQueryable|HasManyAssociation|HasOneAssociation|DataObjectJunction|HasParentJunction|{value:Function}}
  */
-DataObject.prototype.property = function(name)
-{
+DataObject.prototype.property = function(name) {
     if (typeof name !== 'string')
         return null;
-    var self = this;
+    var self = this, er;
     //validate relation based on the given name
     var model = self.getModel(), field = model.field(name);
-    if (field==null)
-        throw new Error('The specified field cannot be found.');
+    if (dataCommon.isNullOrUndefined(field)) {
+        er = new Error('The specified field cannot be found.'); er.code = 'EDATA';
+        throw er;
+    }
     var mapping = model.inferMapping(field.name);
-    if (typeof mapping === 'undefined' || mapping ==null)
-        throw new Error('The specified association cannot be found.');
+    if (dataCommon.isNullOrUndefined(mapping)) {
+        //return queryable field value
+        return {
+            value:function(callback) {
+                //if object has already an attribute with this name
+                if (self.hasOwnProperty(name)) {
+                    //return attribute
+                    return callback(null, self[name]);
+                }
+                else {
+                    //otherwise get attribute value
+                    if (self.hasOwnProperty(model.primaryKey)) {
+                        model.where(model.primaryKey).equal(self[model.primaryKey]).select(name).value(function(err, value) {
+                            if (err) { return callback(err); }
+                            callback(null, value);
+                        });
+                    }
+                    else {
+                        model.inferState(self, function(err, state) {
+                            if (err) { return callback(err); }
+                            if (state==2) {
+                                model.where(model.primaryKey).equal(self[model.primaryKey]).select(name).value(function(err, value) {
+                                    if (err) { return callback(err); }
+                                    callback(null, value);
+                                });
+                            }
+                            else {
+                                er = new Error('Object identity cannot be found due to missing primary key or unique constraint filter.'); er.code = 'EDATA';
+                                callback(er);
+                            }
+                        });
+                    }
+                }
+            }
+        };
+    }
     //validate field association
     if (mapping.associationType=='association') {
         if (mapping.parentModel==model.name)
@@ -237,7 +283,10 @@ DataObject.prototype.property = function(name)
         else
             return new HasParentJunction(self, mapping);
     }
-    return null;
+    else {
+        er = new Error('The association which is specified for the given field is not implemented.'); er.code = 'EDATA';
+        throw er;
+    }
 };
 /**
  * @param {String} name

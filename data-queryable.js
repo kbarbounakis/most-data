@@ -33,8 +33,9 @@ var async=require('async'),
     dataCommon = require('./data-common'),
     types = require('./types'),
     cfg = require('./data-configuration'),
-    qry = require('most-query');
-    DataAssociationMapping = types.DataAssociationMapping;
+    qry = require('most-query'),
+    DataAssociationMapping = types.DataAssociationMapping,
+    Q = require('q');
 
 function DataAttributeResolver() {
 
@@ -429,6 +430,12 @@ DataQueryable.prototype.equal = function(obj) {
  * @param obj {*}
  * @returns {DataQueryable}
  */
+DataQueryable.prototype.is = DataQueryable.prototype.equal;
+
+/**
+ * @param obj {*}
+ * @returns {DataQueryable}
+ */
 DataQueryable.prototype.notEqual = function(obj) {
     this.query.notEqual(obj);
     return this;
@@ -565,10 +572,12 @@ DataQueryable.prototype.between = function(value1, value2) {
  */
 DataQueryable.prototype.select = function(attr) {
 
-    var self = this, arr, expr;
-    if (typeof attr === 'string') {
+    var self = this, arr, expr,
+        arg = (arguments.length>1) ? Array.prototype.slice.call(arguments): attr;
+
+    if (typeof arg === 'string') {
         //validate field or model view
-        var field = self.model.field(attr);
+        var field = self.model.field(arg);
         if (field) {
             //validate field
             if (field.many || (field.mapping && field.mapping.associationType === 'junction')) {
@@ -581,7 +590,7 @@ DataQueryable.prototype.select = function(attr) {
         }
         else {
             //get data view
-            self.$view  = self.model.dataviews(attr);
+            self.$view  = self.model.dataviews(arg);
             //if data view was found
             if (self.$view) {
                 arr = [];
@@ -621,9 +630,9 @@ DataQueryable.prototype.select = function(attr) {
                 });
             }
             //select a field from a joined entity
-            else if (/\//.test(attr)) {
+            else if (/\//.test(arg)) {
                 arr = arr || [];
-                expr = DataAttributeResolver.prototype.selecteNestedAttribute.call(self, attr);
+                expr = DataAttributeResolver.prototype.selecteNestedAttribute.call(self, arg);
                 if (expr) { arr.push(expr); }
             }
         }
@@ -634,16 +643,15 @@ DataQueryable.prototype.select = function(attr) {
     }
     else {
         //get array of attributes
-
-        if (util.isArray(attr)) {
+        if (util.isArray(arg)) {
             arr = [];
             //check if field is a model dataview
-            if (attr.length == 1 && typeof attr[0] === 'string') {
-                if (self.model.dataviews(attr[0])) {
-                    return self.select(attr[0]);
+            if (arg.length == 1 && typeof arg[0] === 'string') {
+                if (self.model.dataviews(arg[0])) {
+                    return self.select(arg[0]);
                 }
             }
-            attr.forEach(function(x) {
+            arg.forEach(function(x) {
                 if (typeof x === 'string') {
                     field = self.model.field(x);
                     if (field) {
@@ -679,7 +687,7 @@ DataQueryable.prototype.select = function(attr) {
             });
         }
     }
-    if (typeof arr === 'undefined' || arr === null) {
+    if (typeof arr === 'undefined' || arr == null) {
         if (!self.query.hasFields()) {
             //enumerate fields
             var fields = self.model.attributes.filter(function(x) {
@@ -911,16 +919,28 @@ DataQueryable.prototype.thenByDescending = function(attr) {
 };
 
 /**
- * @param {function(Error=,*=)} callback
+ * Executes the specified query against the underlying model and returns the first object.
+ * @param {Function=} callback
+ * @returns {Deferred|*}
  */
 DataQueryable.prototype.first = function(callback) {
-    this.firstInternal(callback);
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        firstInternal.call(this, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise();
+    }
+    else {
+        return firstInternal.call(this, callback);
+    }
 };
 /**
  * @private
  * @param {function(Error=,*=)} callback
  */
-DataQueryable.prototype.firstInternal = function(callback) {
+function firstInternal(callback) {
     var self = this;
     callback = callback || function() {};
     self.skip(0).take(1, function(err, result) {
@@ -934,19 +954,31 @@ DataQueryable.prototype.firstInternal = function(callback) {
                 callback(null);
         }
     });
-};
+}
+
 
 /**
- * @param {function(Error=,Array=)} callback
+ * @param {function(Error=,Array=)=} callback
+ * @returns {Deferred|*} - If callback function is missing returns a promise.
  */
 DataQueryable.prototype.all = function(callback) {
-    this.allInternal(callback);
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        allInternal.call(this, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise();
+    }
+    else {
+        allInternal.call(this, callback);
+    }
 };
 
 /**
- * @param {function(Error=,Array=)} callback
+ * @param {Function} callback
  */
-DataQueryable.prototype.allInternal = function(callback) {
+function allInternal(callback) {
     var self = this;
     //remove skip and take
     delete this.query.$skip;
@@ -958,7 +990,7 @@ DataQueryable.prototype.allInternal = function(callback) {
     callback = callback || function() {};
     //execute select
     self.execute(callback);
-};
+}
 
 /**
  * @param n {number}
@@ -974,7 +1006,7 @@ DataQueryable.prototype.skip = function(n) {
  * @param {function=} callback
  * @returns {*} - A collection of objects that meet the query provided
  */
-DataQueryable.prototype.take = function(n, callback) {
+function takeInternal(n, callback) {
     var self = this;
     self.query.take(n);
     //if no callback is defined
@@ -988,13 +1020,47 @@ DataQueryable.prototype.take = function(n, callback) {
     }
     //execute select
     self.execute(callback);
+}
+
+/**
+ * @param {Number} n - Defines the number of items to take
+ * @param {Function=} callback
+ * @returns {Deferred|*} - If callback function is missing returns a promise.
+ */
+DataQueryable.prototype.take = function(n, callback) {
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        takeInternal.call(this, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise();
+    }
+    else {
+        takeInternal.call(this, callback);
+    }
 };
 /**
  * Executes current query and returns a result set based on the specified paging parameters.
- * @param {function(Error=,DataResultSet=)} callback - A callback function with arguments (err, result) where the first argument is the error, if any
+ * @param {function(Error=,DataResultSet=)=} callback - A callback function with arguments (err, result) where the first argument is the error, if any
  * and the second argument is an object that represents a result set
+ * @returns {Deferred|*} - If callback is missing returns a promise.
  */
 DataQueryable.prototype.list = function(callback) {
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        listInternal.call(this, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise();
+    }
+    else {
+        return listInternal.call(this, callback);
+    }
+};
+
+function listInternal(callback) {
     var self = this;
     try {
         callback = callback || function() {};
@@ -1122,6 +1188,7 @@ DataQueryable.prototype.count = function(callback) {
         callback.call(self, err, value);
     });
 };
+
 /**
  * Executes the underlying query statement and returns the maximum value of the given attribute.
  * @param {string} attr
@@ -1936,6 +2003,25 @@ DataQueryable.prototype.toLowerCase = DataQueryable.prototype.toLocaleLowerCase;
  */
 DataQueryable.prototype.toLocaleUpperCase = function() {
     this.query.toLocaleUpperCase(); return this;
+};
+/**
+ * Gets a single value after executing the specified query. In query does not have any fields
+ * @param {Function} callback
+ */
+DataQueryable.prototype.value = function(callback) {
+    if (dataCommon.isNullOrUndefined(this.query.$select)) {
+        //select model primary key
+        this.select(this.model.primaryKey);
+    }
+    this.firstInternal(function(err, result) {
+       if (err) { return callback(err); }
+        if (typeof result === 'undefined' || result == null) {
+            return callback();
+        }
+        var key = Object.keys(result)[0];
+        if (typeof key === 'undefined') { return callback(); }
+        callback(null, result[key]);
+    });
 };
 /**
  * @returns {DataQueryable}

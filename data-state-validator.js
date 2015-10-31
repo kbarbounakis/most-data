@@ -54,35 +54,38 @@ DataStateValidatorListener.prototype.beforeSave = function(e, callback) {
         if (dataCommon.isNullOrUndefined(e.state)) {e.state = 1; }
         //if state is different than inserted then do nothing and return
         if (e.state!=1) {
-            callback();
-            return;
+            return callback();
         }
+
         var model = e.model, target = e.target;
         //if model or target is not defined do nothing and exit
         if (dataCommon.isNullOrUndefined(model) || dataCommon.isNullOrUndefined(target)) {
-            callback();
-            return;
+            return callback();
+        }
+        //if target has $state property defined, set this state and exit
+        if (!dataCommon.isNullOrUndefined(target.$state)) {
+            //set state
+            e.state = target.$state;
+            //and exit
+            return callback();
         }
         if (!dataCommon.isNullOrUndefined(model.primaryKey)) {
             if (!dataCommon.isNullOrUndefined(target[model.primaryKey])) {
                 //The primary key exists, so do nothing
                 e.state = 2;
-                callback();
-                return;
+                return callback();
             }
         }
         //get constraint collection (from both model and base model)
         var arr = model.constraintCollection.filter(function(x) { return x.type==='unique' }), context = model.context, objectFound=false;
         if (arr.length==0) {
             //do nothing and exit
-            callback();
-            return;
+            return callback();
         }
         async.eachSeries(arr, function(constraint, cb) {
             try {
                 if (objectFound) {
-                    cb();
-                    return;
+                    return cb();
                 }
                 /**
                  * @type {DataQueryable}
