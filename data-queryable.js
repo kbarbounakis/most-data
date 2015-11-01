@@ -1030,14 +1030,14 @@ function takeInternal(n, callback) {
 DataQueryable.prototype.take = function(n, callback) {
     if (typeof callback !== 'function') {
         var d = Q.defer();
-        takeInternal.call(this, function(err, result) {
+        takeInternal.call(this, n, function(err, result) {
             if (err) { return d.reject(err); }
             d.resolve(result);
         });
         return d.promise();
     }
     else {
-        takeInternal.call(this, callback);
+        takeInternal.call(this, n, callback);
     }
 };
 /**
