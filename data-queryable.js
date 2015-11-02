@@ -1094,7 +1094,7 @@ function listInternal(callback) {
     catch(e) {
         callback(e);
     }
-};
+}
 
 /**
  * @param {string} name
@@ -1162,7 +1162,7 @@ DataQueryable.prototype.sumOf = function(name, alias) {
  * @param callback {Function}
  * @returns {*} - A collection of objects that meet the query provided
  */
-DataQueryable.prototype.count = function(callback) {
+function countInternal(callback) {
     var self = this;
     callback = callback || function() {};
     //add a count expression
@@ -1187,6 +1187,25 @@ DataQueryable.prototype.count = function(callback) {
         }
         callback.call(self, err, value);
     });
+}
+
+/**
+ * Executes the underlying query statement and returns the count of object found.
+ * @param {Function=} callback
+ * @returns {Deferred|*} - A collection of objects that meet the query provided
+ */
+DataQueryable.prototype.count = function(callback) {
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        countInternal.call(this, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise();
+    }
+    else {
+        return countInternal.call(this, callback);
+    }
 };
 
 /**
@@ -1195,7 +1214,7 @@ DataQueryable.prototype.count = function(callback) {
  * @param callback {Function}
  * @returns {*} Returns the maximum value of the given attribute
  */
-DataQueryable.prototype.max = function(attr, callback) {
+function maxInternal(attr, callback) {
     var self = this;
     callback = callback || function() {};
     //add a count expression
@@ -1220,6 +1239,26 @@ DataQueryable.prototype.max = function(attr, callback) {
         }
         callback.call(self, err, value);
     });
+}
+
+/**
+ * Executes the underlying query statement and returns the maximum value of the given attribute.
+ * @param {string} attr
+ * @param {Function=} callback
+ * @returns {Deferred|*} Returns the maximum value of the given attribute
+ */
+DataQueryable.prototype.max = function(attr, callback) {
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        maxInternal.call(this, attr, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise();
+    }
+    else {
+        return maxInternal.call(this, attr, callback);
+    }
 };
 
 /**
@@ -1228,7 +1267,7 @@ DataQueryable.prototype.max = function(attr, callback) {
  * @param callback {Function}
  * @returns {*} Returns the maximum value of the given attribute
  */
-DataQueryable.prototype.min = function(attr, callback) {
+function minInternal(attr, callback) {
     var self = this;
     callback = callback || function() {};
     //add a count expression
@@ -1253,15 +1292,34 @@ DataQueryable.prototype.min = function(attr, callback) {
         }
         callback.call(self, err, value);
     });
+}
+
+/**
+ * Executes the underlying query statement and returns the minimum value of the given attribute.
+ * @param {String} attr
+ * @param {Function=} callback
+ * @returns {Deferred|*} Returns the maximum value of the given attribute
+ */
+DataQueryable.prototype.min = function(attr, callback) {
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        minInternal.call(this, attr, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise();
+    }
+    else {
+        return minInternal.call(this, attr, callback);
+    }
 };
 
 /**
- * Executes the underlying query statement and returns the average value of the given attribute.
- * @param attr {String}
- * @param callback {Function}
+ * @param {string} attr
+ * @param {Function} callback
  * @returns {*} Returns the maximum value of the given attribute
  */
-DataQueryable.prototype.average = function(attr, callback) {
+function averageInternal(attr, callback) {
     var self = this;
     callback = callback || function() {};
     //add a count expression
@@ -1274,7 +1332,34 @@ DataQueryable.prototype.average = function(attr, callback) {
     //1. remove skip
     delete self.query.$skip;
     //append count expression
-    self.query.select(qry.fields.average(field.name)).take(1, callback);
+    self.query.select(qry.fields.average(field.name)).take(1, function(err, result) {
+        if (err) { return callback(err); }
+        if (dataCommon.isNullOrUndefined(result)) { return callback(); }
+        if (result.length==0) { return callback(); }
+        var key = Object.keys(result[0])[0];
+        if (typeof key === 'undefined') { return callback(); }
+        callback(null, result[0][key]);
+    });
+}
+
+/**
+ * Executes the underlying query statement and returns the average value of the given attribute.
+ * @param {string} attr
+ * @param {Function=} callback
+ * @returns {Deferred|*} Returns the maximum value of the given attribute
+ */
+DataQueryable.prototype.average = function(attr, callback) {
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        averageInternal.call(this, attr, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise();
+    }
+    else {
+        return averageInternal.call(this, attr, callback);
+    }
 };
 /**
  * @private
@@ -2004,24 +2089,40 @@ DataQueryable.prototype.toLowerCase = DataQueryable.prototype.toLocaleLowerCase;
 DataQueryable.prototype.toLocaleUpperCase = function() {
     this.query.toLocaleUpperCase(); return this;
 };
+
 /**
  * Gets a single value after executing the specified query. In query does not have any fields
  * @param {Function} callback
  */
-DataQueryable.prototype.value = function(callback) {
+function valueInternal(callback) {
     if (dataCommon.isNullOrUndefined(this.query.$select)) {
-        //select model primary key
         this.select(this.model.primaryKey);
     }
-    this.firstInternal(function(err, result) {
-       if (err) { return callback(err); }
-        if (typeof result === 'undefined' || result == null) {
-            return callback();
-        }
+    firstInternal.call(this, function(err, result) {
+        if (err) { return callback(err); }
+        if (dataCommon.isNullOrUndefined(result)) { return callback(); }
         var key = Object.keys(result)[0];
         if (typeof key === 'undefined') { return callback(); }
         callback(null, result[key]);
     });
+}
+
+/**
+ * Gets a single value after executing the specified query. In query does not have any fields
+ * @param {Function=} callback
+ */
+DataQueryable.prototype.value = function(callback) {
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        valueInternal.call(this, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise();
+    }
+    else {
+        return valueInternal.call(this, callback);
+    }
 };
 /**
  * @returns {DataQueryable}
