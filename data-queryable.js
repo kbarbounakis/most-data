@@ -1027,7 +1027,7 @@ function takeInternal(n, callback) {
  */
 DataQueryable.prototype.take = function(n, callback) {
     if (typeof callback !== 'function') {
-        self.query.take(n);
+        this.query.take(n);
         return this;
     }
     else {
