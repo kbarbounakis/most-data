@@ -976,6 +976,7 @@ DataQueryable.prototype.all = function(callback) {
 };
 
 /**
+ * @private
  * @param {Function} callback
  */
 function allInternal(callback) {
@@ -1002,6 +1003,7 @@ DataQueryable.prototype.skip = function(n) {
 };
 
 /**
+ * @private
  * @param {Number} n - Defines the number of items to take
  * @param {function=} callback
  * @returns {*} - A collection of objects that meet the query provided
@@ -1059,7 +1061,10 @@ DataQueryable.prototype.list = function(callback) {
         return listInternal.call(this, callback);
     }
 };
-
+/**
+ * @private
+ * @param {Function} callback
+ */
 function listInternal(callback) {
     var self = this;
     try {
@@ -1158,6 +1163,7 @@ DataQueryable.prototype.sumOf = function(name, alias) {
 };
 
 /**
+ * @private
  * Executes the underlying query statement and returns the count of object found.
  * @param callback {Function}
  * @returns {*} - A collection of objects that meet the query provided
@@ -1209,6 +1215,7 @@ DataQueryable.prototype.count = function(callback) {
 };
 
 /**
+ * @private
  * Executes the underlying query statement and returns the maximum value of the given attribute.
  * @param {string} attr
  * @param callback {Function}
@@ -1262,6 +1269,7 @@ DataQueryable.prototype.max = function(attr, callback) {
 };
 
 /**
+ * @private
  * Executes the underlying query statement and returns the minimum value of the given attribute.
  * @param attr {String}
  * @param callback {Function}
@@ -1315,6 +1323,7 @@ DataQueryable.prototype.min = function(attr, callback) {
 };
 
 /**
+ * @private
  * @param {string} attr
  * @param {Function} callback
  * @returns {*} Returns the maximum value of the given attribute
@@ -1575,7 +1584,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                 }
             }
             if (mapping) {
-                var associatedModel, values, keyField;
+                var associatedModel, values, keyField, arr, junction;
                 if (mapping.associationType=='association' || mapping.associationType=='junction') {
                     //1. current model is the parent model and association type is association
                     if ((mapping.parentModel==self.model.name) && (mapping.associationType=='association') && (mapping.parentModel!=mapping.childModel)) {
@@ -1592,7 +1601,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                 values.push(result[keyField]);
                         }
                         if (values.length==0) {
-                            cb(null);
+                            return cb(null);
                         }
                         else {
                             field = associatedModel.field(mapping.childField);
@@ -1604,7 +1613,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                             }
                             qChilds.all(function(err, childs) {
                                 if (err) {
-                                    cb(err);
+                                    return cb(err);
                                 }
                                 else {
                                     var key=null,
@@ -1623,7 +1632,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                         key =result[mapping.parentField];
                                         result[parentField] = childs.filter(selector);
                                     }
-                                    cb(null);
+                                    return cb(null);
                                 }
                             });
                         }
@@ -1638,7 +1647,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                         values = arr.filter(function(x) { return (typeof x[mapping.childField]!=='undefined') && (x[mapping.childField]!=null); }).map(function(x) { return x[mapping.childField] });
                         //query junction model
                         junction.baseModel.where('valueId').in(values).silent().all(function(err, junctions) {
-                            if (err) { cb(err); return; }
+                            if (err) { return cb(err); }
                             //get array of parent key values
                             values = junctions.map(function(x) { return x['parentId'] });
                             //get parent model
@@ -1651,8 +1660,14 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                 q.select(mapping.select);
                             //and finally query parent
                             q.all(function(err, parents) {
-                                if (err) { cb(err); return; }
-                                //loop result array
+                                if (err) { return cb(err); }
+                                //if result contains only one item
+                                if (arr.length == 1) {
+                                    arr[0][field.name] = parents;
+                                    console.log(JSON.stringify(result[0]['groups']));
+                                    return cb();
+                                }
+                                //otherwise loop result array
                                 arr.forEach(function(x) {
                                     //get child (key value)
                                     var valueId = x[mapping.childField];
@@ -1661,7 +1676,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                     //filter data and set property value (a filtered array of parent objects)
                                     x[field.name] = parents.filter(function(z) { return p.indexOf(z[mapping.parentField])>=0; });
                                 });
-                                cb(null);
+                                return cb();
                             });
                         });
                     }
@@ -1688,8 +1703,13 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                 q.select(mapping.select);
                             //and finally query childs
                             q.all(function(err, childs) {
-                                if (err) { cb(err); return; }
-                                //loop result array
+                                if (err) { return cb(err); }
+                                //if result contains only one item
+                                if (arr.length == 1) {
+                                    arr[0][field.name] = childs;
+                                    return cb();
+                                }
+                                //otherwise loop result array
                                 arr.forEach(function(x) {
                                     //get parent (key value)
                                     var parentId = x[mapping.parentField];
@@ -1698,7 +1718,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                     //filter data and set property value (a filtered array of parent objects)
                                     x[field.name] = childs.filter(function(z) { return p.indexOf(z[mapping.childField])>=0; });
                                 });
-                                cb(null);
+                                return cb();
                             });
                         });
                     }
@@ -1719,13 +1739,13 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                 values.push(result[keyField]);
                         }
                         if (values.length==0) {
-                            cb(null);
+                            return cb();
                         }
                         else {
                             var childField = self.model.field(mapping.childField);
                             associatedModel.where(mapping.parentField).in(values).flatten().silent().select(mapping.select).all(function(err, parents) {
                                 if (err) {
-                                    cb(err);
+                                    return cb(err);
                                 }
                                 else {
                                     var key=null,
@@ -1753,50 +1773,49 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                         else
                                             result[childField.name] = parents.filter(selector)[0];
                                     }
-                                    cb(null);
+                                    return cb(null);
                                 }
                             });
                         }
                     }
                 }
                 else {
-                    cb(new Error("Not yet implemented"));
+                    return cb(new Error("Not yet implemented"));
                 }
             }
             else {
                 console.log(util.format('Data assocication mapping (%s) for %s cannot be found or the association between these two models defined more than once.', expand, self.model.title));
-                cb(null);
+                return cb(null);
             }
         }, function(err) {
             if (err) {
                 callback(err);
             }
             else {
-                self.toArrayCallback(result, callback);
+                toArrayCallback.call(self, result, callback);
             }
         });
     }
     else {
-        self.toArrayCallback(result, callback);
+        toArrayCallback.call(self, result, callback);
     }
 };
+
 /**
  * @private
  * @param {Array|*} result
  * @param {Function} callback
  */
-DataQueryable.prototype.toArrayCallback = function(result, callback) {
+function toArrayCallback(result, callback) {
     try {
         var self = this;
         if (self.$asArray) {
             if (typeof self.query === 'undefined') {
-                callback(null, result);
-                return;
+                return callback(null, result);
             }
             var fields = self.query.fields();
             if (util.isArray(fields)==false) {
-                callback(null, result);
-                return;
+                return callback(null, result);
             }
             if (fields.length==1) {
                 var arr = [];
@@ -1807,22 +1826,20 @@ DataQueryable.prototype.toArrayCallback = function(result, callback) {
                     if (x[key])
                         arr.push(x[key]);
                 });
-                callback(null, arr);
+                return callback(null, arr);
             }
             else {
-                callback(null, result);
+                return callback(null, result);
             }
         }
         else {
-            callback(null, result);
+            return callback(null, result);
         }
     }
     catch (e) {
-        callback(e);
+        return callback(e);
     }
-
-};
-
+}
 
 /**
  * @param {Boolean=} value
@@ -2091,6 +2108,7 @@ DataQueryable.prototype.toLocaleUpperCase = function() {
 };
 
 /**
+ * @private
  * Gets a single value after executing the specified query. In query does not have any fields
  * @param {Function} callback
  */
