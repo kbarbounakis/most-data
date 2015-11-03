@@ -1664,7 +1664,6 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                                 //if result contains only one item
                                 if (arr.length == 1) {
                                     arr[0][field.name] = parents;
-                                    console.log(JSON.stringify(result[0]['groups']));
                                     return cb();
                                 }
                                 //otherwise loop result array
