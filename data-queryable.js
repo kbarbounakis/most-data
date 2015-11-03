@@ -1011,10 +1011,6 @@ DataQueryable.prototype.skip = function(n) {
 function takeInternal(n, callback) {
     var self = this;
     self.query.take(n);
-    //if no callback is defined
-    if (typeof callback === 'undefined')
-    //return object to continue query preparation
-        return this;
     callback = callback || function() {};
     //validate already selected fields
     if (!self.query.hasFields()) {
@@ -1027,16 +1023,12 @@ function takeInternal(n, callback) {
 /**
  * @param {Number} n - Defines the number of items to take
  * @param {Function=} callback
- * @returns {Deferred|*} - If callback function is missing returns a promise.
+ * @returns {DataQueryable|*} - If callback function is missing returns a promise.
  */
 DataQueryable.prototype.take = function(n, callback) {
     if (typeof callback !== 'function') {
-        var d = Q.defer();
-        takeInternal.call(this, n, function(err, result) {
-            if (err) { return d.reject(err); }
-            d.resolve(result);
-        });
-        return d.promise();
+        self.query.take(n);
+        return this;
     }
     else {
         takeInternal.call(this, n, callback);
