@@ -930,7 +930,7 @@ DataQueryable.prototype.first = function(callback) {
             if (err) { return d.reject(err); }
             d.resolve(result);
         });
-        return d.promise();
+        return d.promise;
     }
     else {
         return firstInternal.call(this, callback);
@@ -968,7 +968,7 @@ DataQueryable.prototype.all = function(callback) {
             if (err) { return d.reject(err); }
             d.resolve(result);
         });
-        return d.promise();
+        return d.promise;
     }
     else {
         allInternal.call(this, callback);
@@ -1047,7 +1047,7 @@ DataQueryable.prototype.list = function(callback) {
             if (err) { return d.reject(err); }
             d.resolve(result);
         });
-        return d.promise();
+        return d.promise;
     }
     else {
         return listInternal.call(this, callback);
@@ -1199,7 +1199,7 @@ DataQueryable.prototype.count = function(callback) {
             if (err) { return d.reject(err); }
             d.resolve(result);
         });
-        return d.promise();
+        return d.promise;
     }
     else {
         return countInternal.call(this, callback);
@@ -1253,7 +1253,7 @@ DataQueryable.prototype.max = function(attr, callback) {
             if (err) { return d.reject(err); }
             d.resolve(result);
         });
-        return d.promise();
+        return d.promise;
     }
     else {
         return maxInternal.call(this, attr, callback);
@@ -1307,7 +1307,7 @@ DataQueryable.prototype.min = function(attr, callback) {
             if (err) { return d.reject(err); }
             d.resolve(result);
         });
-        return d.promise();
+        return d.promise;
     }
     else {
         return minInternal.call(this, attr, callback);
@@ -1356,7 +1356,7 @@ DataQueryable.prototype.average = function(attr, callback) {
             if (err) { return d.reject(err); }
             d.resolve(result);
         });
-        return d.promise();
+        return d.promise;
     }
     else {
         return averageInternal.call(this, attr, callback);
@@ -2127,7 +2127,7 @@ DataQueryable.prototype.value = function(callback) {
             if (err) { return d.reject(err); }
             d.resolve(result);
         });
-        return d.promise();
+        return d.promise;
     }
     else {
         return valueInternal.call(this, callback);
