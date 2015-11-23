@@ -315,7 +315,9 @@ function DataQueryable(model) {
     Object.defineProperty(this, 'model', { get: function() {
         return m;
     }, configurable:false, enumerable:false});
-
+    //get silent property
+    if (m)
+        this.silent(m.$silent);
 }
 /**
  * @returns DataQueryable

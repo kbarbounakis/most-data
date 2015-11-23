@@ -215,6 +215,14 @@ var dataCommon = {
         return (typeof obj === 'undefined' || obj === null);
     },
     /**
+     * Checks if the specified object argument is not undefined or null.
+     * @param {*} obj
+     * @returns {boolean}
+     */
+    isDefined: function(obj) {
+        return (typeof obj !== 'undefined' && obj != null);
+    },
+    /**
      * Returns a random integer between a minimum and a maximum value
      * @param {number} min
      * @param {number} max

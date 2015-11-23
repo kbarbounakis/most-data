@@ -103,6 +103,11 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
         context = e.model.context,
         requestMask = 1,
         workspace = 1;
+    //ensure silent operation
+    if (e.model && e.model.$silent) {
+        callback();
+        return;
+    }
     if (e.state == 0)
         requestMask = PermissionMask.Read;
     else if (e.state==1)

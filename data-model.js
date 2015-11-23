@@ -69,6 +69,7 @@ function EmptyQueryExpression() {
  * @constructor
  * @augments EventEmitter2
  * @param {*=} obj An object instance that holds data model attributes. This parameter is optional.
+ * @protected {Boolean} $silent
  */
 function DataModel(obj) {
     /**
@@ -184,6 +185,23 @@ function DataModel(obj) {
      */
     Object.defineProperty(this, 'viewAdapter', { get: function() {
         return self.view!=null ? self.view :  self.name.concat('Data');
+    }, enumerable: false, configurable: false});
+
+    var silent_ = false;
+    /**
+     * Prepares a silent operation (for query, update, insert, delete etc)
+     * @param {Boolean=} value
+     * @returns DataModel
+     */
+    this.silent = function(value) {
+        if (typeof value === 'undefined')
+            silent_ = true;
+        else
+            silent_ = !!value;
+        return this;
+    };
+    Object.defineProperty(this, '$silent', { get: function() {
+        return silent_;
     }, enumerable: false, configurable: false});
 
     var pluralExpression = /([a-zA-Z]+?)([e']s|[^aiou]s)$/;
@@ -309,7 +327,7 @@ function DataModel(obj) {
     }, enumerable: false, configurable: false});
 
     //register listeners
-    this.registerListeners();
+    registerListeners_.call(this);
     //call initialize method
     if (typeof this.initialize === 'function')
         this.initialize();
@@ -335,7 +353,7 @@ DataModel.prototype.clone = function(context) {
  * Registers default model listeners
  * @protected
  */
-DataModel.prototype.registerListeners = function() {
+ function registerListeners_() {
 
     var CalculatedValueListener = dataListeners.CalculatedValueListener,
         DefaultValueListener = dataListeners.DefaultValueListener,
@@ -591,8 +609,9 @@ DataModel.prototype.filter = function(params, callback) {
  * @param {string|*} constraint
  * @param {*} target
  * @returns {DataQueryable|undefined}
+ * @private
  */
-function constraintAsQueryable(constraint, target) {
+function constraintAsQueryable_(constraint, target) {
     /**
      * @type {DataModel|*}
      */
@@ -834,7 +853,7 @@ DataModel.prototype.base = function()
  * @private
  * @param {*} obj
  */
-DataModel.prototype.convertInternal = function(obj) {
+ function convertInternal_(obj) {
     var self = this;
     //get type parsers (or default type parsers)
     var parsers = self.parsers || types.parsers, parser, value;
@@ -856,7 +875,7 @@ DataModel.prototype.convertInternal = function(obj) {
                         if (associatedModel) {
                             if (typeof value === 'object') {
                                 //set associated key value (e.g. primary key value)
-                                associatedModel.convertInternal(value);
+                                convertInternal_.call(associatedModel, value);
                             }
                             else {
                                 var field = associatedModel.field(mapping.parentField);
@@ -873,7 +892,7 @@ DataModel.prototype.convertInternal = function(obj) {
             }
         }
     });
-};
+}
 
 /**
  * Converts an object or a collection of objects to the corresponding data instance
@@ -943,7 +962,7 @@ DataModel.prototype.convert = function(obj, typeConvert)
                     util._extend(o, src);
                 }
                 if (typeConvert)
-                    self.convertInternal(o);
+                    convertInternal_.call(self, o);
                 o.context = self.context;
                 o.type = self.name;
                 arr.push(o);
@@ -961,7 +980,7 @@ DataModel.prototype.convert = function(obj, typeConvert)
             util._extend(result, src);
         }
         if (typeConvert)
-            self.convertInternal(result);
+            convertInternal_.call(self, result);
         result.context = self.context;
         result.type = self.name;
         return result;
@@ -985,43 +1004,63 @@ DataModel.prototype.idOf = function(obj) {
         return obj[this.primaryKey];
     return obj;
 };
-
-DataModel.prototype.cast = function(obj)
+/**
+ * @param {*} obj
+ * @param {number=} state
+ * @returns {*}
+ */
+DataModel.prototype.cast = function(obj, state)
 {
+   return cast_.call(this, obj, state);
+};
+/**
+ * @param {*} obj
+ * @param {number=} state
+ * @returns {*}
+ * @private
+ */
+function cast_(obj, state) {
     var self = this;
     if (obj==null)
         return {};
     if (typeof obj === 'object' && obj instanceof Array)
     {
         return obj.map(function(x) {
-            return self.cast(x);
+            return cast_.call(self, x, state);
         });
     }
     else
     {
+        //ensure state (set default state to Insert=1)
+        state = dataCommon.isNullOrUndefined(state) ? (dataCommon.isNullOrUndefined(obj.$state) ? 1 : obj.$state) : state;
         var result = {}, name;
-        self.attributes.forEach(function(x) {
+        self.attributes.filter(function(x) {
+            if (x.model!==self.name) { return false; }
+            return (!x.readonly) ||
+                (x.readonly && (typeof x.calculation!=='undefined') && state==2) ||
+                (x.readonly && (typeof x.value!=='undefined') && state==1) ||
+                (x.readonly && (typeof x.calculation!=='undefined') && state==1);
+        }).forEach(function(x) {
             name = obj.hasOwnProperty(x.property) ? x.property : x.name;
             if (obj.hasOwnProperty(name))
             {
-                if (!(x.readonly && typeof x.value==='undefined') && (x.model===self.name)) {
-                    var mapping = self.inferMapping(name);
-                    if (typeof mapping === 'undefined' || mapping === null)
+                var mapping = self.inferMapping(name);
+                if (typeof mapping === 'undefined' || mapping === null)
+                    result[x.name] = obj[name];
+                else if ((mapping.associationType==='association') && (mapping.childModel===self.name)) {
+                    if ((typeof obj[name] === 'object') && (obj[name] != null))
+                    //set associated key value (e.g. primary key value)
+                        result[x.name] = obj[name][mapping.parentField];
+                    else
+                    //set raw value
                         result[x.name] = obj[name];
-                    else if ((mapping.associationType==='association') && (mapping.childModel===self.name)) {
-                        if ((typeof obj[name] === 'object') && (obj[name] != null))
-                            //set associated key value (e.g. primary key value)
-                            result[x.name] = obj[name][mapping.parentField];
-                        else
-                            //set raw value
-                            result[x.name] = obj[name];
-                    }
                 }
             }
         });
         return result;
     }
-};
+}
+
 /**
  * @param {*} dest
  * @param {*} src
@@ -1131,7 +1170,7 @@ DataModel.prototype.save = function(obj, callback)
         var res = [];
         db.executeInTransaction(function(cb) {
             async.eachSeries(arr, function(item, saveCallback) {
-                self.saveSingleObject(item, function(err, result) {
+                saveSingleObject_.call(self, item, function(err, result) {
                     if (err) {
                         saveCallback.call(self, err);
                         return;
@@ -1175,7 +1214,7 @@ DataModel.prototype.inferState = function(obj, callback) {
  * @param {Function} callback
  * @private
  */
-DataModel.prototype.saveBaseObject = function(obj, callback) {
+function saveBaseObject_(obj, callback) {
     //ensure callback
     callback = callback || function() {};
     var self = this, base = self.base();
@@ -1190,19 +1229,20 @@ DataModel.prototype.saveBaseObject = function(obj, callback) {
         callback.call(self, null);
     }
     else {
+        base.silent();
         //perform operation
-        base.saveSingleObject(obj, function(err, result) {
+        saveSingleObject_.call(base, obj, function(err, result) {
             callback.call(self, err, result);
         });
     }
-};
+}
 /**
  * Saves a single object and performs all the operation needed.
  * @param {*} obj
  * @param {Function} callback
  * @private
  */
-DataModel.prototype.saveSingleObject = function(obj, callback) {
+ function saveSingleObject_(obj, callback) {
     var self = this,
         NotNullConstraintListener = dataListeners.NotNullConstraintListener,
         UniqueContraintListener = dataListeners.UniqueContraintListener;
@@ -1216,7 +1256,7 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
         return 0;
     }
     if (obj.$state == 4) {
-        return self.removeSingleObject(obj, callback);
+        return removeSingleObject_.call(self, obj, callback);
     }
     //get object state before any other operation
     var state = obj.$state ? obj.$state : (obj[self.primaryKey]!=null ? 2 : 1);
@@ -1243,7 +1283,7 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
         //otherwise execute save operation
         else {
             //save base object if any
-            self.saveBaseObject(e.target, function(err, result) {
+            saveBaseObject_.call(self, e.target, function(err, result) {
                 if (err) {
                     callback.call(self, err);
                     return;
@@ -1255,7 +1295,7 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
                 //get db context
                 var db = self.context.db;
                 //create insert query
-                var target = self.cast(e.target);
+                var target = self.cast(e.target, e.state);
                 var q = null, key = target[self.primaryKey];
                 if (e.state==1)
                     //create insert statement
@@ -1358,7 +1398,8 @@ DataModel.prototype.saveSingleObject = function(obj, callback) {
             });
         }
     });
-};
+}
+
 DataModel.prototype.superTypes = function() {
     var result=[];
     var baseModel = this.base();
@@ -1460,7 +1501,7 @@ DataModel.prototype.remove = function(obj, callback)
         var db = self.context.db;
         db.executeInTransaction(function(cb) {
             async.eachSeries(arr, function(item, removeCallback) {
-                self.removeSingleObject(item, function(err, result) {
+                removeSingleObject_.call(self, item, function(err, result) {
                     if (err) {
                         removeCallback.call(self, err);
                         return;
@@ -1486,7 +1527,7 @@ DataModel.prototype.remove = function(obj, callback)
  * @param {Function} callback
  * @private
  */
-DataModel.prototype.removeSingleObject = function(obj, callback) {
+ function removeSingleObject_(obj, callback) {
     var self = this;
     callback = callback || function() {};
     if (obj==null) {
@@ -1516,7 +1557,7 @@ DataModel.prototype.removeSingleObject = function(obj, callback) {
         //otherwise execute save operation
         else {
             //save base object if any
-            self.removeBaseObject(e.target, function(err, result) {
+            removeBaseObject_.call(self, e.target, function(err, result) {
                 //if result is defined
                 if (result!==undefined)
                 //sync original object
@@ -1540,7 +1581,7 @@ DataModel.prototype.removeSingleObject = function(obj, callback) {
             });
         }
     });
-};
+}
 
 /**
  * Deletes the base object if any.
@@ -1548,7 +1589,7 @@ DataModel.prototype.removeSingleObject = function(obj, callback) {
  * @param {Function} callback
  * @private
  */
-DataModel.prototype.removeBaseObject = function(obj, callback) {
+function removeBaseObject_(obj, callback) {
     //ensure callback
     callback = callback || function() {};
     var self = this, base = self.base();
@@ -1563,12 +1604,13 @@ DataModel.prototype.removeBaseObject = function(obj, callback) {
         callback.call(self, null);
     }
     else {
+        base.silent();
         //perform operation
-        base.removeSingleObject(obj, function(err, result) {
+        removeSingleObject_.call(base, obj, function(err, result) {
             callback.call(self, err, result);
         });
     }
-};
+}
 
 /**
  * Validates that the given string is plural or not.
@@ -1738,7 +1780,7 @@ DataModel.prototype.migrateInternal = function(db, callback) {
     //get base adapter
     var baseAdapter = (baseModel!=null) ? baseModel.name.concat('Data') : null, baseFields = [];
     //enumerate columns of base model (if any)
-    if (baseModel!=null) {
+    if (dataCommon.isDefined(baseModel)) {
         baseModel.attributes.forEach(function(x) {
             //get all fields (except primary and one-to-many relations)
             if ((!x.primary) && (!x.many))
@@ -1820,7 +1862,7 @@ DataModel.prototype.seedInternal = function(callback) {
 
 /**
  * Gets the primary key.
- * @return {DataField}
+ * @return {DataField|*}
  */
 DataModel.prototype.key = function()
 {

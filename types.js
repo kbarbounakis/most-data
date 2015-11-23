@@ -715,6 +715,7 @@ function DataField() {
     this.virtual = false;
 }
 
+
 /**
  * @class DataResultSet
  * @constructor
@@ -849,7 +850,7 @@ var types =
             return null;
         },
         parseDate: function(val) {
-            var res = this.parseDateTime(val);
+            var res = types.parsers.parseDateTime(val);
             if (res instanceof Date) {
                 res.setHours(0,0,0,0);
                 return res;
