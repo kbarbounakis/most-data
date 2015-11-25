@@ -326,6 +326,12 @@ DataQueryable.prototype.clone = function() {
     var result = new DataQueryable(this.model);
     //set view if any
     result.$view = this.$view;
+    //set silent property
+    result.$silent = this.$silent;
+    //set flatten property
+    result.$flatten = this.$flatten;
+    //set expand property
+    result.$expand = this.$expand;
     //set query
     util._extend(result.query, this.query);
     return result;
