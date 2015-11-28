@@ -28,6 +28,9 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * @private
+ */
 var util=require('util'),
     array = require('most-array'),
     qry = require('most-query'),
@@ -36,7 +39,10 @@ var util=require('util'),
     dataCache = require('./data-cache'),
     common = require('./data-common');
 
-
+/**
+ * @class
+ * @constructor
+ */
 function DataPermissionEventArgs() {
     /**
      * The target data model
@@ -69,35 +75,68 @@ function DataPermissionEventArgs() {
      */
     this.emitter = null;
 }
-
+/**
+ * An enumeration of the available permission masks
+ * @enum {number}
+ */
 var PermissionMask = {
+    /**
+     * Read Access Mask (1)
+     */
     Read:1,
+    /**
+     * Create Access Mask (2)
+     */
     Create:2,
+    /**
+     * Update Access Mask (4)
+     */
     Update:4,
+    /**
+     * Delete Access Mask (8)
+     */
     Delete:8,
+    /**
+     * Execute Access Mask (16)
+     */
     Execute:16,
+    /**
+     * Full Access Mask (31)
+     */
     Owner:31
 };
 
 /**
- * @class DataPermissionEventListener
+ * @class
  * @constructor
  */
 function DataPermissionEventListener() {
     //
 }
-
+/**
+ * Occurs before creating or updating a data object.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ */
 DataPermissionEventListener.prototype.beforeSave = function(e, callback)
 {
     DataPermissionEventListener.prototype.validate(e, callback);
 };
-
-
+/**
+ * Occurs before removing a data object.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ * @returns {DataEventListener}
+ */
 DataPermissionEventListener.prototype.beforeRemove = function(e, callback)
 {
     DataPermissionEventListener.prototype.validate(e, callback);
 };
-
+/**
+ * Validates permissions against the event arguments provided.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ */
 DataPermissionEventListener.prototype.validate = function(e, callback) {
     var model = e.model,
         context = e.model.context,
@@ -154,7 +193,7 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
         return;
     }
 
-    DataPermissionEventListener.effectiveAccounts(context, function(err, accounts) {
+    effectiveAccounts(context, function(err, accounts) {
         if (err) { callback(err); return; }
 
         var permEnabled = model.privileges.filter(function(x) { return !x.disabled; }, model.privileges).length>0;
@@ -402,13 +441,18 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
 
     });
 };
+/**
+ * @private
+ * @type {string}
+ */
 var ANONYMOUS_USER_CACHE_PATH = '/User/anonymous';
 /**
  * @param {DataContext} context
  * @param {function(Error=,*=)} callback
+ * @private
  */
-DataPermissionEventListener.anonymousUser = function(context, callback) {
-    DataPermissionEventListener.queryUser(context, 'anonymous', function(err, result) {
+function anonymousUser(context, callback) {
+    queryUser(context, 'anonymous', function(err, result) {
         if (err) {
             callback(err);
         }
@@ -422,8 +466,9 @@ DataPermissionEventListener.anonymousUser = function(context, callback) {
  * @param {DataContext} context
  * @param {string} username
  * @param {function(Error=,*=)} callback
+ * @private
  */
-DataPermissionEventListener.queryUser = function(context, username, callback) {
+function queryUser(context, username, callback) {
     try {
         if (typeof context === 'undefined' || context == null) {
             callback();
@@ -469,8 +514,9 @@ DataPermissionEventListener.queryUser = function(context, username, callback) {
 /**
  * @param {DataContext} context
  * @param {function(Error=,Array=)} callback
+ * @private
  */
-DataPermissionEventListener.effectiveAccounts = function(context, callback) {
+function effectiveAccounts(context, callback) {
     if (typeof context === 'undefined' || context == null) {
         //push no account
         callback(null, [ 0 ]);
@@ -488,7 +534,7 @@ DataPermissionEventListener.effectiveAccounts = function(context, callback) {
     if (context.user.name === 'anonymous') {
         //get anonymous user data
         dataCache.current.ensure(ANONYMOUS_USER_CACHE_PATH, function(cb) {
-            DataPermissionEventListener.anonymousUser(context, function(err, result) {
+            anonymousUser(context, function(err, result) {
                 cb(err, result);
             });
         }, function(err, result) {
@@ -512,11 +558,11 @@ DataPermissionEventListener.effectiveAccounts = function(context, callback) {
         //try to get data from cache
         var USER_CACHE_PATH = '/User/' + context.user.name;
         dataCache.current.ensure(USER_CACHE_PATH, function(cb) {
-            DataPermissionEventListener.queryUser(context, context.user.name, cb);
+            queryUser(context, context.user.name, cb);
         }, function(err, user) {
             if (err) { callback(err); return; }
             dataCache.current.ensure(ANONYMOUS_USER_CACHE_PATH, function(cb) {
-                DataPermissionEventListener.anonymousUser(context, cb);
+                anonymousUser(context, cb);
             }, function(err, anonymous) {
                 if (err) { callback(err); return; }
                 var arr = [ ];
@@ -539,9 +585,9 @@ DataPermissionEventListener.effectiveAccounts = function(context, callback) {
 };
 
 /**
- *
- * @param {DataPermissionEventArgs} e
- * @param {Function} callback
+ * Occurs before executing a data operation.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
 {
@@ -640,7 +686,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
             return;
         }
 
-        DataPermissionEventListener.effectiveAccounts(context, function(err, accounts) {
+        effectiveAccounts(context, function(err, accounts) {
             if (err) { callback(err); return; }
             //get all enabled privileges
             var privileges = modelPrivileges.filter(function(x) {
@@ -775,17 +821,8 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
 };
 
 var perms = {
-    /**
-     * @class DataPermissionEventArgs
-     * @constructor
-     */
     DataPermissionEventArgs:DataPermissionEventArgs,
-    /**
-     * @class DataPermissionEventListener
-     * @constructor
-     */
     DataPermissionEventListener:DataPermissionEventListener
-
 };
 
 if (typeof exports !== 'undefined') {

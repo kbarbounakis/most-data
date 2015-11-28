@@ -28,6 +28,9 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * @private
+ */
 var string = require('string'),
     util = require('util'),
     path = require("path"),
@@ -42,15 +45,12 @@ var string = require('string'),
     dataCommon = require('./data-common'),
     dataListeners = require('./data-listeners'),
     dataAssociations = require('./data-associations'),
-    DataObject = require('./data-object').DataObject,
     DataQueryable = require('./data-queryable').DataQueryable,
     DataAttributeResolver = require('./data-queryable').DataAttributeResolver,
     DataObjectAssociationListener = dataAssociations.DataObjectAssociationListener,
     DataField = types.DataField,
     DataModelView = require('./data-model-view').DataModelView,
     DataFilterResolver = require('./data-filter-resolver').DataFilterResolver;
-
-
 
 /**
  * @class EmptyQueryExpression
@@ -63,13 +63,12 @@ function EmptyQueryExpression() {
 
 /**
  * Database Object Management for node.js
- * @class {DataModel}
+ * @class
  * @property {Array} seed - An array instance that represents a collection of items to be seeded when the model is being upgraded for the first time
  * @property {string} classPath - Gets or sets a string which represents the path of the DataObject subclass associated with this model.
  * @constructor
  * @augments EventEmitter2
  * @param {*=} obj An object instance that holds data model attributes. This parameter is optional.
- * @protected {Boolean} $silent
  */
 function DataModel(obj) {
     /**
@@ -118,7 +117,7 @@ function DataModel(obj) {
      */
     this.inherits = undefined;
     /**
-     *
+     * An array that represents the collection of model fields.
      * @type {Array}
      */
     this.fields = [];
@@ -143,11 +142,13 @@ function DataModel(obj) {
      */
     this.privileges = [];
     /**
-     * @type {string} - Gets or sets a string that contains the database source.
+     * Gets or sets a string that contains the database source.
+     * @type {string}
      */
     this.source = undefined;
     /**
-     * @type {string} - Gets or sets a string that contains the database source.
+     * Gets or sets a string that contains the database source.
+     * @type {string}
      */
     this.view = undefined;
 
@@ -223,8 +224,10 @@ function DataModel(obj) {
     };
 
     /**
-     * @type {Array} - Gets an array of objects that represents the collection of fields for this model. This collection contains
-     * the fields defined in the current model and its parent.
+     * Gets an array of objects that represents the collection of fields for this model.
+     * This collection contains the fields defined in the current model and its parent.
+     * @type {Array}
+     *
      */
     Object.defineProperty(this, 'attributes', { get: function() {
         //validate self field collection
@@ -334,13 +337,16 @@ function DataModel(obj) {
 }
 util.inherits(DataModel, types.EventEmitter2);
 
+/**
+ * Initializes the current data model. This method is used for extending the behaviour of an install of DataModel class.
+ */
 DataModel.prototype.initialize = function() {
     //
 };
 
 /**
  * Clones the current data model
- * @param {DataContext=} context The current data context
+ * @param {DataContext=} context - An instance of DataContext class which represents the current data context.
  * @returns {DataModel} Returns a new DataModel instance
  */
 DataModel.prototype.clone = function(context) {
@@ -350,8 +356,7 @@ DataModel.prototype.clone = function(context) {
     return result;
 };
 /**
- * Registers default model listeners
- * @protected
+ * @private
  */
  function registerListeners_() {
 
@@ -402,7 +407,7 @@ DataModel.prototype.clone = function(context) {
         for (var i = 0; i < this.eventListeners.length; i++) {
             var listener = this.eventListeners[i];
             //get listener type (e.g. type: require('./custom-listener.js'))
-            if (listener.type)
+            if (listener.type && !listener.disabled)
             {
                 /**
                  * Load event listener from the defined type
@@ -448,7 +453,7 @@ DataModel.prototype.where = function(attr) {
 };
 /**
  * Returns a DataQueryable instance of the current model
- * @returns DataQueryable
+ * @returns {DataQueryable}
  */
 DataModel.prototype.asQueryable = function() {
     return new DataQueryable(this);
@@ -456,9 +461,17 @@ DataModel.prototype.asQueryable = function() {
 
 
 /**
- * Applies open data filter, ordering, grouping and paging params and returns the derived data queryable object
+ * Applies open data filter, ordering, grouping and paging params and returns a data queryable object
  * @param {String|{$filter:string=, $skip:number=, $top:number=, $take:number=, $order:string=, $inlinecount:string=, $expand:string=,$select:string=, $orderby:string=, $group:string=, $groupby:string=}} params - A string that represents an open data filter or an object with open data parameters
- * @param {function(Error=,DataQueryable=)} callback
+ * @param {function(Error=,DataQueryable=)} callback -  A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain an instance of DataQueryable class.
+ * @example
+ context.model('Order').filter(context.params, function(err,q) {
+    if (err) { return callback(err); }
+    q.take(10, function(err, result) {
+        if (err) { return callback(err); }
+        callback(null, result);
+    });
+ });
  */
 DataModel.prototype.filter = function(params, callback) {
     var self = this;
@@ -670,9 +683,14 @@ function constraintAsQueryable_(constraint, target) {
 }
 
 /**
- *
- * @param {*} obj An object that is going t
- * @returns DataQueryable
+ * Prepares a data query with the given object as parameters and returns the equivalent DataQueryable instance
+ * @param {*} obj - An object which represents the query parameters
+ * @returns DataQueryable - An instance of DataQueryable class that represents a data query based on the given parameters.
+ * @example
+ context.model('Order').find({ "paymentMethod":1 }).orderBy('dateCreated').take(10, function(err,result) {
+    if (err) { return callback(err); }
+    return callback(null, result);
+ });
  */
 DataModel.prototype.find = function(obj) {
     var self = this, result;
@@ -761,8 +779,14 @@ DataModel.prototype.list = function(callback) {
 };
 
 /**
- * Returns the first data item.
- * @param {Function} callback - A callback function that will be invoked.
+ * Returns the first data item of the current model.
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
+ * @returns {Deferred|*} If callback parameter is missing then returns a Deferred object.
+ * @example
+ context.model('User').first(function(err, result) {
+    if (err) { return done(err); }
+    return done(null, result);
+ });
 */
 DataModel.prototype.first = function(callback) {
     var result = new DataQueryable(this);
@@ -770,13 +794,20 @@ DataModel.prototype.first = function(callback) {
 };
 
 /**
- * Returns a data item based on the given key.
- * @param {String} key
- * @param {Function} callback - A callback function that will be invoked.
-*/
+ * A helper function for getting an object based on the given primary key value
+ * @param {String|*} key - The primary key value to search for.
+ * @param {Function} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result, if any.
+ * @returns {Deferred|*} If callback parameter is missing then returns a Deferred object.
+ * @example
+ context.model('User').get(1).then(function(result) {
+    return done(null, result);
+}).catch(function(err) {
+    return done(err);
+});
+ */
 DataModel.prototype.get = function(key, callback) {
     var result = new DataQueryable(this);
-    result.where(this.primaryKey).equal(key).first(callback);
+    return result.where(this.primaryKey).equal(key).first(callback);
 };
 
 /**
@@ -838,7 +869,7 @@ DataModel.prototype.min = function(attr, callback) {
 };
 
 /**
- * Gets a DataModel object that represents the base of the current model if any.
+ * Gets a DataModel instance which represents the inherited data model of this item, if any.
  * @returns {DataModel}
  */
 DataModel.prototype.base = function()
@@ -895,10 +926,66 @@ DataModel.prototype.base = function()
 }
 
 /**
- * Converts an object or a collection of objects to the corresponding data instance
+ * Converts an object or a collection of objects to the corresponding data object instance
  * @param {Array|*} obj
  * @param {boolean=} typeConvert - Forces property value conversion for each property based on field type.
- * @returns {DataObject|Array|*}
+ * @returns {DataObject|Array|*} - Returns an instance of DataObject (or an array of DataObject instances)
+ *<p>
+ This conversion of an anonymous object through DataModel.convert() may be overriden by subclassing DataObject
+ and place this class in app/models folder of a MOST Data Appllication:
+ </p>
+ <pre class="prettyprint"><code>
+ /
+ + app
+   + models
+     + user-model.js
+ </code></pre>
+ <p>
+ An example of user model subclassing (user-model.js):
+ </p>
+ <pre class="prettyprint"><code>
+ var util = require('util'),
+ md = require('most-data'),
+ web = require('most-web');
+
+ function UserModel(obj) {
+    UserModel.super_.call(this, 'User', obj);
+}
+ util.inherits(UserModel, md.classes.DataObject);
+
+ UserModel.prototype.person = function (callback) {
+    var self = this, context = self.context;
+    try {
+        //search person by user name
+        return context.model('Person').where('user/name').equal(self.name).first(callback);
+    }
+    catch (err) {
+        callback(err);
+    }
+};
+ if (typeof module !== 'undefined') module.exports = UserModel;
+ </code></pre>
+ @example
+ //get User model
+ var users = context.model('User');
+ users.where('name').equal(context.user.name).first().then(function(result) {
+    if (md.common.isNullOrUndefined(result)) {
+        return done(new Error('User cannot be found'));
+    }
+    //convert result
+    var user = users.convert(result);
+    //get user's person
+    user.person(function(err, result) {
+        if (err) { return done(err); }
+        if (md.common.isNullOrUndefined(result)) {
+            return done(new Error('Person cannot be found'));
+        }
+        console.log('Person: ' + JSON.stringify(result));
+        done(null, result);
+    });
+}).catch(function(err) {
+   done(err);
+});
  */
 DataModel.prototype.convert = function(obj, typeConvert)
 {
@@ -908,6 +995,7 @@ DataModel.prototype.convert = function(obj, typeConvert)
     /**
      * @constructor
      * @augments DataObject
+     * @ignore
      */
     var DataObjectClass = self['DataObjectClass'];
     if (typeof DataObjectClass === 'undefined')
@@ -933,7 +1021,7 @@ DataModel.prototype.convert = function(obj, typeConvert)
                     catch(e) {
                         if (e.code === 'MODULE_NOT_FOUND') {
                             //if , finally, we are unable to find class file, load default DataObject class
-                            DataObjectClass = DataObject;
+                            DataObjectClass = require('./data-object');
                         }
                         else {
                             throw e;
@@ -992,6 +1080,8 @@ DataModel.prototype.convert = function(obj, typeConvert)
  * suitable for this model.
  * @param {*} obj
  * @returns {*|undefined}
+ * @example
+ var id = context.model('User').idOf({ id:1, "name":"anonymous"});
  */
 DataModel.prototype.idOf = function(obj) {
     if (typeof obj === 'undefined')
@@ -1005,9 +1095,10 @@ DataModel.prototype.idOf = function(obj) {
     return obj;
 };
 /**
- * @param {*} obj
- * @param {number=} state
- * @returns {*}
+ * Casts the given object and returns an object that is going to be used against the underlying database.
+ * @param {*} obj - The source object which is going to be casted
+ * @param {number=} state - The state of the source object.
+ * @returns {*} - Returns an object which is going to be against the underlying database.
  */
 DataModel.prototype.cast = function(obj, state)
 {
@@ -1062,9 +1153,10 @@ function cast_(obj, state) {
 }
 
 /**
- * @param {*} dest
- * @param {*} src
- * @param {function(Error=)} callback
+ * Casts the given source object and returns a data object based on the current model.
+ * @param {*} dest - The destination object
+ * @param {*} src - The source object
+ * @param {function(Error=)} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  */
 DataModel.prototype.recast = function(dest, src, callback)
 {
@@ -1193,9 +1285,10 @@ DataModel.prototype.save = function(obj, callback)
 
 };
 /**
- *
- * @param {DataObject|*} obj
- * @param {function(Error=,*=)} callback
+ * Infers the state of the given object.
+ * @param {DataObject|*} obj - The source object
+ * @param {function(Error=,DataObjectState=)} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
+ * @see DataObjectState
  */
 DataModel.prototype.inferState = function(obj, callback) {
     var self = this,
@@ -1209,7 +1302,6 @@ DataModel.prototype.inferState = function(obj, callback) {
     });
 };
 /**
- * Saves the base object if any.
  * @param {*} obj
  * @param {Function} callback
  * @private
@@ -1237,7 +1329,6 @@ function saveBaseObject_(obj, callback) {
     }
 }
 /**
- * Saves a single object and performs all the operation needed.
  * @param {*} obj
  * @param {Function} callback
  * @private
@@ -1411,14 +1502,13 @@ DataModel.prototype.superTypes = function() {
 };
 
 /**
- * Inserts an item or an array of items
+ * Performing an insert operation of the given object or array of objects
  * @param obj {*|Array} The item or the array of items to insert
- * @param callback {Function=} A callback function that raises the error and the result of this operation.
+ * @param {Function=} callback -  A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  */
 DataModel.prototype.insert = function(obj, callback)
 {
     var self = this, key = self.key();
-    //ensure callback
     callback = callback || function() {};
     if ((obj==null) || obj === undefined) {
         callback.call(self, null);
@@ -1432,8 +1522,6 @@ DataModel.prototype.insert = function(obj, callback)
             ,configurable:false,enumerable:false
         });
     };
-
-    //todo::validate state for each object
     if (!util.isArray(obj))
     {
         if (key.type=='Counter') {
@@ -1522,7 +1610,6 @@ DataModel.prototype.remove = function(obj, callback)
 };
 
 /**
- * Deletes a single object and performs all the operation needed.
  * @param {Object} obj
  * @param {Function} callback
  * @private
@@ -1584,7 +1671,6 @@ DataModel.prototype.remove = function(obj, callback)
 }
 
 /**
- * Deletes the base object if any.
  * @param {*} obj
  * @param {Function} callback
  * @private
@@ -1622,6 +1708,7 @@ DataModel.PluralExpression = /([a-zA-Z]+?)([e']s|[^aiou]s)$/;
 /**
  * Ensures model data adapter.
  * @param callback
+ * @private
  */
 DataModel.prototype.ensureModel = function(callback) {
     var self = this;
@@ -1869,9 +1956,9 @@ DataModel.prototype.key = function()
     return this.fields.find(function(x) { return x.primary==true; });
 };
 /**
- * Gets a field based on the given name.
+ * Gets an instance of DataField class based on the given name.
  * @param {String} name - The name of the field.
- * @return {DataField} - Returns a data field if exists. Otherwise returns null.
+ * @return {DataField|*} - Returns a data field if exists. Otherwise returns null.
  */
 DataModel.prototype.field = function(name)
 {
@@ -1891,29 +1978,28 @@ DataModel.prototype.fieldOf = function(attr, alias) {
 };
 
 /**
- * Gets the specified model view
- * @param {string} name
- * @param {DataModelView=} obj
+ * Gets an instance of DataModelView class which represents a model view with the given name.
+ * @param {string} name - A string that represents the name of the view.
  * @returns {DataModelView|undefined}
+ *@example
+ var view = context.model('Person').dataviews('summary');
+ *
  */
-DataModel.prototype.dataviews = function(name, obj) {
+DataModel.prototype.dataviews = function(name) {
     var self = this;
-    //todo::add or update data view
-    if (typeof obj !== 'undefined')
-        throw new Error('Not implemented.');
     var re = new RegExp('^' + name.replace('$','\$') + '$', 'ig');
     var view = self.views.filter(function(x) { return re.test(x.name);})[0];
     if (dataCommon.isNullOrUndefined(view))
         return;
     return util._extend(new DataModelView(self), view);
 };
+
 /**
- * Caches a mapping associated with the given field
  * @param {DataField|*} field
  * @param {DataAssociationMapping|*} mapping
  * @private
  */
-DataModel.prototype.cacheMappingInternal  = function(field, mapping) {
+  function cacheMappingInternal(field, mapping) {
     if (typeof field === 'undefined' || field == null)
         return;
     //cache mapping
@@ -1939,7 +2025,8 @@ DataModel.prototype.cacheMappingInternal  = function(field, mapping) {
 
 /**
  * Gets a field association mapping based on field attributes, if any. Otherwise returns null.
- * @param {String} name The name of the field
+ * @param {string} name - The name of the field
+ * @returns {DataAssociationMapping|undefined}
  */
 DataModel.prototype.inferMapping = function(name) {
     var self = this;
@@ -1978,7 +2065,7 @@ DataModel.prototype.inferMapping = function(name) {
                     oneToOne:false
                 });
                 //cache mapping
-                self.cacheMappingInternal(field, result);
+                cacheMappingInternal.call(self, field, result);
                 //and finally return mapping
                 return result;
             }
@@ -1996,7 +2083,7 @@ DataModel.prototype.inferMapping = function(name) {
                     refersTo:field.property || field.name
                 });
                 //cache mapping
-                self.cacheMappingInternal(field, result);
+                cacheMappingInternal.call(self, field, result);
                 //and finally return mapping
                 return result;
             }
@@ -2017,7 +2104,7 @@ DataModel.prototype.inferMapping = function(name) {
                     oneToOne: false
                 });
                 //cache mapping
-                self.cacheMappingInternal(field, result);
+                cacheMappingInternal.call(self, field, result);
                 //and finally return mapping
                 return result;
             }
@@ -2032,7 +2119,7 @@ DataModel.prototype.inferMapping = function(name) {
                     oneToOne: false
                 });
                 //cache mapping
-                self.cacheMappingInternal(field, result);
+                cacheMappingInternal.call(self, field, result);
                 //and finally return mapping
                 return result;
             }
@@ -2057,13 +2144,8 @@ cfg.current.models.Migration =(function() {
 
 if (typeof exports !== 'undefined') {
     module.exports = {
-        /**
-         * DataModel class constructor.
-         * @constructs DataModel
-         */
         DataModel : DataModel
-    }
-
-; }
+    };
+}
 
 

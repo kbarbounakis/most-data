@@ -30,6 +30,7 @@
  */
 /**
  * @type {{inherits:Function,_extend:Function}}
+ * @ignore
  */
 var util = require('util'),
     async = require('async'),

@@ -28,6 +28,10 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/**
+ * @ignore
+ */
 var util = require('util');
 /**
  * Load native object extensions
@@ -38,6 +42,7 @@ if (typeof Array.prototype.find === 'undefined')
      * @param {Function} callback
      * @param {Object=} [thisObject]
      * @returns {*}
+     * @ignore
      */
     var find = function(callback, thisObject) {
         if (this == null) {
@@ -80,6 +85,7 @@ if (typeof Array.prototype.select === 'undefined')
      * @param {Function} callback
      * @param {Object=} [thisObject]
      * @returns {*}
+     * @ignore
      */
     var select = function(callback, thisObject) {
         if (this == null) {
@@ -121,6 +127,7 @@ if (typeof Array.prototype.distinct === 'undefined')
      * @param {Function} callback
      * @param {Object=} [thisObject]
      * @returns {*}
+     * @ignore
      */
     var distinct = function(callback, thisObject) {
         if (this == null) {
@@ -159,9 +166,10 @@ if (typeof Array.prototype.distinct === 'undefined')
 
 if (typeof Object.prototype.isNullOrUndefined === 'undefined')
 {
-    /****
+    /**
      * @param {*} obj
      * @returns {boolean}
+     * @ignore
      */
     var isNullOrUndefined = function(obj) {
         return (typeof obj === 'undefined') || (obj==null);
@@ -176,7 +184,9 @@ if (typeof Object.prototype.isNullOrUndefined === 'undefined')
     }
     if (!Object.prototype.isNullOrUndefined) { Object.prototype.isNullOrUndefined = isNullOrUndefined; }
 }
-
+/**
+ * @private
+ */
 var dataCommon = {
     /**
      *
@@ -251,6 +261,11 @@ var dataCommon = {
         }
         return value.join('');
     },
+    /**
+     * Converts the given value to the equivalent MD5 formatted string.
+     * @param {*} value
+     * @returns {string|undefined}
+     */
     md5 : function(value) {
         if (typeof value === 'undefined' || value == null) {
             return;
@@ -271,5 +286,8 @@ var dataCommon = {
 
 if (typeof exports !== 'undefined')
 {
+    /**
+     * @type {{log: Function, debug: Function, dasherize: Function, isNullOrUndefined: Function, isDefined: Function, randomInt: Function, randomChars: Function, md5: Function}}
+     */
     module.exports = dataCommon;
 }

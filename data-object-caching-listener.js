@@ -29,6 +29,10 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**
+ * @type {dataCache|exports|module.exports}
+ * @ignore
+ */
 var dataCache = require('./data-cache'),
     dataCommon = require('./data-common');
 /**

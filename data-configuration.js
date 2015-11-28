@@ -28,6 +28,9 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * @ignore
+ */
 var array = require('most-array'),
     dataCommon = require('./data-common'),
     util = require('util'),
@@ -272,35 +275,34 @@ DataConfiguration.prototype.model = function(name)
 
 };
 
-//DataConfiguration.current = (function() {
-//    return new DataConfiguration();
-//}).call();
-
+/**
+ * @private
+ */
 var cfg = {
     /**
      * @type DataConfiguration
      */
     current:undefined,
     /**
-     * @namespace
-     */
-    classes: {
-        /**
-         * DataConfiguration class
-         * @constructor
-         */
-        DataConfiguration:DataConfiguration  
-    },
-    /**
      * Creates a instance data configuration class
      * @returns {DataConfiguration}  Returns an instance of DataConfiguration class
      */
     createInstance: function() {
-       return new DataConfiguration();
+        return new DataConfiguration();
+    },
+    /**
+     * @namespace
+     */
+    classes: {
+        /**
+         * @memberof module:most-data/data-configuration.classes
+         */
+        DataConfiguration:DataConfiguration
     }
 };
 /**
  * @type DataConfiguration
+ * @private
  */
 var __cfg;
 

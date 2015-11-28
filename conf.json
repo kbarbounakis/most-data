@@ -1,0 +1,10 @@
+{
+    "tags": {
+        "allowUnknownTags": true
+    },
+    "source": {
+        "include": ["./"],
+        "includePattern": ".+\\.js(doc)?$",
+        "exclude":[ "util.js" ]
+    }
+}

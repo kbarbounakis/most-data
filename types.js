@@ -28,10 +28,14 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/**
+ * @ignore
+  */
 var events = require('events'), util = require('util'), async = require('async'), qry = require('most-query');
 /**
  * Represents a data connection
- * @class DataAdapter
+ * @class
  * @constructor
  */
 function DataAdapter(options) {
@@ -110,7 +114,7 @@ DataAdapter.prototype.createView = function(name, query, callback) {
 }
 
 /**
- * @class EventEmitter2
+ * @class
  * @augments EventEmitter
  * @constructor
  */
@@ -119,10 +123,10 @@ function EventEmitter2() {
 }
 util.inherits(EventEmitter2, events.EventEmitter);
 /**
- * Raises the specified event and executes event listeners as series.
- * @param {String} event The event that is going to be raised.
- * @param {*} args An object that contains the event arguments.
- * @param {Function} callback A callback function to be invoked after the execution.
+ * Raises the specified event and executes event listeners in series.
+ * @param {String} event - The event that is going to be raised.
+ * @param {*} args - An object that contains the event arguments.
+ * @param {Function} callback - A callback function to be invoked after the execution.
  */
 EventEmitter2.prototype.emit = function(event, args, callback)
 {
@@ -176,7 +180,7 @@ EventEmitter2.prototype.once = function(type, listener) {
 };
 
 /**
- * @class DataEventArgs
+ * @class
  * @constructor
  * @property {DataModel|*} model - Represents the underlying model.
  * @property {DataObject|*} target - Represents the underlying data object.
@@ -190,7 +194,7 @@ function DataEventArgs() {
 
 /**
  * Represents the main data context.
- * @class DataContext
+ * @class
  * @augments EventEmitter2
  * @constructor
  */
@@ -226,41 +230,63 @@ DataContext.prototype.finalize = function(cb) {
 util.inherits(DataContext, EventEmitter2);
 
 /**
- * @class DataEventListener
+ * Represents a data model event listener
+ * @class
  * @constructor
  * @abstract
- * Represents data object event listener
  */
 function DataEventListener() {
     //
 }
 /**
- * @param {DataEventArgs} e
- * @param {Function} cb
+ * Occurs before executing a data operation. The event arguments contain the query that is going to be executed.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ * @returns {DataEventListener}
+ */
+DataEventListener.prototype.beforeExecute = function(e, cb) {
+    return this;
+};
+/**
+ * Occurs after executing a data operation. The event arguments contain the executed query.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ * @returns {DataEventListener}
+ */
+DataEventListener.prototype.afterExecute = function(e, cb) {
+    return this;
+};
+/**
+ * Occurs before creating or updating a data object.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  * @returns {DataEventListener}
  */
 DataEventListener.prototype.beforeSave = function(e, cb) {
     return this;
-}
+};
 /**
- * @param {DataEventArgs} e
- * @param {Function} cb
+ * Occurs after creating or updating a data object.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  * @returns {DataEventListener}
  */
 DataEventListener.prototype.afterSave = function(e, cb) {
     return this;
 };
 /**
- * @param {DataEventArgs} e
- * @param {Function} cb
+ * Occurs before removing a data object.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  * @returns {DataEventListener}
  */
 DataEventListener.prototype.beforeRemove = function(e, cb) {
     return this;
 };
 /**
- * @param {DataEventArgs} e
- * @param {Function} cb
+ * Occurs after removing a data object.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  * @returns {DataEventListener}
  */
 DataEventListener.prototype.afterRemove = function(e, cb) {
@@ -297,7 +323,7 @@ function DataException(code, message, innerMessage) {
 util.inherits(DataException, Error);
 
 /**
- * @class AccessDeniedException
+ * @class
  * @param {string=} message
  * @param {string=} innerMessage
  * @constructor
@@ -309,7 +335,7 @@ function AccessDeniedException(message, innerMessage) {
 util.inherits(AccessDeniedException, DataException);
 
 /**
- * @class {DataQueryableField}
+ * @class
  * @param name
  * @constructor
  */
@@ -511,6 +537,7 @@ if (typeof String.prototype.fieldOf === 'undefined')
 {
     /**
      * @returns {DataQueryableField}
+     * @private
      */
     var fnFieldOf = function() {
         if (this == null) {
@@ -523,9 +550,9 @@ if (typeof String.prototype.fieldOf === 'undefined')
 
 
 /**
- * @class DataModelMigration
- * @constructor
  * Represents a model migration scheme against data adapters
+ * @class
+ * @constructor
  */
 function DataModelMigration() {
     /**
@@ -565,7 +592,7 @@ function DataModelMigration() {
     this.model = null;
 }
 /**
- * @class DataModelBatch
+ * @class
  * @constructor
  */
 function DataModelBatch() {
@@ -618,73 +645,110 @@ DataModelBatch.prototype.prepare = function(obj) {
 };
 
 /**
- * @class DataAssociationMapping
- * @param {*=} obj An object that contains relation mapping attributes
+ * DataAssociationMapping class describes the association between two models.
+ * <p>
+ *     An association between two models is described in field attributes. For example
+ *     model Order may have an association with model Party (Person or Organization) through the field Order.customer:
+ * </p>
+ <pre class="prettyprint"><code>
+   { "name": "Order",
+     "fields": [
+    ...
+   {
+        "name": "customer",
+        "title": "Customer",
+        "description": "Party placing the order.",
+        "type": "Party"
+    }
+    ...]
+    }
+ </code></pre>
+ <p>
+      This association is equivalent with the following DataAssociationMapping instance:
+ </p>
+ <pre class="prettyprint"><code>
+ "mapping": {
+    "cascade": "null",
+    "associationType": "association",
+    "select": [],
+    "childField": "customer",
+    "childModel": "Order",
+    "parentField": "id",
+    "parentModel": "Party"
+}
+ </code></pre>
+  <p>
+ The above association mapping was auto-generated from the field definition of Order.customer where the field type (Party)
+ actually defines the association between these models.
+ </p>
+ <p>
+ Another example of an association between two models is a many-to-many association. User model has a many-to-many association (for user groups) with Group model:
+ </p>
+ <pre class="prettyprint"><code>
+ { "name": "User",
+   "fields": [
+  ...
+ {
+    "name": "groups",
+    "title": "User Groups",
+    "description": "A collection of groups where user belongs.",
+    "type": "Group",
+    "expandable": true,
+    "mapping": {
+        "associationAdapter": "GroupMembers",
+        "parentModel": "Group",
+        "parentField": "id",
+        "childModel": "User",
+        "childField": "id",
+        "associationType": "junction",
+        "cascade": "delete"
+    }
+}
+  ...]
+  }
+ </code></pre>
+ <p>This association may also be defined in Group model:</p>
+ <pre class="prettyprint"><code>
+ { "name": "Group",
+   "fields": [
+  ...
+ {
+    "name": "members",
+    "title": "Group Members",
+    "description": "Contains the collection of group members (users or groups).",
+    "type": "Account",
+    "many":true
+}
+  ...]
+  }
+ </code></pre>
+ *
+ * @class
+ * @property {string} associationAdapter - Gets or sets the association database object
+ * @property {string} parentModel - Gets or sets the parent model name
+ * @property {string} childModel - Gets or sets the child model name
+ * @property {string} parentField - Gets or sets the parent field name
+ * @property {string} childField - Gets or sets the child field name
+ * @property {string} refersTo - Gets or sets the parent property where this association refers to
+ * @property {string} parentLabel - Gets or sets the parent field that is going to be used as label for this association
+ * @property {string} cascade - Gets or sets the action that occurs when parent item is going to be deleted (all|none|null|delete). The default value is 'none'.
+ * @property {string} associationType - Gets or sets the type of this association (junction|association). The default value is 'association'.
+ * @property {string[]} select - Gets or sets an array of fields to select from associated model. If this property is empty then all associated model fields will be selected.
+ * @property {boolean} oneToOne - Gets or sets a boolean value that indicates whether current relation is one-to-one relation. The default value is false.
+ * @param {*=} obj - An object that contains relation mapping attributes
  * @constructor
  */
 function DataAssociationMapping(obj) {
-    /**
-     * Gets or set the storage adapter of a relation.
-     * @type {string}
-     */
-    this.associationAdapter = undefined;
-    /**
-     * Gets or sets the parent model name
-     * @type {string}
-     */
-    this.parentModel = undefined;
-    /**
-     * Gets or sets the child model name
-     * @type {string}
-     */
-    this.childModel = undefined;
-    /**
-     * Gets or sets the parent field that is going to be used as label for this association
-     * @type {string}
-     */
-    this.parentLabel = undefined;
-    /**
-     * Gets or sets the parent field name or an array of field names
-     * @type {string|Array}
-     */
-    this.parentField = undefined;
-    /**
-     * Gets or sets the parent property where this association refers to
-     * @type {string}
-     */
-    this.refersTo = undefined;
-    /**
-     * Gets or sets the child field name or an array of field names
-     * @type {string|Array}
-     */
-    this.childField = undefined;
-    /**
-     * Gets or sets the action that occurs when parent item is going to be deleted (all|none|null|delete).
-     * @type {string}
-     */
     this.cascade = 'none';
-    /**
-     * Gets or sets the type of this association (junction|association|multivalues|lookup).
-     * @type {string}
-     */
     this.associationType = 'association';
-    /**
-     * Gets or sets an array of fields to select from associated model. If this property is empty then all associated model fields will be selected.
-     * @type {Array}
-     */
     this.select = [];
-    /**
-     * Gets or sets a boolean value that indicates whether current relation is one-to-one relation.
-     * @type {Boolean}
-     */
     this.oneToOne = false;
-    if (typeof obj === 'object')
-        util._extend(this, obj);
+    if (typeof obj === 'object') { util._extend(this, obj); }
 }
 
 
 /**
- * @class DataField
+ * @class
  * @constructor
  * @property {string} name - Gets or sets the internal name of this field.
  * @property {string} property - Gets or sets the property name for this field.
@@ -715,9 +779,59 @@ function DataField() {
     this.virtual = false;
 }
 
+/**
+ * @class
+ * @constructor
+ * @property {string} name - Gets or sets a short description for this listener
+ * @property {string} type - Gets or sets a string which is the path of the module that exports this listener.
+ * @property {boolean} disabled - Gets or sets a boolean value that indicates whether this listener is disabled or not. The default value is false.
+ *
+ * @description
+ * <p>
+ * A data model uses event listeners as triggers which are automatically executed after data operations.
+ * Those listeners are defined in [eventListeners] section of a model's schema.
+ * </p>
+ * <pre class="prettyprint">
+ *<code>
+*     {
+*          ...
+*          "fields": [ ... ],
+*          ...
+*          "eventListeners": [
+*              { "name":"Update Listener", "type":"/app/controllers/an-update-listener.js" },
+*              { "name":"Another Update Listener", "type":"module-a/lib/listener" }
+*          ]
+*          ...
+*     }
+ *</code>
+ * </pre>
+ * @example
+ * // A simple DataEventListener that sends a message to sales users after new order was arrived.
+ * var web = require("most-web");
+ exports.afterSave = function(event, callback) {
+    //exit if state is other than [Insert]
+    if (event.state != 1) { return callback() }
+    //initialize web mailer
+    var mm = require("most-web-mailer"), context = event.model.context;
+    //send new order mail template by passing new item data
+    mm.mailer(context).to("sales@example.com")
+        .cc("supervisor@example.com")
+        .subject("New Order")
+        .template("new-order").send(event.target, function(err) {
+        if (err) { return web.common.log(err); }
+        return callback();
+    });
+};
+ *
+ */
+function DataModelEventListener() {
+
+}
+
+
 
 /**
- * @class DataResultSet
+ * @class
  * @constructor
  */
 function DataResultSet() {
@@ -735,9 +849,8 @@ function DataResultSet() {
     this.records = [];
 }
 
-
 /**
- * @abstract DataContextEmitter
+ * @abstract
  * @constructor
  */
 function DataContextEmitter() {
@@ -747,48 +860,36 @@ DataContextEmitter.prototype.ensureContext = function() {
     return null;
 };
 
+/**
+ * An enumeration of the available data object states
+ * @enum {number}
+ */
+var DataObjectState = {
+    /**
+     * Insert State (1)
+     */
+    Insert:1,
+    /**
+     * Update State (2)
+     */
+    Update:2,
+    /**
+     * Delete State (4)
+     */
+    Delete:4
+};
 
 var types =
 {
-    /**
-     * @constructs DataQueryableField
-     */
     DataQueryableField: DataQueryableField,
-    /**
-    * @constructs DataAdapter
-    */
-   DataAdapter: DataAdapter,
-   /**
-    * @constructs DataContext
-    */
-   DataContext: DataContext,
-    /**
-     * @constructs DataContextEmitter
-     */
+    DataAdapter: DataAdapter,
+    DataContext: DataContext,
     DataContextEmitter: DataContextEmitter,
-   /**
-    * @constructs EventEmitter2
-    */
-   EventEmitter2: EventEmitter2,
-    /**
-     * @constructs DataEventArgs
-     */
+    EventEmitter2: EventEmitter2,
     DataEventArgs: DataEventArgs,
-    /**
-     * @constructs DataModelMigration
-     */
     DataEventListener: DataEventListener,
-    /**
-     * @constructs DataModelMigration
-     */
     DataModelMigration: DataModelMigration,
-    /**
-     * @constructs DataAssociationMapping
-     */
     DataAssociationMapping:DataAssociationMapping,
-    /**
-     * @constructs DataModelBatch
-     */
     DataModelBatch: DataModelBatch,
     parsers: {
         parseInteger: function(val) {
@@ -871,22 +972,11 @@ var types =
             }
         }
     },
-    /**
-     * @constructs DataException
-     */
     DataException:DataException,
-    /**
-     * @constructs AccessDeniedException
-     */
     AccessDeniedException:AccessDeniedException,
-    /**
-     * @constructs DataField
-     */
     DataField:DataField,
-    /**
-     * @constructs DataResultSet
-     */
-    DataResultSet:DataResultSet
+    DataResultSet:DataResultSet,
+    DataModelEventListener:DataModelEventListener
 };
 
 if (typeof exports !== 'undefined')

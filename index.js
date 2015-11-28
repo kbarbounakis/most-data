@@ -28,6 +28,9 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * @ignore
+ */
 var model = require('./data-model'),
     types = require('./types'),
     cfg = require('./data-configuration'),
@@ -35,34 +38,25 @@ var model = require('./data-model'),
     dataCache = require('./data-cache'),
     dataCommon = require('./data-common'),
     functions = require('./functions'),
-    DataObject = require('./data-object').DataObject,
     DataQueryable = require('./data-queryable').DataQueryable,
     DefaultDataContext = require('./data-context').DefaultDataContext,
     NamedDataContext = require('./data-context').NamedDataContext,
-    /**
-     * @constructs {DataModel}
-     */
     DataModel = model.DataModel,
-    /**
-     * @constructs {DataFilterResolver}
-     */
     DataFilterResolver = require('./data-filter-resolver').DataFilterResolver;
+
 /**
- * @module most-data
+ * @exports most-data
+ * @private
  */
 var dat = {
     /**
      * @namespace
+     * @memberof module:most-data
      */
-    cfg: {
-        /**
-         * Represents the current data configuration
-         * @type DataConfiguration
-         */
-        current:cfg.current
-    },
+    cfg: cfg,
     /**
      * @namespace
+     * @memberof module:most-data
      */
     common: dataCommon,
     /**
@@ -77,51 +71,41 @@ var dat = {
     cache:dataCache,
     /**
      * @namespace
+     * @memberOf module:most-data
      */
     classes: {
-        /**
-         * DataObject class constructor.
-         * @constructs DataObject
-         */
-        DataObject : DataObject,
+        DataObject : require('./data-object'),
         /**
          * DefaultDataContext class constructor.
-         * @constructs DefaultDataContext
          */
         DefaultDataContext: DefaultDataContext,
         /**
          * NamedDataContext class constructor.
-         * @constructs NamedDataContext
          */
         NamedDataContext: NamedDataContext,
         /**
          * FunctionContext constructor.
-         * @constructs FunctionContext
          */
         FunctionContext:functions.classes.FunctionContext,
         /**
-         * DataQueryable class constructor
-         * @constructs DataQueryable
+         * @see DataQueryable
          */
         DataQueryable: DataQueryable,
         /**
          * DataModel class constructor
-         * @constructs DataModel
+         * @see DataModel
          */
         DataModel: DataModel,
         /**
          * DataFilterResolver class constructor
-         * @constructs DataFilterResolver
          */
         DataFilterResolver: DataFilterResolver,
         /**
          * DataPermissionEventListener class constructor
-         * @constructs DataPermissionEventListener
          */
         DataPermissionEventListener:perms.DataPermissionEventListener,
         /**
          * DataPermissionEventArgs class constructor
-         * @constructs DataPermissionEventArgs
          */
         DataPermissionEventArgs:perms.DataPermissionEventArgs
     },
@@ -146,27 +130,27 @@ var dat = {
         fn.call(null, ctx);
     },
     /**
+     * @param {string} userName
      * @param {function(DataContext)} fn - A function fn(context) that is going to be invoked in current context
      */
     executeAs: function(userName, fn)
     {
         fn = fn || function() {};
         var ctx = new DefaultDataContext();
-        ctx.user = { name:userName, authenticationType:'Basic' }
+        ctx.user = { name:userName, authenticationType:'Basic' };
         fn.call(null, ctx);
     },
     /**
      * DataObject class constructor.
-     * @constructs DataObject
      */
-    DataObject : DataObject
+    DataObject : require('./data-object')
 };
 
 
 if (typeof exports !== 'undefined')
 {
     /**
-     * @see dat
+     * @module most-data
      */
     module.exports = dat;
 }

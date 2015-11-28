@@ -28,6 +28,9 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * @ignore
+ */
 var dataCommon = require('./data-common'),
     async = require('async'),
     util = require('util');

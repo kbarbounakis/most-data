@@ -28,11 +28,15 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * @private
+ */
 var types = require('./types'), util = require('util');
 /**
- * Implements the cache for a data application.
- * @class DataCache
- * @property {Number} ttl
+ * Implements data cache mechanisms in MOST Data Applications.
+ * DataCache class is used as the internal data caching engine, if any other caching mechanism is not defined.
+ * @class
+ * @property {Number} ttl - An amount of time in seconds which is the default cached item lifetime.
  * @constructor
  * @augments EventEmitter2
  */
@@ -42,7 +46,14 @@ function DataCache() {
 util.inherits(DataCache, types.EventEmitter2);
 /**
  * Initializes data caching.
- * @param {function(Error=)} callback
+ * @param {function(Error=)} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ *
+ * @example
+ var d = require("most-data");
+ //try to find article with id 100 in cache
+ d.cache.current.init(function(err) {
+    done(err);
+ };
  */
 DataCache.prototype.init = function(callback) {
     try {
@@ -63,7 +74,14 @@ DataCache.prototype.init = function(callback) {
 /**
  * Removes a cached value.
  * @param {string} key - A string that represents the key of the cached value
- * @param {function(Error=,number=)} callback - Returns the number of deleted entries. This parameter is optional.
+ * @param {function(Error=)=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ *
+ * @example
+ var d = require("most-data");
+ //try to find article with id 100 in cache
+ d.cache.current.remove('/Article/100', function(err) {
+    done(err);
+ };
  */
 DataCache.prototype.remove = function(key, callback) {
     var self = this;
@@ -80,7 +98,14 @@ DataCache.prototype.remove = function(key, callback) {
 
 /**
 * Flush all cached data.
-* @param {function(Error=)} callback - This parameter is optional.
+* @param {function(Error=)=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ *
+ * @example
+ var d = require("most-data");
+ //try to find article with id 100 in cache
+ d.cache.current.removeAll(function(err) {
+    done(err);
+ };
 */
 DataCache.prototype.removeAll = function(callback) {
     var self = this;
@@ -101,7 +126,13 @@ DataCache.prototype.removeAll = function(callback) {
  * @param {string} key - A string that represents the key of the cached value
  * @param {*} value - The value to be cached
  * @param {number=} ttl - A TTL in seconds. This parameter is optional.
- * @param {function(Error=,boolean=)} callback - Returns true on success. This parameter is optional.
+ * @param {function(Error=,boolean=)=} callback - A callback function where the first argument will contain the Error object if an error occured and the second argument will return true on success.
+ *
+ * @example
+ var d = require("most-data");
+ d.cache.current.add('/User/100', { "id":100,"name":"user1@example.com","description":"User #1" }, 1200, function(err) {
+    done(err);
+ });
  */
 DataCache.prototype.add = function(key, value, ttl, callback) {
     var self = this;
@@ -119,7 +150,21 @@ DataCache.prototype.add = function(key, value, ttl, callback) {
  * Gets data from cache or executes the defined function and adds the result to the cache with the specified key
  * @param {string|*} key - A string thath represents the of the cached data
  * @param {function(function(Error=,*=))} fn - A function to execute if data will not be found in cache
- * @param {function(Error=,*=)} callback - A callback function that will return the result or an error, if any.
+ * @param {function(Error=,*=)} callback - A callback function where the first argument will contain the Error object if an error occured and the second argument will contain the result.
+ * @example
+ var d = require("most-data");
+ //try to find user with id 100 in cache
+ d.cache.current.ensure('/User/100', function(cb) {
+        //otherwise get user from database
+      context.model('User').where('id').equal(100).first().then(function(result) {
+        cb(null, result);
+      }).catch(function(err) {
+        cb(err);
+      }
+ }, function(err, result) {
+    //and finally return the result
+    done(err,result);
+ };
  */
 DataCache.prototype.ensure = function(key, fn, callback) {
     var self = this;
@@ -145,12 +190,17 @@ DataCache.prototype.ensure = function(key, fn, callback) {
         }
     });
 };
-
-
 /**
  * Gets a cached value defined by the given key.
- * @param {string|*} key
- * @param {function(Error=,*=)} callback - A callback that returns the cached value, if any.
+ * @param {string|*} key - A string that represents the key of the cached value
+ * @param {function(Error=,*=)} callback - A callback function where the first argument will contain the Error object if an error occured and the second argument will contain the result.
+ *
+ * @example
+ var d = require("most-data");
+ //try to find article with id 100 in cache
+ d.cache.current.get('/Article/100', function(err, result) {
+    done(err,result);
+ };
  */
 DataCache.prototype.get = function(key, callback) {
     var self = this;
@@ -180,7 +230,7 @@ DataCache.prototype.get = function(key, callback) {
     });
 };
 /**
- * @type {{DataCache: DataCache}, {current:DataCache}}
+ * @private
  */
 var dataCache = {
     /**
@@ -190,6 +240,7 @@ var dataCache = {
 };
 /**
  * @type DataCache
+ * @private
  */
 var currentDataCache;
 Object.defineProperty(dataCache, 'current', { get: function () {
@@ -215,8 +266,5 @@ Object.defineProperty(dataCache, 'current', { get: function () {
 
 if (typeof exports !== 'undefined')
 {
-    /**
-     * @see dataCache
-     */
     module.exports = dataCache;
 }

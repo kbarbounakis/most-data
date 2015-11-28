@@ -29,6 +29,9 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+/**
+ * @ignore
+ */
 var util = require('util'),
     async = require('async'),
     qry = require('most-query'),

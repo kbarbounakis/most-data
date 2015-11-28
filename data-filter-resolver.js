@@ -28,15 +28,17 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
+/**
+ * @private
+ */
 var Q = require('q'),
     functions = require('./functions');
 
 /**
- * @class DataFilterResolver
+ * @class
  * @abstract
  * @constructor
- * @augments {DataModel}
+ * @augments DataModel
  */
 function DataFilterResolver() {
     //

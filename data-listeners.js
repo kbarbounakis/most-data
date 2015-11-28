@@ -28,12 +28,15 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+/**
+ * @ignore
+ */
 var async = require('async'),
     dataCommon = require('./data-common'),
     util = require('util'),
     dataCache = require('./data-cache');
 /**
- * @class NotNullConstraintListener
+ * @class
  * @constructor
  */
 function NotNullConstraintListener() {
@@ -71,7 +74,7 @@ NotNullConstraintListener.prototype.beforeSave = function(e, callback) {
 };
 
 /**
- * @class UniqueContraintListener
+ * @class
  * @constructor
  */
 function UniqueContraintListener() {
@@ -170,9 +173,9 @@ UniqueContraintListener.prototype.beforeSave = function(e, callback) {
 };
 
 /**
- * @class CalculatedValueListener
- * @constructor
  * Represents data object default value listener
+ * @class
+ * @constructor
  */
 function CalculatedValueListener() {
     //
@@ -263,7 +266,7 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
 
 
 /**
- * @class DataModelLookupCachingListener
+ * @class
  * @constructor
  */
 function DataModelLookupCachingListener() {
@@ -305,9 +308,9 @@ DataModelLookupCachingListener.prototype.afterRemove = function(e, callback) {
 
 
 /**
- * @class DefaultValueListener
- * @constructor
  * Represents data object default value listener
+ * @class
+ * @constructor
  */
 function DefaultValueListener() {
     //

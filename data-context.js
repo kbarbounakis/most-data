@@ -30,6 +30,7 @@
  */
 /**
  * @type {{inherits:Function,_extend:Function,isArray:Function,format:Function}}
+ * @ignore
  */
 var util = require('util'),
     dataCommon = require('./data-common'),

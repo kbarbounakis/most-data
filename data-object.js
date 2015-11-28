@@ -31,6 +31,7 @@
 
 /**
  * @type {{inherits:Function,_extend:Function,isArray:Function,format:Function}}
+ * @ignore
  */
 var util = require('util'),
     dataCommon = require('./data-common'),
@@ -44,14 +45,14 @@ var util = require('util'),
     HasParentJunction = require('./has-parent-junction').HasParentJunction;
 
 /**
- * CONSTANTS
+ * @ignore
  */
 var STR_MISSING_CALLBACK_ARGUMENT = 'Missing argument. Callback function expected.',
     STR_MISSING_ARGUMENT_CODE = 'EARGM';
 
 /**
  * DataObject class represents a data object that is going to be used in data and other operations
- * @class DataObject
+ * @class
  * @param {string=} type
  * @param {*=} obj The object that is going to be extended
  * @constructor
@@ -509,11 +510,5 @@ DataObject.prototype.remove = function(context, callback) {
 
 if (typeof exports !== 'undefined')
 {
-    module.exports = {
-        /**
-         * @constructs DataObject
-         */
-        DataObject:DataObject
-
-    };
+    module.exports = DataObject;
 }

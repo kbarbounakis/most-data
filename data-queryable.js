@@ -28,6 +28,10 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+/**
+ * @ignore
+ */
 var async=require('async'),
     util = require('util'),
     dataCommon = require('./data-common'),
@@ -37,6 +41,11 @@ var async=require('async'),
     DataAssociationMapping = types.DataAssociationMapping,
     Q = require('q');
 
+/**
+ * @class
+ * @constructor
+ * @ignore
+ */
 function DataAttributeResolver() {
 
 }
@@ -167,9 +176,13 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
 DataAttributeResolver.prototype.testAttribute = function(s) {
     if (typeof s !== 'string')
         return;
+    /**
+     * @private
+     */
     var matches;
     /**
      * attribute aggregate function with alias e.g. f(x) as a
+     * @ignore
      */
     matches = /^(\w+)\((\w+)\)\sas\s(\w+)$/i.exec(s);
     if (matches) {
@@ -177,6 +190,7 @@ DataAttributeResolver.prototype.testAttribute = function(s) {
     }
     /**
      * attribute aggregate function with alias e.g. x as a
+     * @ignore
      */
     matches = /^(\w+)\sas\s(\w+)$/i.exec(s);
     if (matches) {
@@ -184,6 +198,7 @@ DataAttributeResolver.prototype.testAttribute = function(s) {
     }
     /**
      * attribute aggregate function with alias e.g. f(x)
+     * @ignore
      */
     matches = /^(\w+)\((\w+)\)$/i.exec(s);
     if (matches) {
@@ -202,9 +217,13 @@ DataAttributeResolver.prototype.testAttribute = function(s) {
 DataAttributeResolver.prototype.testNestedAttribute = function(s) {
     if (typeof s !== 'string')
         return;
+    /**
+     * @private
+     */
     var matches;
     /**
      * nested attribute aggregate function with alias e.g. f(x/b) as a
+     * @ignore
      */
     matches = /^(\w+)\((\w+)\/(\w+)\)\sas\s(\w+)$/i.exec(s);
     if (matches) {
@@ -212,6 +231,7 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
     }
     /**
      * nested attribute aggregate function with alias e.g. f(x/b/c) as a
+     * @ignore
      */
     matches = /^(\w+)\((\w+)\/(\w+)\/(\w+)\)\sas\s(\w+)$/i.exec(s);
     if (matches) {
@@ -219,6 +239,7 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
     }
     /**
      * nested attribute with alias e.g. x/b as a
+     * @ignore
      */
     matches = /^(\w+)\/(\w+)\sas\s(\w+)$/i.exec(s);
     if (matches) {
@@ -226,6 +247,7 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
     }
     /**
      * nested attribute with alias e.g. x/b/c as a
+     * @ignore
      */
     matches = /^(\w+)\/(\w+)\/(\w+)\sas\s(\w+)$/i.exec(s);
     if (matches) {
@@ -233,6 +255,7 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
     }
     /**
      * nested attribute aggregate function with alias e.g. f(x/b)
+     * @ignore
      */
     matches = /^(\w+)\((\w+)\/(\w+)\)$/i.exec(s);
     if (matches) {
@@ -240,6 +263,7 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
     }
     /**
      * nested attribute aggregate function with alias e.g. f(x/b/c)
+     * @ignore
      */
     matches = /^(\w+)\((\w+)\/(\w+)\/(\w+)\)$/i.exec(s);
     if (matches) {
@@ -247,6 +271,7 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
     }
     /**
      * nested attribute with alias e.g. x/b
+     * @ignore
      */
     matches = /^(\w+)\/(\w+)$/.exec(s);
     if (matches) {
@@ -255,6 +280,7 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
 
     /**
      * nested attribute with alias e.g. x/b/c
+     * @ignore
      */
     matches = /^(\w+)\/(\w+)\/(\w+)$/.exec(s);
     if (matches) {
@@ -265,7 +291,7 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
 
 
 /**
- * @class DataQueryable
+ * @class
  * @property {QueryExpression|*} query - Gets or sets the query expression
  * @property {DataModel|*} model - Gets or sets the underlying data model
  * @constructor
@@ -566,7 +592,6 @@ DataQueryable.prototype.between = function(value1, value2) {
     this.query.between(value1, value2);
     return this;
 };
-
 
 /**
  * @param {*=} attr  An array of fields, a field or a view name
@@ -1158,7 +1183,6 @@ DataQueryable.prototype.sumOf = function(name, alias) {
 
 /**
  * @private
- * Executes the underlying query statement and returns the count of object found.
  * @param callback {Function}
  * @returns {*} - A collection of objects that meet the query provided
  */
@@ -1210,7 +1234,6 @@ DataQueryable.prototype.count = function(callback) {
 
 /**
  * @private
- * Executes the underlying query statement and returns the maximum value of the given attribute.
  * @param {string} attr
  * @param callback {Function}
  * @returns {*} Returns the maximum value of the given attribute
@@ -1264,7 +1287,6 @@ DataQueryable.prototype.max = function(attr, callback) {
 
 /**
  * @private
- * Executes the underlying query statement and returns the minimum value of the given attribute.
  * @param attr {String}
  * @param callback {Function}
  * @returns {*} Returns the maximum value of the given attribute
@@ -1390,7 +1412,10 @@ DataQueryable.prototype.__executeCount = function(callback) {
     }
 
 };
-
+/**
+ * Migrates the underlying data model
+ * @param {function(Error=)} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ */
 DataQueryable.prototype.migrate = function(callback) {
     var self = this;
     try {
@@ -1718,6 +1743,7 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
                     else {
                         /**
                          * @type {DataModel}
+                         * @private
                          */
                         associatedModel = self.model.context.model(mapping.parentModel);
                         var keyAttr = self.model.field(mapping.childField);
@@ -2102,7 +2128,6 @@ DataQueryable.prototype.toLocaleUpperCase = function() {
 
 /**
  * @private
- * Gets a single value after executing the specified query. In query does not have any fields
  * @param {Function} callback
  */
 function valueInternal(callback) {
@@ -2136,20 +2161,23 @@ DataQueryable.prototype.value = function(callback) {
     }
 };
 /**
- * @returns {DataQueryable}
+ * @returns DataQueryable
  */
-DataQueryable.prototype.toUpperCase = DataQueryable.prototype.toLocaleUpperCase;
+DataQueryable.prototype.toUpperCase = function() {
+    return this.toLocaleUpperCase();
+};
+
+/**
+ * @returns DataQueryable
+ */
+DataQueryable.prototype.toLowerCase = function() {
+    return this.toLocaleLowerCase();
+};
 
 if (typeof exports !== 'undefined')
 {
     module.exports = {
-        /**
-         * @constructs DataQueryable
-         */
         DataQueryable:DataQueryable,
-        /**
-         * @constructs DataAttributeResolver
-         */
         DataAttributeResolver:DataAttributeResolver
     };
 }
