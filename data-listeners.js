@@ -173,7 +173,7 @@ UniqueContraintListener.prototype.beforeSave = function(e, callback) {
 };
 
 /**
- * Represents data object default value listener
+ * @classdesc A default event listener for calculating values
  * @class
  * @constructor
  */
@@ -181,9 +181,9 @@ function CalculatedValueListener() {
     //
 }
 /**
- *
- * @param {DataEventArgs} e
- * @param {Function} callback
+ * Occurs before creating or updating a data object.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 CalculatedValueListener.prototype.beforeSave = function(e, callback) {
     //get function context
@@ -416,25 +416,10 @@ DefaultValueListener.prototype.beforeSave = function(e, callback) {
 if (typeof exports !== 'undefined')
 {
     module.exports = {
-        /**
-         * @constructs NotNullConstraintListener
-         */
         NotNullConstraintListener:NotNullConstraintListener,
-        /**
-         * @constructs UniqueContraintListener
-         */
         UniqueContraintListener:UniqueContraintListener,
-        /**
-         * @constructs CalculatedValueListener
-         */
         CalculatedValueListener:CalculatedValueListener,
-        /**
-         * @constructs DataModelLookupCachingListener
-         */
         DataModelLookupCachingListener:DataModelLookupCachingListener,
-        /**
-         * @constructs DefaultValueListener
-         */
         DefaultValueListener:DefaultValueListener
     };
 }

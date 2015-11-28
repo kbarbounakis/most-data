@@ -62,96 +62,166 @@ function EmptyQueryExpression() {
 }
 
 /**
- * Database Object Management for node.js
+ * @classdesc DataModel class extends a JSON data model and performs all data operations (select, insert, update and delete) in MOST Data Applications.
+ <p>
+     These JSON schemas are in config/models folder:
+ </p>
+ <pre class="prettyprint"><code>
+ /
+ + config
+   + models
+     - User.json
+     - Group.json
+     - Account.json
+     ...
+ </code></pre>
+ <p class="pln">
+ The following JSON schema presents a typical User model with fields, views, privileges, constraints, listeners, and seeding:
+ </p>
+ <pre class="prettyprint"><code>
+ {
+     "name": "User", "id": 90, "title": "Application Users", "inherits": "Account", "hidden": false, "sealed": false, "abstract": false, "version": "1.4",
+     "fields": [
+         {
+             "name": "id", "title": "Id", "description": "The identifier of the item.",
+             "type": "Integer",
+             "nullable": false,
+             "primary": true
+         },
+         {
+             "name": "accountType",  "title": "Account Type", "description": "Contains a set of flags that define the type and scope of an account object.",
+             "type": "Integer",
+             "readonly":true,
+             "value":"javascript:return 0;"
+         },
+         {
+             "name": "lockoutTime", "title": "Lockout Time", "description": "The date and time that this account was locked out.",
+             "type": "DateTime",
+             "readonly": true
+         },
+         {
+             "name": "logonCount", "title": "Logon Count", "description": "The number of times the account has successfully logged on.",
+             "type": "Integer",
+             "value": "javascript:return 0;",
+             "readonly": true
+         },
+         {
+             "name": "enabled", "title": "Enabled", "description": "Indicates whether a user is enabled or not.",
+             "type": "Boolean",
+             "nullable": false,
+             "value": "javascript:return true;"
+         },
+         {
+             "name": "lastLogon", "title": "Last Logon", "description": "The last time and date the user logged on.",
+             "type": "DateTime",
+             "readonly": true
+         },
+         {
+             "name": "groups", "title": "User Groups", "description": "A collection of groups where user belongs.",
+             "type": "Group",
+             "expandable": true,
+             "mapping": {
+                 "associationAdapter": "GroupMembers", "parentModel": "Group",
+                 "parentField": "id", "childModel": "User", "childField": "id",
+                 "associationType": "junction", "cascade": "delete",
+                 "select": [
+                     "id",
+                     "name",
+                     "alternateName"
+                 ]
+             }
+         },
+         {
+             "name": "additionalType",
+             "value":"javascript:return this.model.name;",
+             "readonly":true
+         },
+         {
+             "name": "accountType",
+             "value": "javascript:return 0;"
+         }
+     ], "privileges":[
+         { "mask":1, "type":"self", "filter":"id eq me()" },
+         { "mask":15, "type":"global", "account":"*" }
+     ],
+     "constraints":[
+         {
+             "description": "User name must be unique across different records.",
+             "type":"unique",
+             "fields": [ "name" ]
+         }
+     ],
+     "views": [
+         {
+             "name":"list", "title":"Users", "fields":[
+                 { "name":"id", "hidden":true },
+                 { "name":"description" },
+                 { "name":"name" },
+                 { "name":"enabled" , "format":"yesno" },
+                 { "name":"dateCreated", "format":"moment : 'LLL'" },
+                 { "name":"dateModified", "format":"moment : 'LLL'" }
+             ], "order":"dateModified desc"
+         }
+     ],
+     "eventListeners": [
+         { "name":"New User Credentials Provider", "type":"/app/controllers/user-credentials-listener" }
+     ],
+     "seed":[
+         {
+             "name":"anonymous",
+             "description":"Anonymous User",
+             "groups":[
+                 { "name":"Guests" }
+             ]
+         },
+         {
+             "name":"admin@example.com",
+             "description":"Site Administrator",
+             "groups":[
+                 { "name":"Administrators" }
+             ]
+         }
+     ]
+ }
+ </code></pre>
+ *
  * @class
- * @property {Array} seed - An array instance that represents a collection of items to be seeded when the model is being upgraded for the first time
  * @property {string} classPath - Gets or sets a string which represents the path of the DataObject subclass associated with this model.
+ * @property {string} name - Gets or sets a string that represents the name of the model.
+ * @property {number} id - Gets or sets an integer that represents the internal identifier of the model.
+ * @property {boolean} hidden - Gets or sets a boolean that indicates whether the current model is hidden or not. The default value is false.
+ * @property {string} title - Gets or sets a title for this data model.
+ * @property {boolean} sealed - Gets or sets a boolean that indicates whether current model is sealed or not. A sealed model cannot be migrated.
+ * @property {boolean} abstract - Gets or sets a boolean that indicates whether current model is an abstract model or not.
+ * @property {string} version - Gets or sets the version of this data model.
+ * @property {string} type - Gets or sets an internal type for this model.
+ * @property {string} inherits - Gets or sets a string that contains the model that is inherited by the current model.
+ * @property {DataField[]} fields - Gets or sets an array that represents the collection of model fields.
+ * @property {DataModelEventListener[]} eventListeners - Gets or sets an array that represents the collection of model listeners.
+ * @property {Array} constraints - Gets or sets the array of constraints which are defined for this model
+ * @property {DataModelView[]} views - Gets or sets the array of views which are defined for this model
+ * @property {DataModelPrivilege[]} privileges - Gets or sets the array of privileges which are defined for this model
+ * @property {string} source - Gets or sets a string which represents the source database object for this model.
+ * @property {string} view - Gets or sets a string which represents the view database object for this model.
+ * @property {DataContext|*} - Gets or sets the data context of this model.
+ * @property {DataField[]} attributes - Gets an array of DataField objects which represents the collection of model fields (including fields which are inherited from the base model).
+ * @property {Array} seed - An array of objects which represents a collection of items to be seeded when the model is being generated for the first time
  * @constructor
  * @augments EventEmitter2
  * @param {*=} obj An object instance that holds data model attributes. This parameter is optional.
  */
 function DataModel(obj) {
-    /**
-     * Gets or sets a string that represents the name of the model.
-     * @type {string}
-     */
-    this.name = null;
-    /**
-     * Gets or sets an integer that represents an internal identifier.
-     * @type {number}
-     */
-    this.id = null;
-    /**
-     * Gets or sets a boolean that indicates whether the current model is hidden or not.
-     * @type {boolean}
-     */
-    this.hidden = false;
-    /**
-     * Gets or sets a title for a model object.
-     * @type {null}
-     */
-    this.title = null;
-    /**
-     * Gets or sets a boolean that indicates whether model is sealed or not.
-     * @type {boolean}
-     */
-    this.sealed = false;
-    /**
-     * Gets or sets a boolean that indicates whether model is an abstract model or not.
-     * @type {boolean}
-     */
-    this.abstract = false;
-    /**
-     * Gets or sets a string that represents the version of the current model.
-     * @type {string}
-     */
-    this.version = '0.1';
-    /**
-     * Gets or sets a string that represents an internal type for this model.
-     * @type {string}
-     */
-    this.type = 'data';
-    /**
-     * Gets or sets a string that contains the model that is inherited by the current model.
-     * @type {string}
-     */
-    this.inherits = undefined;
-    /**
-     * An array that represents the collection of model fields.
-     * @type {Array}
-     */
-    this.fields = [];
-    /**
-     * Gets or sets the array of listeners attached to this model
-     * @type {Array}
-     */
-    this.eventListeners = [];
-    /**
-     * Gets or sets the array of constraints that are defined for this model
-     * @type {Array}
-     */
-    this.constraints = [];
-    /**
-     * Gets or sets the array of views that are defined for this model
-     * @type {Array}
-     */
-    this.views = [];
-    /**
-     * Gets or sets the array of privileges that are defined for this model
-     * @type {Array}
-     */
-    this.privileges = [];
-    /**
-     * Gets or sets a string that contains the database source.
-     * @type {string}
-     */
-    this.source = undefined;
-    /**
-     * Gets or sets a string that contains the database source.
-     * @type {string}
-     */
-    this.view = undefined;
 
+    this.hidden = false;
+    this.sealed = false;
+    this.abstract = false;
+    this.version = '0.1';
+    this.type = 'data';
+    this.fields = [];
+    this.eventListeners = [];
+    this.constraints = [];
+    this.views = [];
+    this.privileges = [];
     //extend model if obj parameter is defined
     if (obj)
     {
@@ -166,31 +236,25 @@ function DataModel(obj) {
      */
     var __context__ = null;
     var self = this;
-    /**
-     * @type {DataContext}
-     */
     Object.defineProperty(this, 'context', { get: function() {
         return __context__;
     }, set: function(value) {
         __context__ = value;
     }, enumerable: false, configurable: false});
 
-    /**
-     * @type {string}
-     */
     Object.defineProperty(this, 'sourceAdapter', { get: function() {
         return self.source!=null ? self.source :  self.name.concat('Base');
     }, enumerable: false, configurable: false});
-    /**
-     * @type {string}
-     */
+
     Object.defineProperty(this, 'viewAdapter', { get: function() {
         return self.view!=null ? self.view :  self.name.concat('Data');
     }, enumerable: false, configurable: false});
 
     var silent_ = false;
     /**
-     * Prepares a silent operation (for query, update, insert, delete etc)
+     * Prepares a silent data operation (for query, update, insert, delete etc).
+     * In a silent execution, permission check will be omitted.
+     * Any other listeners which are prepared for using silent execution will use this parameter.
      * @param {Boolean=} value
      * @returns DataModel
      */
@@ -443,8 +507,8 @@ DataModel.prototype.join = function(model) {
 };
 
 /**
- * Filters a data model based on the given attribute
- * @param {String|*} attr
+ * Initializes a where statement and returns an instance of DataQueryable class.
+ * @param {String|*} attr - A string that represents the name of a field
  * @returns DataQueryable
 */
 DataModel.prototype.where = function(attr) {
@@ -737,19 +801,25 @@ DataModel.prototype.find = function(obj) {
 };
 
 /**
- * Selects an attribute or a collection of attributes
- * @param {String|Array} attr
- * @returns DataQueryable
-*/
+ * Selects the given attribute or attributes and return an instance of DataQueryable class
+ * @param {...string} attr - An array of fields, a field or a view name
+ * @returns {DataQueryable}
+ */
 DataModel.prototype.select = function(attr) {
     var result = new DataQueryable(this);
     return result.select(attr);
 };
 
 /**
- * Sorts data model items based on the given attribute
- * @param {String|Array} attr
+ * Prepares an ascending order by expression and returns an instance of DataQueryable class.
+ * @param {string|*} attr - A string that is going to be used in this expression.
  * @returns DataQueryable
+ * @example
+ context.model('Person').orderBy('givenName').list().then(function(result) {
+    done(null, result);
+ }).catch(function(err) {
+    done(err);
+ });
 */
 DataModel.prototype.orderBy = function(attr) {
     var result = new DataQueryable(this);
@@ -757,13 +827,12 @@ DataModel.prototype.orderBy = function(attr) {
 };
 
 /**
- * Returns an array of items based on the given parameter
- * @param {Number} n - The number of items that is going to be retrieved
- * @param {Function} callback - A callback function that will be invoked.
- * @returns DataQueryable|undefined
+ * Takes an array of maximum [n] items.
+ * @param {Number} n - The maximum number of items that is going to be retrieved
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
+ * @returns DataQueryable|undefined If callback parameter is missing then returns a DataQueryable object.
  */
 DataModel.prototype.take = function(n, callback) {
-    //default size (25)
     n = n || 25;
     var result = new DataQueryable(this);
     if (typeof callback === 'undefined')
@@ -771,17 +840,27 @@ DataModel.prototype.take = function(n, callback) {
     result.take(n, callback);
 };
 
+/**
+ * Returns an instance of DataResultSet of the current model.
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
+ * @returns {Deferred|*} If callback parameter is missing then returns a Deferred object.
+ * @deprecated Use DataModel.asQueryable().list().
+ * @example
+ context.model('User').list(function(err, result) {
+    if (err) { return done(err); }
+    return done(null, result);
+ });
+ */
 DataModel.prototype.list = function(callback) {
-    //default size (25)
-    n = n || 25;
     var result = new DataQueryable(this);
-    result.list(callback);
+    return result.list(callback);
 };
 
 /**
- * Returns the first data item of the current model.
+ * Returns the first item of the current model.
  * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
  * @returns {Deferred|*} If callback parameter is missing then returns a Deferred object.
+ * @deprecated Use DataModel.asQueryable().first().
  * @example
  context.model('User').first(function(err, result) {
     if (err) { return done(err); }
@@ -811,9 +890,15 @@ DataModel.prototype.get = function(key, callback) {
 };
 
 /**
- * Returns the last data item.
- * @param {Function} callback - A callback function that will be invoked.
-*/
+ * Returns the last item of the current model based.
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
+ * @returns {Deferred|*} If callback parameter is missing then returns a Deferred object.
+ * @example
+ context.model('User').last(function(err, result) {
+    if (err) { return done(err); }
+    return done(null, result);
+ });
+ */
 DataModel.prototype.last = function(callback) {
     var result = new DataQueryable(this);
     return result.orderByDescending(this.primaryKey).select(this.attributeNames).first(callback);
@@ -821,7 +906,7 @@ DataModel.prototype.last = function(callback) {
 
 /**
  * Returns all data items.
- * @param {Function} callback - A callback function that will be invoked.
+ * @param {Function} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result, if any.
 */
 DataModel.prototype.all = function(callback) {
     var result = new DataQueryable(this);
@@ -829,8 +914,8 @@ DataModel.prototype.all = function(callback) {
 };
 
 /**
- * Bypasses a number of items based on the given parameter
- * @param {Number} n
+ * Bypasses a number of items based on the given parameter. This method is used in data paging operations.
+ * @param {Number} n - The number of items to skip.
  * @returns DataQueryable
 */
 DataModel.prototype.skip = function(n) {
@@ -839,19 +924,26 @@ DataModel.prototype.skip = function(n) {
 };
 
 /**
- * Sorts data model items in descending order based on the given attribute
- * @param {String|Array} attr
+ * Prepares an descending order by expression and returns an instance of DataQueryable class.
+ * @param {string|*} attr - A string that is going to be used in this expression.
  * @returns DataQueryable
-*/
+ * @example
+ context.model('Person').orderByDescending('givenName').list().then(function(result) {
+    done(null, result);
+ }).catch(function(err) {
+    done(err);
+ });
+ */
 DataModel.prototype.orderByDescending = function(attr) {
     var result = new DataQueryable(this);
     return result.orderBy(attr);
 };
 
 /**
- * Returns the maximum value for a column.
- * @param {String} attr
- * @param {Function} callback - A callback function that will be invoked.
+ * Returns the maximum value for a field.
+ * @param {string} attr - A string that represents the name of the field.
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
+ * @returns {Deferred|*} If callback parameter is missing then returns a Deferred object.
  */
 DataModel.prototype.max = function(attr, callback) {
     var result = new DataQueryable(this);
@@ -859,9 +951,10 @@ DataModel.prototype.max = function(attr, callback) {
 };
 
 /**
- * Returns the minimum value for a column.
- * @param {String} attr
- * @param {Function} callback - A callback function that will be invoked.
+ * Returns the minimum value for a field.
+ * @param {string} attr - A string that represents the name of the field.
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
+ * @returns {Deferred|*} If callback parameter is missing then returns a Deferred object.
  */
 DataModel.prototype.min = function(attr, callback) {
     var result = new DataQueryable(this);
@@ -1096,7 +1189,7 @@ DataModel.prototype.idOf = function(obj) {
 };
 /**
  * Casts the given object and returns an object that is going to be used against the underlying database.
- * @param {*} obj - The source object which is going to be casted
+ * @param {*} obj - The source object which is going to be cast
  * @param {number=} state - The state of the source object.
  * @returns {*} - Returns an object which is going to be against the underlying database.
  */
@@ -1228,8 +1321,8 @@ DataModel.prototype.recast = function(dest, src, callback)
 
 
 /**
- *
- * @param obj {*}
+ * Casts the given object and returns an object that was prepared for insert.
+ * @param obj {*} - The object to be cast
  * @returns {*}
  */
 DataModel.prototype.new = function(obj)
@@ -1237,8 +1330,9 @@ DataModel.prototype.new = function(obj)
     return this.cast(obj);
 };
 /**
- * @param obj {Array|*}
- * @param callback {Function}
+ * Saves the given object or array of objects
+ * @param obj {*|Array}
+ * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  */
 DataModel.prototype.save = function(obj, callback)
 {
@@ -1502,9 +1596,9 @@ DataModel.prototype.superTypes = function() {
 };
 
 /**
- * Performing an insert operation of the given object or array of objects
+ * Performs an insert operation of the given object or array of objects
  * @param obj {*|Array} The item or the array of items to insert
- * @param {Function=} callback -  A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  */
 DataModel.prototype.insert = function(obj, callback)
 {
@@ -1540,8 +1634,8 @@ DataModel.prototype.insert = function(obj, callback)
 
 /**
  * Updates an item or an array of items
- * @param obj {*|Array} The item or the array of items to insert
- * @param callback {Function=} A callback function that raises the error and the result of this operation.
+ * @param obj {*|Array} - The item or the array of items to update
+ * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  */
 DataModel.prototype.update = function(obj, callback)
 {
@@ -1563,9 +1657,9 @@ DataModel.prototype.update = function(obj, callback)
 };
 
 /**
- * Deletes an item or an array of items
+ * Deleted the given object or array of objects
  * @param obj {*|Array} The item or the array of items to delete
- * @param callback {Function=} A callback function that raises the error and the result of this operation.
+ * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  */
 DataModel.prototype.remove = function(obj, callback)
 {
@@ -1738,8 +1832,8 @@ DataModel.prototype.ensureModel = function(callback) {
 };
 
 /**
- * Migrates current data model based on current definition
- * @param {Function} callback
+ * Performing an automatic migration of current data model based on the current model's definition.
+ * @param {Function} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
  */
 DataModel.prototype.migrate = function(callback)
 {
@@ -1948,12 +2042,12 @@ DataModel.prototype.seedInternal = function(callback) {
 }
 
 /**
- * Gets the primary key.
- * @return {DataField|*}
+ * Gets an instance of DataField class which represents the primary key of this model.
+ * @returns {DataField|*}
  */
 DataModel.prototype.key = function()
 {
-    return this.fields.find(function(x) { return x.primary==true; });
+    return this.attributes.find(function(x) { return x.primary==true; });
 };
 /**
  * Gets an instance of DataField class based on the given name.

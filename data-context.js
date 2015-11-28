@@ -37,13 +37,31 @@ var util = require('util'),
     types = require('./types'),
     cfg = require('./data-configuration');
 /**
- * Represents the default data context.
+ * @classdesc Represents the default data context of MOST Data Applications.
+ * The default data context uses the adapter which is registered as the default adapter in application configuration.
+ <pre class="prettyprint"><code>
+ adapters: [
+ ...
+ { "name":"development", "invariantName":"...", "default":false,
+    "options": {
+      "server":"localhost",
+      "user":"user",
+      "password":"password",
+      "database":"test"
+    }
+},
+ { "name":"development_with_pool", "invariantName":"pool", "default":true,
+    "options": {
+      "adapter":"development"
+    }
+}
+ ...
+ ]
+ </code></pre>
  * @class
  * @constructor
- * @augments types.DataContext
  * @augments DataContext
- * @property {types.classes.DataAdapter} db - Gets the data adapter that is going to used in data operations.
- * @static {Function} super_
+ * @property {DataAdapter} db - Gets a data adapter based on the current configuration settings.
  */
 function DefaultDataContext()
 {
@@ -95,8 +113,9 @@ function DefaultDataContext()
 util.inherits(DefaultDataContext, types.DataContext);
 
 /**
+ * Gets an instance of DataModel class based on the given name.
  * @param name {string} - A string that represents the model name.
- * @returns {DataModel}
+ * @returns {DataModel} - An instance of DataModel class associated with this data context.
  */
 DefaultDataContext.prototype.model = function(name) {
     var self = this;
@@ -112,7 +131,10 @@ DefaultDataContext.prototype.model = function(name) {
     //return model
     return model;
 };
-
+/**
+ * Finalizes the current data context
+ * @param {Function} cb - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ */
 DefaultDataContext.prototype.finalize = function(cb) {
     cb = cb || function () {};
     this.__finalize__();
@@ -121,12 +143,12 @@ DefaultDataContext.prototype.finalize = function(cb) {
 
 
 /**
- * Represents a data context based on a data adapter's name.
- * @class NamedDataContext
+ * @classdesc Represents a data context based on a data adapter's name.
+ * The specified adapter name must be registered in application configuration.
+ * @class
  * @constructor
  * @augments DataContext
- * @property {DataAdapter} db - Gets the underlying data adapter that is going to used in data operations.
- * @property {Function} NamedDataContext.super_ - Represents the DataContext class constructor
+ * @property {DataAdapter} db - Gets a data adapter based on the given adapter's name.
  */
 function NamedDataContext(name)
 {
@@ -188,8 +210,9 @@ function NamedDataContext(name)
 util.inherits(NamedDataContext, types.DataContext);
 
 /**
+ * Gets an instance of DataModel class based on the given name.
  * @param name {string} - A string that represents the model name.
- * @returns {DataModel}
+ * @returns {DataModel} - An instance of DataModel class associated with this data context.
  */
 NamedDataContext.prototype.model = function(name) {
     var self = this;

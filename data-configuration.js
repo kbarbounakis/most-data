@@ -52,15 +52,17 @@ function DataConfigurationAuth() {
 }
 
 /**
- * Holds the configuration of data modeling infrastructure
+ * @classdesc Holds the configuration of data modeling infrastructure
  * @class
  * @constructor
  * @property {DataConfigurationAuth} auth
+ *
  */
 function DataConfiguration() {
     /**
      * Model caching object (e.g. cfg.models.Migration, cfg.models.User etc)
      * @type {*}
+     * @ignore
      */
     this.models = { };
 

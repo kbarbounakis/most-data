@@ -34,26 +34,202 @@
   */
 var events = require('events'), util = require('util'), async = require('async'), qry = require('most-query');
 /**
- * Represents a data connection
+ * @classdesc Represents an abstract data connector to a database
+ * <p>
+ There are several data adapters for connections to common database engines:
+ </p>
+ <ul>
+    <li>MOST Web Framework MySQL Adapter for connecting with MySQL Database Server
+    <p>Install the data adapter:<p>
+    <pre class="prettyprint"><code>npm install most-data-mysql</code></pre>
+    <p>Append the adapter type in application configuration (app.json#adapterTypes):<p>
+    <pre class="prettyprint"><code>
+ ...
+ "adapterTypes": [
+ ...
+ { "name":"MySQL Data Adapter", "invariantName": "mysql", "type":"most-data-mysql" }
+ ...
+ ]
+ </code></pre>
+ <p>Register an adapter in application configuration (app.json#adapters):<p>
+ <pre class="prettyprint"><code>
+ adapters: [
+ ...
+ { "name":"development", "invariantName":"mysql", "default":true,
+     "options": {
+       "host":"localhost",
+       "port":3306,
+       "user":"user",
+       "password":"password",
+       "database":"test"
+     }
+ }
+ ...
+ ]
+ </code></pre>
+ </li>
+    <li>MOST Web Framework MSSQL Adapter for connecting with Microsoft SQL Database Server
+ <p>Install the data adapter:<p>
+ <pre class="prettyprint"><code>npm install most-data-mssql</code></pre>
+ <p>Append the adapter type in application configuration (app.json#adapterTypes):<p>
+ <pre class="prettyprint"><code>
+ ...
+ "adapterTypes": [
+ ...
+ { "name":"MSSQL Data Adapter", "invariantName": "mssql", "type":"most-data-mssql" }
+ ...
+ ]
+ </code></pre>
+ <p>Register an adapter in application configuration (app.json#adapters):<p>
+ <pre class="prettyprint"><code>
+ adapters: [
+ ...
+ { "name":"development", "invariantName":"mssql", "default":true,
+        "options": {
+          "server":"localhost",
+          "user":"user",
+          "password":"password",
+          "database":"test"
+        }
+    }
+ ...
+ ]
+ </code></pre>
+ </li>
+    <li>MOST Web Framework PostgreSQL Adapter for connecting with PostgreSQL Database Server
+ <p>Install the data adapter:<p>
+ <pre class="prettyprint"><code>npm install most-data-pg</code></pre>
+ <p>Append the adapter type in application configuration (app.json#adapterTypes):<p>
+ <pre class="prettyprint"><code>
+ ...
+ "adapterTypes": [
+ ...
+ { "name":"PostgreSQL Data Adapter", "invariantName": "postgres", "type":"most-data-pg" }
+ ...
+ ]
+ </code></pre>
+ <p>Register an adapter in application configuration (app.json#adapters):<p>
+ <pre class="prettyprint"><code>
+ adapters: [
+ ...
+ { "name":"development", "invariantName":"postgres", "default":true,
+        "options": {
+          "host":"localhost",
+          "post":5432,
+          "user":"user",
+          "password":"password",
+          "database":"db"
+        }
+    }
+ ...
+ ]
+ </code></pre>
+ </li>
+    <li>MOST Web Framework Oracle Adapter for connecting with Oracle Database Server
+ <p>Install the data adapter:<p>
+ <pre class="prettyprint"><code>npm install most-data-oracle</code></pre>
+ <p>Append the adapter type in application configuration (app.json#adapterTypes):<p>
+ <pre class="prettyprint"><code>
+ ...
+ "adapterTypes": [
+ ...
+ { "name":"Oracle Data Adapter", "invariantName": "oracle", "type":"most-data-oracle" }
+ ...
+ ]
+ </code></pre>
+ <p>Register an adapter in application configuration (app.json#adapters):<p>
+ <pre class="prettyprint"><code>
+ adapters: [
+ ...
+ { "name":"development", "invariantName":"oracle", "default":true,
+        "options": {
+          "host":"localhost",
+          "port":1521,
+          "user":"user",
+          "password":"password",
+          "service":"orcl",
+          "schema":"PUBLIC"
+        }
+    }
+ ...
+ ]
+ </code></pre>
+ </li>
+    <li>MOST Web Framework SQLite Adapter for connecting with Sqlite Databases
+ <p>Install the data adapter:<p>
+ <pre class="prettyprint"><code>npm install most-data-sqlite</code></pre>
+ <p>Append the adapter type in application configuration (app.json#adapterTypes):<p>
+ <pre class="prettyprint"><code>
+ ...
+ "adapterTypes": [
+ ...
+ { "name":"SQLite Data Adapter", "invariantName": "sqlite", "type":"most-data-sqlite" }
+ ...
+ ]
+ </code></pre>
+ <p>Register an adapter in application configuration (app.json#adapters):<p>
+ <pre class="prettyprint"><code>
+ adapters: [
+ ...
+ { "name":"development", "invariantName":"sqlite", "default":true,
+        "options": {
+            database:"db/local.db"
+        }
+    }
+ ...
+ ]
+ </code></pre>
+ </li>
+    <li>MOST Web Framework Data Pool Adapter for connection pooling
+ <p>Install the data adapter:<p>
+ <pre class="prettyprint"><code>npm install most-data-pool</code></pre>
+ <p>Append the adapter type in application configuration (app.json#adapterTypes):<p>
+ <pre class="prettyprint"><code>
+ ...
+ "adapterTypes": [
+ ...
+ { "name":"Pool Data Adapter", "invariantName": "pool", "type":"most-data-pool" }
+ { "name":"...", "invariantName": "...", "type":"..." }
+ ...
+ ]
+ </code></pre>
+ <p>Register an adapter in application configuration (app.json#adapters):<p>
+ <pre class="prettyprint"><code>
+ adapters: [
+ { "name":"development", "invariantName":"...", "default":false,
+    "options": {
+      "server":"localhost",
+      "user":"user",
+      "password":"password",
+      "database":"test"
+    }
+},
+ { "name":"development_with_pool", "invariantName":"pool", "default":true,
+    "options": {
+      "adapter":"development"
+    }
+}
+ ...
+ ]
+ </code></pre>
+ </li>
+ </ul>
  * @class
  * @constructor
+ * @param {*} options - The database connection options
+ * @bstract
+ * @property {*} rawConnection - Gets or sets the native database connection
+ * @property {*} options - Gets or sets the database connection options
  */
 function DataAdapter(options) {
-    /**
-     * Represents the native database connection
-     * @type {*}
-     */
+
     this.rawConnection=null;
-    /**
-     * Gets or sets an object that contains native connection options (if any)
-     * @type {String}
-     */
     this.options = options;
 }
 
 /**
- * Opens a database connection
- * @param {function(Error=)} callback
+ * Opens the underlying database connection
+ * @param {Function} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  */
 DataAdapter.prototype.open = function(callback) {
     //
@@ -61,25 +237,26 @@ DataAdapter.prototype.open = function(callback) {
 
 /**
  * Closes the underlying database connection
- * @param callback {function(Error=)=}
+ * @param {Function} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  */
 DataAdapter.prototype.close = function(callback) {
     //
 };
 
 /**
- * Executes a query and returns the result as an array of objects.
- * @param query {string|*}
- * @param values {*}
- * @param callback {Function}
+ * Executes the given query against the underlying database.
+ * @param {string|*} query - A string or a query expression to execute.
+ * @param {*} values - An object which represents the named parameters that are going to used during query parsing
+ * @param {Function} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
  */
 DataAdapter.prototype.execute = function(query, values, callback) {
     //
 };
 /**
- * Executes an operation against database and returns the results.
- * @param batch {DataModelBatch}
- * @param callback {Function=}
+ * Executes a batch query expression and returns the result.
+ * @param {DataModelBatch} batch - The batch query expression to execute
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
+ * @deprecated This method is deprecated.
  */
 DataAdapter.prototype.executeBatch = function(batch, callback) {
     //
@@ -87,31 +264,31 @@ DataAdapter.prototype.executeBatch = function(batch, callback) {
 
 /**
  * Produces a new identity value for the given entity and attribute.
- * @param entity {String} The target entity name
- * @param attribute {String} The target attribute
- * @param callback {Function=}
+ * @param {string} entity - A string that represents the target entity name
+ * @param {string} attribute - A string that represents the target attribute name
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
  */
 DataAdapter.prototype.selectIdentity = function(entity, attribute , callback) {
     //
 };
 
 /**
- * Begins a transactional operation by executing the given function
- * @param fn {Function} The function to execute
- * @param callback {Function} The callback that contains the error -if any- and the results of the given operation
+ * Begins a transactional operation and executes the given function
+ * @param {Function} fn - The function to execute
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
  */
 DataAdapter.prototype.executeInTransaction = function(fn, callback) {
     //
 };
 /**
- * Creates a database view if the current data adapter supports views
- * @param {string} name A string that represents the name of the view to be created
- * @param {QueryExpression} query The query expression that represents the database vew
- * @param {Function} callback A callback function to be called when operation will be completed.
+ * A helper method for creating a database view if the current data adapter supports views
+ * @param {string} name - A string that represents the name of the view to be created
+ * @param {QueryExpression|*} query - A query expression that represents the database view
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  */
 DataAdapter.prototype.createView = function(name, query, callback) {
     //
-}
+};
 
 /**
  * @class
@@ -242,7 +419,6 @@ function DataEventListener() {
  * Occurs before executing a data operation. The event arguments contain the query that is going to be executed.
  * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
  * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
- * @returns {DataEventListener}
  */
 DataEventListener.prototype.beforeExecute = function(e, cb) {
     return this;
@@ -251,7 +427,6 @@ DataEventListener.prototype.beforeExecute = function(e, cb) {
  * Occurs after executing a data operation. The event arguments contain the executed query.
  * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
  * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
- * @returns {DataEventListener}
  */
 DataEventListener.prototype.afterExecute = function(e, cb) {
     return this;
@@ -260,7 +435,6 @@ DataEventListener.prototype.afterExecute = function(e, cb) {
  * Occurs before creating or updating a data object.
  * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
  * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
- * @returns {DataEventListener}
  */
 DataEventListener.prototype.beforeSave = function(e, cb) {
     return this;
@@ -269,7 +443,6 @@ DataEventListener.prototype.beforeSave = function(e, cb) {
  * Occurs after creating or updating a data object.
  * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
  * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
- * @returns {DataEventListener}
  */
 DataEventListener.prototype.afterSave = function(e, cb) {
     return this;
@@ -287,7 +460,6 @@ DataEventListener.prototype.beforeRemove = function(e, cb) {
  * Occurs after removing a data object.
  * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
  * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
- * @returns {DataEventListener}
  */
 DataEventListener.prototype.afterRemove = function(e, cb) {
     return this;
@@ -306,12 +478,16 @@ var FloatRegex =/^[+-]?\d+(\.\d+)?$/g;
  */
 
 /**
- * @class DataException
- * @param {string=} code
- * @param {string=} message
- * @param {string=} innerMessage
+ * @classdesc Extends Error object for throwing exceptions on data operations
+ * @class
+ * @param {string=} code - A string that represents an error code
+ * @param {string=} message - The error message
+ * @param {string=} innerMessage - The error inner message
  * @constructor
- * @property {number} status
+ * @property {number} code - A string that represents an error code e.g. EDATA
+ * @property {string} message -  The error message.
+ * @property {string} innerMessage - The error inner message.
+ * @property {number} status - A number that represents an error status. This error status may be used for throwing the approriate HTTP error.
  * @augments Error
  */
 function DataException(code, message, innerMessage) {
@@ -323,9 +499,16 @@ function DataException(code, message, innerMessage) {
 util.inherits(DataException, Error);
 
 /**
+ * @classdesc Represents an access denied data exception.
  * @class
- * @param {string=} message
- * @param {string=} innerMessage
+ *
+ * @param {string=} message - The error message
+ * @param {string=} innerMessage - The error inner message
+ * @property {string} code - A string that represents an error code. The error code is EACCESS.
+ * @property {number} status - A number that represents an error status. The error status is 401.
+ * @property {string} message -  The error message.
+ * @property {string} innerMessage - The error inner message.
+ * @augments DataException
  * @constructor
  */
 function AccessDeniedException(message, innerMessage) {
@@ -827,6 +1010,48 @@ function DataField() {
 function DataModelEventListener() {
 
 }
+/**
+ * An enumeration of tha available privilege types
+ * @enum
+ */
+var PrivilegeType = {
+    /**
+     * Self Privilege (self).
+     * @type {string}
+     */
+    Self: "self",
+    /**
+     * Parent Privilege (parent)
+     * @type {string}
+     */
+    Parent: "parent",
+    /**
+     * Item Privilege (child)
+     * @type {string}
+     */
+    Item: "item",
+    /**
+     * Global Privilege (global)
+     * @type {string}
+     */
+    Global: "global"
+};
+
+/**
+ * @classdesc Represents a privilege which is defined in a data model and it may be given in users and groups
+ * @class
+ * @constructor
+ * @property {PermissionMask} mask - Gets or sets the set of permissions which may be given with this privilege.
+ * @property {PrivilegeType|string} type - Gets or sets the type of this privilege (global|parent|item|self).
+ * @property {string} filter - Gets or sets a filter expression which is going to be used for self privileges.
+ * The defined set of permissions are automatically assigned if the requested objects fulfill filter criteria.
+ * (e.g. read-write permissions for a user's associated person through the following expression:"user eq me()")
+ * @property {string} account - Gets or sets a wildcard (*) expression for global privileges only.
+ * The defined set of permissions are automatically assigned to all users (e.g. read permissions for all users)
+ */
+function DataModelPrivilege() {
+
+}
 
 
 
@@ -976,7 +1201,8 @@ var types =
     AccessDeniedException:AccessDeniedException,
     DataField:DataField,
     DataResultSet:DataResultSet,
-    DataModelEventListener:DataModelEventListener
+    DataModelEventListener:DataModelEventListener,
+    DataModelPrivilege:DataModelPrivilege
 };
 
 if (typeof exports !== 'undefined')

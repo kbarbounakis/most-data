@@ -33,7 +33,7 @@
  */
 var types = require('./types'), util = require('util');
 /**
- * Implements data cache mechanisms in MOST Data Applications.
+ * @classdesc Implements data cache mechanisms in MOST Data Applications.
  * DataCache class is used as the internal data caching engine, if any other caching mechanism is not defined.
  * @class
  * @property {Number} ttl - An amount of time in seconds which is the default cached item lifetime.
