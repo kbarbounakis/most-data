@@ -484,7 +484,7 @@ var FloatRegex =/^[+-]?\d+(\.\d+)?$/g;
  * @param {string=} message - The error message
  * @param {string=} innerMessage - The error inner message
  * @constructor
- * @property {number} code - A string that represents an error code e.g. EDATA
+ * @property {string} code - A string that represents an error code e.g. EDATA
  * @property {string} message -  The error message.
  * @property {string} innerMessage - The error inner message.
  * @property {number} status - A number that represents an error status. This error status may be used for throwing the approriate HTTP error.
@@ -1056,21 +1056,16 @@ function DataModelPrivilege() {
 
 
 /**
+ * Represents a query result when this query uses paging parameters.
  * @class
+ * @property {number} total - The total number of records
+ * @property {number} skip - The number of skipped records
+ * @property {Array} records - An array of objects which represents the query results.
  * @constructor
  */
 function DataResultSet() {
-    /**
-     * @type {number}
-     */
     this.total = 0;
-    /**
-     * @type {number}
-     */
     this.skip = 0;
-    /**
-     * @type {Array}
-     */
     this.records = [];
 }
 

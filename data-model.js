@@ -807,7 +807,7 @@ DataModel.prototype.find = function(obj) {
  */
 DataModel.prototype.select = function(attr) {
     var result = new DataQueryable(this);
-    return result.select(attr);
+    return result.select.apply(result, arguments);
 };
 
 /**

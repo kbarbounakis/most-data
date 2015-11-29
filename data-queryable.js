@@ -65,6 +65,29 @@ DataAttributeResolver.prototype.selecteNestedAttribute = function(attr, alias) {
     return expr;
 };
 
+DataAttributeResolver.prototype.selectAggregatedAttribute = function(aggr, attr) {
+    var self=this, result;
+    if (DataAttributeResolver.prototype.testNestedAttribute(attr)) {
+        result = DataAttributeResolver.prototype.selecteNestedAttribute.call(self,attr);
+    }
+    else {
+        result = self.fieldOf(attr);
+    }
+    var alias = result.as(), name = result.name(), expr;
+    if (alias) {
+        expr = result[alias];
+        result[alias] = { };
+        result[alias]['$' + aggr ] = expr;
+    }
+    else {
+        expr = result.$name;
+        result[name] = { };
+        result[alias]['$' + aggr ] = expr;
+        delete field.$name;
+    }
+    return result;
+};
+
 DataAttributeResolver.prototype.resolveNestedAttribute = function(attr) {
     var self = this;
     if (typeof attr === 'string' && /\//.test(attr)) {
@@ -509,8 +532,19 @@ DataQueryable.prototype.is = function(obj) {
 };
 
 /**
- * @param obj {*}
+ * Prepares a not equal comparison.
+ * @param obj {*} - The right operand of the expression
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of orders with order status different than 1
+ context.model('Order')
+ .where('orderStatus').notEqual(1)
+ .orderByDescending('orderDate')
+ .list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.notEqual = function(obj) {
     this.query.notEqual(obj);
@@ -518,8 +552,29 @@ DataQueryable.prototype.notEqual = function(obj) {
 };
 
 /**
- * @param obj {*}
+ * Prepares a greater than comparison.
+ * @param obj {*} - The right operand of the expression
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of orders where product price is greater than 800
+ context.model('Order')
+ .where('orderedItem/price').greaterThan(800)
+ .orderByDescending('orderDate')
+ .select('id','orderedItem/name as productName', 'orderedItem/price as productPrice', 'orderDate')
+ .take(5)
+ .list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //Results:
+ id   productName                                   productPrice  orderDate
+ ---  --------------------------------------------  ------------  -----------------------------
+ 304  Apple iMac (27-Inch, 2013 Version)            1336.27       2015-11-27 23:49:17.000+02:00
+ 322  Dell B1163w Mono Laser Multifunction Printer  842.86        2015-11-27 20:16:52.000+02:00
+ 167  Razer Blade (2013)                            1553.43       2015-11-27 04:17:08.000+02:00
+ 336  Apple iMac (27-Inch, 2013 Version)            1336.27       2015-11-26 07:25:35.000+02:00
+ 89   Nvidia GeForce GTX 650 Ti Boost               1625.49       2015-11-21 17:29:21.000+02:00
  */
 DataQueryable.prototype.greaterThan = function(obj) {
     this.query.greaterThan(obj);
@@ -527,8 +582,20 @@ DataQueryable.prototype.greaterThan = function(obj) {
 };
 
 /**
- * @param obj {*}
+ * Prepares a greater than or equal comparison.
+ * @param obj {*} The right operand of the expression
  * @returns {DataQueryable}
+ * * @example
+ //retrieve a list of orders where product price is greater than or equal to 800
+ context.model('Order')
+ .where('orderedItem/price').greaterOrEqual(800)
+ .orderByDescending('orderDate')
+ .take(5)
+ .list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.greaterOrEqual = function(obj) {
     this.query.greaterOrEqual(obj);
@@ -549,6 +616,7 @@ DataQueryable.prototype.bit = function(value, result) {
 };
 
 /**
+ * Prepares a lower than comparison
  * @param obj {*}
  * @returns {DataQueryable}
  */
@@ -558,8 +626,20 @@ DataQueryable.prototype.lowerThan = function(obj) {
 };
 
 /**
- * @param obj {*}
+ * Prepares a lower than or equal comparison.
+ * @param obj {*} - The right operand of the expression
  * @returns {DataQueryable}
+ * @example
+ //retrieve orders based on payment due date
+ context.model('Order')
+ .orderBy('paymentDue')
+ .where('paymentDue').lowerOrEqual(moment().subtract('days',-7).toDate())
+ .and('paymentDue').greaterThan(new Date())
+ .take(10).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.lowerOrEqual = function(obj) {
     this.query.lowerOrEqual(obj);
@@ -567,8 +647,24 @@ DataQueryable.prototype.lowerOrEqual = function(obj) {
 };
 
 /**
- * @param obj {*}
+ * Prepares an ends with comparison
+ * @param obj {*} - The string to be searched for at the end of a field.
  * @returns {DataQueryable}
+ * @example
+ //retrieve people whose given name starts with 'D'
+ context.model('Person')
+ .where('givenName').startsWith('D')
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //Results:
+ id   givenName  familyName
+ ---  ---------  ----------
+ 257  Daisy      Lambert
+ 275  Dustin     Brooks
+ 333  Dakota     Gallagher
  */
 DataQueryable.prototype.startsWith = function(obj) {
     this.query.startsWith(obj);
@@ -576,14 +672,31 @@ DataQueryable.prototype.startsWith = function(obj) {
 };
 
 /**
- * @param obj {*}
+ * Prepares an ends with comparison
+ * @param obj {*} - The string to be searched for at the end of a field.
  * @returns {DataQueryable}
+ * @example
+ //retrieve people whose given name ends with 'y'
+ context.model('Person')
+ .where('givenName').endsWith('y')
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //Results
+ id   givenName  familyName
+ ---  ---------  ----------
+ 257  Daisy      Lambert
+ 287  Zachary    Field
+ 295  Anthony    Berry
+ 339  Brittney   Hunt
+ 341  Kimberly   Wheeler
  */
 DataQueryable.prototype.endsWith = function(obj) {
     this.query.endsWith(obj);
     return this;
 };
-
 
 /**
  * Prepares a typical IN comparison.
@@ -639,12 +752,18 @@ DataQueryable.prototype.mod = function(obj, result) {
  * @returns {DataQueryable}
  * @example
  //retrieve person where the given name contains
- context.model('Person').select(['id','givenName','familyName']).where('givenName').contains('ex')
+ context.model('Person').select(['id','givenName','familyName'])
+ .where('givenName').contains('ex')
  .list().then(function(result) {
         done(null, result);
     }).catch(function(err) {
         done(err);
     });
+ @example //The result set of this example may be:
+ id   givenName  familyName
+ ---  ---------  ----------
+ 297  Alex       Miles
+ 353  Alexis     Rees
  */
 DataQueryable.prototype.contains = function(value) {
     this.query.contains(value);
@@ -652,8 +771,26 @@ DataQueryable.prototype.contains = function(value) {
 };
 
 /**
- * @param value {*}
+ * Prepares a not contains comparison (e.g. a string contains another string).
+ * @param value {*} - The right operand of the expression
  * @returns {DataQueryable}
+ * @example
+ //retrieve persons where the given name not contains 'ar'
+ context.model('Person').select(['id','givenName','familyName'])
+ .where('givenName').notContains('ar')
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //The result set of this example may be:
+ id   givenName  familyName
+ ---  ---------  ----------
+ 257  Daisy      Lambert
+ 259  Peter      French
+ 261  Kylie      Jordan
+ 263  Maxwell    Hall
+ 265  Christian  Marshall
  */
 DataQueryable.prototype.notContains = function(value) {
     this.query.notContains(value);
@@ -661,9 +798,27 @@ DataQueryable.prototype.notContains = function(value) {
 };
 
 /**
- * @param {*} value1
- * @param {*} value2
+ * Prepares a comparison where the left operand is between two values
+ * @param {*} value1 - The minimum value
+ * @param {*} value2 - The maximum value
  * @returns {DataQueryable}
+ * @example
+ //retrieve products where price is between 150 and 250
+ context.model('Product')
+ .where('price').between(150,250)
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //The result set of this example may be:
+ id   name                                        model   price
+ ---  ------------------------------------------  ------  ------
+ 367  Asus Transformer Book T100                  HD2895  224.52
+ 380  Zotac Zbox Nano XS AD13 Plus                WC5547  228.05
+ 384  Apple iPad Air                              ZE6015  177.44
+ 401  Intel Core i7-4960X Extreme Edition         SM5853  194.61
+ 440  Bose SoundLink Bluetooth Mobile Speaker II  HS5288  155.27
  */
 DataQueryable.prototype.between = function(value1, value2) {
     this.query.between(value1, value2);
@@ -671,8 +826,54 @@ DataQueryable.prototype.between = function(value1, value2) {
 };
 
 /**
- * @param {*=} attr  An array of fields, a field or a view name
+ * Selects a field or a collection of fields of the current model.
+ * @param {...string} attr  An array of fields, a field or a view name
  * @returns {DataQueryable}
+ * @example
+ //retrieve the last 5 orders
+ context.model('Order').select('id','customer','orderDate','orderedItem')
+ .orderBy('orderDate')
+ .take(5).list().then(function(result) {
+        console.table(result.records);
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ * @example
+ //retrieve the last 5 orders by getting the associated customer name and product name
+ context.model('Order').select('id','customer/description as customerName','orderDate','orderedItem/name as productName')
+ .orderBy('orderDate')
+ .take(5).list().then(function(result) {
+        console.table(result.records);
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //The result set of this example may be:
+ id   customerName         orderDate                      orderedItemName
+ ---  -------------------  -----------------------------  ----------------------------------------------------
+ 46   Nicole Armstrong     2014-12-31 13:35:41.000+02:00  LaCie Blade Runner
+ 288  Cheyenne Hudson      2015-01-01 13:24:21.000+02:00  Canon Pixma MG5420 Wireless Photo All-in-One Printer
+ 139  Christian Whitehead  2015-01-01 23:21:24.000+02:00  Olympus OM-D E-M1
+ 3    Katelyn Kelly        2015-01-02 04:42:58.000+02:00  Kobo Aura
+ 59   Cheyenne Hudson      2015-01-02 10:47:53.000+02:00  Google Nexus 7 (2013)
+
+ @example
+ //retrieve the best customers by getting the associated customer name and a count of orders made by the customer
+ context.model('Order').select('customer/description as customerName','count(id) as orderCount')
+ .orderBy('count(id)')
+ .groupBy('customer/description')
+ .take(3).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //The result set of this example may be:
+ customerName      orderCount
+ ----------------  ----------
+ Miranda Bird      19
+ Alex Miles        16
+ Isaiah Morton     16
  */
 DataQueryable.prototype.select = function(attr) {
 
@@ -938,7 +1139,7 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
 };
 
 /**
- * @param attr {string}
+ * @param {...string} attr
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.orderBy = function(attr) {
@@ -951,15 +1152,37 @@ DataQueryable.prototype.orderBy = function(attr) {
 };
 
 /**
- * @param attr {string|Array}
+ * Prepares a group by expression
+ * @param {...string} attr - A param array of string that represents the attributes which are going to be used in group by expression
  * @returns {DataQueryable}
+ * @example
+ //retrieve products with highest sales during last month
+ context.model('Order')
+ .select('orderedItem/model as productModel', 'orderedItem/name as productName','count(id) as orderCount')
+ .where('orderDate').greaterOrEqual(moment().startOf('month').toDate())
+ .groupBy('orderedItem')
+ .orderByDescending('count(id)')
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //Results
+ productModel  productName                              orderCount
+ ------------  ---------------------------------------  ----------
+ SM5111        Brother MFC-J6920DW                      3
+ FY8135        LaCie Blade Runner                       3
+ HA6910        Apple iMac (27-Inch, 2013 Version)       2
+ LD4238        Dell XPS 18                              2
+ HR6205        Samsung Galaxy Note 10.1 (2014 Edition)  2
  */
 DataQueryable.prototype.groupBy = function(attr) {
-    var arr = [];
-    if (util.isArray(attr)) {
-        for (var i = 0; i < attr.length; i++) {
-            var x = attr[i];
-            if (/\//.test(x)) {
+    var arr = [],
+        arg = (arguments.length>1) ? Array.prototype.slice.call(arguments): attr;
+    if (util.isArray(arg)) {
+        for (var i = 0; i < arg.length; i++) {
+            var x = arg[i];
+            if (DataAttributeResolver.prototype.testNestedAttribute.call(this,x)) {
                 //nested group by
                 arr.push(DataAttributeResolver.prototype.orderByNestedAttribute.call(this, x));
             }
@@ -969,12 +1192,12 @@ DataQueryable.prototype.groupBy = function(attr) {
         }
     }
     else {
-        if (/\//.test(attr)) {
+        if (DataAttributeResolver.prototype.testNestedAttribute.call(this,arg)) {
             //nested group by
-            arr.push(DataAttributeResolver.prototype.orderByNestedAttribute.call(this, attr));
+            arr.push(DataAttributeResolver.prototype.orderByNestedAttribute.call(this, arg));
         }
         else {
-            arr.push(this.fieldOf(attr));
+            arr.push(this.fieldOf(arg));
         }
     }
     if (arr.length>0) {
@@ -1140,9 +1363,67 @@ DataQueryable.prototype.take = function(n, callback) {
 };
 /**
  * Executes current query and returns a result set based on the specified paging parameters.
+ * <p>
+ *     The result is an instance of <a href="DataResultSet.html">DataResultSet</a>. The returned records may contain nested objects
+ *     based on the definition of the current model (expandable fields).
+ *     This operation is one of the common data operations on MOST Data Applications
+ *     where the affected records may have nested objects which contain the associated objects of each object.
+ * </p>
+ <pre class="prettyprint"><code>
+ {
+    "total": 242,
+    "records": [
+        ...
+        {
+            "id": 46,
+            "orderDate": "2014-12-31 13:35:41.000+02:00",
+            "orderedItem": {
+                "id": 413,
+                "additionalType": "Product",
+                "category": "Storage and Networking Gear",
+                "price": 647.13,
+                "model": "FY8135",
+                "releaseDate": "2015-01-15 18:07:42.000+02:00",
+                "name": "LaCie Blade Runner",
+                "dateCreated": "2015-11-23 14:53:04.927+02:00",
+                "dateModified": "2015-11-23 14:53:04.934+02:00"
+            },
+            "orderNumber": "DEF193",
+            "orderStatus": {
+                "id": 7,
+                "name": "Problem",
+                "alternateName": "OrderProblem",
+                "description": "Representing that there is a problem with the order."
+            },
+            "paymentDue": "2015-01-20 13:35:41.000+02:00",
+            "paymentMethod": {
+                "id": 7,
+                "name": "PayPal",
+                "alternateName": "PayPal",
+                "description": "Payment via the PayPal payment service."
+            },
+            "additionalType": "Order",
+            "description": null,
+            "dateCreated": "2015-11-23 21:00:18.306+02:00",
+            "dateModified": "2015-11-23 21:00:18.307+02:00"
+        }
+        ...
+    ]
+}
+ </code></pre>
  * @param {function(Error=,DataResultSet=)=} callback - A callback function with arguments (err, result) where the first argument is the error, if any
  * and the second argument is an object that represents a result set
  * @returns {Deferred|*} - If callback is missing returns a promise.
+ @example
+ //retrieve products list order by price
+ context.model('Product')
+ .where('category').equal('LCDs and Peripherals')
+ .orderByDescending('price')
+ .take(3).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.list = function(callback) {
     if (typeof callback !== 'function') {
@@ -1185,7 +1466,7 @@ function listInternal(callback) {
                     }
                     else {
                         //and finally create result set
-                        var res = { total: total, records: (result || []) };
+                        var res = { total: total, skip: parseInt(self.query.$skip) || 0 , records: (result || []) };
                         callback(null, res);
                     }
                 });
@@ -1213,6 +1494,8 @@ DataQueryable.prototype.countOf = function(name, alias) {
  * @param {string} name
  * @param {string=} alias
  * @returns {*|QueryField}
+ * @deprecated
+ * @ignore
  */
 DataQueryable.prototype.maxOf = function(name, alias) {
     alias = alias || 'maxOf'.concat(name);
@@ -1225,6 +1508,8 @@ DataQueryable.prototype.maxOf = function(name, alias) {
  * @param {string} name
  * @param {string=} alias
  * @returns {*|QueryField}
+ * @deprecated
+ * @ignore
  */
 DataQueryable.prototype.minOf = function(name, alias) {
     alias = alias || 'minOf'.concat(name);
@@ -1237,6 +1522,8 @@ DataQueryable.prototype.minOf = function(name, alias) {
  * @param {string} name
  * @param {string=} alias
  * @returns {*|QueryField}
+ * @deprecated
+ * @ignore
  */
 DataQueryable.prototype.averageOf = function(name, alias) {
     alias = alias || 'avgOf'.concat(name);
@@ -1291,9 +1578,18 @@ function countInternal(callback) {
 }
 
 /**
- * Executes the underlying query statement and returns the count of object found.
- * @param {Function=} callback
- * @returns {Deferred|*} - A collection of objects that meet the query provided
+ * Executes the query against the current model and returns the count of items found.
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result, if any.
+ * @returns {Deferred|*} - If callback parameter is missing then returns a Deferred object.
+ * @example
+ //retrieve the number of a product's orders
+ context.model('Order')
+ .where('orderedItem').equal(302)
+ .count().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.count = function(callback) {
     if (typeof callback !== 'function') {
@@ -1313,40 +1609,31 @@ DataQueryable.prototype.count = function(callback) {
  * @private
  * @param {string} attr
  * @param callback {Function}
- * @returns {*} Returns the maximum value of the given attribute
  */
 function maxInternal(attr, callback) {
     var self = this;
-    callback = callback || function() {};
-    //add a count expression
-    var field = self.model.field(attr);
-    if (field==null) {
-        callback.call(this, new Error('The specified attribute cannot be found.'));
-        return;
-    }
-    //normalize query
-    //1. remove skip
     delete self.query.$skip;
-    //append count expression
-    self.query.select([qry.fields.max(field.name)]);
-    //execute select
-    self.execute(function(err, result) {
-        if (err) { callback.call(self, err, result); return; }
-        var value = null;
-        if (util.isArray(result)) {
-            //get first value
-            if (result.length>0)
-                value = result[0][attr];
-        }
-        callback.call(self, err, value);
+    var field = DataAttributeResolver.prototype.selectAggregatedAttribute.call(self, 'max', attr);
+    self.select([field]).flatten().value(function(err, result) {
+        if (err) { return callback(err); }
+        callback(null, result)
     });
 }
 
 /**
- * Executes the underlying query statement and returns the maximum value of the given attribute.
- * @param {string} attr
- * @param {Function=} callback
- * @returns {Deferred|*} Returns the maximum value of the given attribute
+ * Executes the query against the current model and returns the maximum value of the given attribute.
+ * @param {string} attr - A string that represents a field of the current model
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result, if any.
+ * @returns {Deferred|*} - If callback parameter is missing then returns a Deferred object.
+ * @example
+ //retrieve the maximum price of products sold during last month
+ context.model('Order')
+ .where('orderDate').greaterOrEqual(moment().startOf('month').toDate())
+ .max('orderedItem/price').then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.max = function(attr, callback) {
     if (typeof callback !== 'function') {
@@ -1366,40 +1653,31 @@ DataQueryable.prototype.max = function(attr, callback) {
  * @private
  * @param attr {String}
  * @param callback {Function}
- * @returns {*} Returns the maximum value of the given attribute
  */
 function minInternal(attr, callback) {
     var self = this;
-    callback = callback || function() {};
-    //add a count expression
-    var field = self.model.field(attr);
-    if (field==null) {
-        callback.call(this, new Error('The specified attribute cannot be found.'));
-        return;
-    }
-    //normalize query
-    //1. remove skip
     delete self.query.$skip;
-    //append count expression
-    self.query.select([qry.fields.min(field.name)]);
-    //execute select
-    self.execute(function(err, result) {
-        if (err) { callback.call(self, err, result); return; }
-        var value = null;
-        if (util.isArray(result)) {
-            //get first value
-            if (result.length>0)
-                value = result[0][attr];
-        }
-        callback.call(self, err, value);
+    var field = DataAttributeResolver.prototype.selectAggregatedAttribute.call(self, 'min', attr);
+    self.select([field]).flatten().value(function(err, result) {
+        if (err) { return callback(err); }
+        callback(null, result)
     });
 }
 
 /**
- * Executes the underlying query statement and returns the minimum value of the given attribute.
- * @param {String} attr
- * @param {Function=} callback
- * @returns {Deferred|*} Returns the maximum value of the given attribute
+ * Executes the query against the current model and returns the average value of the given attribute.
+ * @param {string} attr - A string that represents a field of the current model
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result, if any.
+ * @returns {Deferred|*} - If callback parameter is missing then returns a Deferred object.
+ * @example
+ //retrieve the mininum price of products sold during last month
+ context.model('Order')
+ .where('orderDate').greaterOrEqual(moment().startOf('month').toDate())
+ .min('orderedItem/price').then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.min = function(attr, callback) {
     if (typeof callback !== 'function') {
@@ -1419,48 +1697,43 @@ DataQueryable.prototype.min = function(attr, callback) {
  * @private
  * @param {string} attr
  * @param {Function} callback
- * @returns {*} Returns the maximum value of the given attribute
  */
-function averageInternal(attr, callback) {
+function averageInternal_(attr, callback) {
     var self = this;
-    callback = callback || function() {};
-    //add a count expression
-    var field = self.model.field(attr);
-    if (field==null) {
-        callback.call(this, new Error('The specified attribute cannot be found.'));
-        return;
-    }
-    //normalize query
-    //1. remove skip
     delete self.query.$skip;
-    //append count expression
-    self.query.select(qry.fields.average(field.name)).take(1, function(err, result) {
+    var field = DataAttributeResolver.prototype.selectAggregatedAttribute.call(self, 'avg', attr);
+    self.select([field]).flatten().value(function(err, result) {
         if (err) { return callback(err); }
-        if (dataCommon.isNullOrUndefined(result)) { return callback(); }
-        if (result.length==0) { return callback(); }
-        var key = Object.keys(result[0])[0];
-        if (typeof key === 'undefined') { return callback(); }
-        callback(null, result[0][key]);
+        callback(null, result)
     });
 }
 
 /**
- * Executes the underlying query statement and returns the average value of the given attribute.
- * @param {string} attr
- * @param {Function=} callback
- * @returns {Deferred|*} Returns the maximum value of the given attribute
+ * Executes the query against the current model and returns the average value of the given attribute.
+ * @param {string} attr - A string that represents a field of the current model
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result, if any.
+ * @returns {Deferred|*} - If callback parameter is missing then returns a Deferred object.
+ * @example
+ //retrieve the average price of products sold during last month
+ context.model('Order')
+ .where('orderDate').greaterOrEqual(moment().startOf('month').toDate())
+ .average('orderedItem/price').then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.average = function(attr, callback) {
     if (typeof callback !== 'function') {
         var d = Q.defer();
-        averageInternal.call(this, attr, function(err, result) {
+        averageInternal_.call(this, attr, function(err, result) {
             if (err) { return d.reject(err); }
             d.resolve(result);
         });
         return d.promise;
     }
     else {
-        return averageInternal.call(this, attr, callback);
+        return averageInternal_.call(this, attr, callback);
     }
 };
 /**
@@ -1969,7 +2242,6 @@ DataQueryable.prototype.toMD5 = function() {
     return dataCommon.md5(q);
 };
 
-/**
 /**
  * @param {Boolean=} value
  * @returns {DataQueryable}
