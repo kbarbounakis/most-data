@@ -427,8 +427,18 @@ DataQueryable.prototype.join = function(model)
 
 
 /**
- * @param attr {string}
+ * Prepares a logical AND expression
+ * @param attr {string} - The name of field that is going to be used in this expression
  * @returns {DataQueryable}
+ * @example
+ context.model('Order').where('customer').equal(298)
+ .and('orderStatus').equal(1)
+ .list().then(function(result) {
+        //SQL: WHERE ((OrderData.customer=298) AND (OrderData.orderStatus=1)
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.and = function(attr) {
     if (typeof attr === 'string' && /\//.test(attr)) {
@@ -439,8 +449,18 @@ DataQueryable.prototype.and = function(attr) {
     return this;
 };
 /**
- * @param attr {string}
+ * Prepares a logical OR expression
+ * @param attr {string} - The name of field that is going to be used in this expression
  * @returns {DataQueryable}
+ * example
+ context.model('Order').where('orderStatus').equal(1)
+ .or('orderStatus').equal(2)
+ .list().then(function(result) {
+        //SQL: WHERE ((OrderData.orderStatus=1) OR (OrderData.orderStatus=2)
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.or = function(attr) {
     if (typeof attr === 'string' && /\//.test(attr)) {
@@ -452,8 +472,18 @@ DataQueryable.prototype.or = function(attr) {
 };
 
 /**
- * @param obj {*}
+ * Performs an equality comparison.
+ * @param obj {*} - The right operand of the expression
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of orders with order status equal to 1
+ context.model('Order').where('orderStatus').equal(1)
+ .list().then(function(result) {
+        //WHERE (OrderData.orderStatus=1)
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.equal = function(obj) {
     this.query.equal(obj);
@@ -461,10 +491,22 @@ DataQueryable.prototype.equal = function(obj) {
 };
 
 /**
- * @param obj {*}
+ * Performs an equality comparison.
+ * @param obj {*} - The right operand of the expression
  * @returns {DataQueryable}
+ * @example
+ //retrieve a person with id equal to 299
+ context.model('Person').where('id').is(299)
+ .first().then(function(result) {
+        //WHERE (PersonData.id=299)
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
-DataQueryable.prototype.is = DataQueryable.prototype.equal;
+DataQueryable.prototype.is = function(obj) {
+    return this.equal(obj);
+};
 
 /**
  * @param obj {*}
@@ -544,8 +586,18 @@ DataQueryable.prototype.endsWith = function(obj) {
 
 
 /**
- * @param objs {Array}
+ * Prepares a typical IN comparison.
+ * @param objs {Array} - An array of values which represents the values to be used in expression
  * @returns {DataQueryable}
+ * @example
+ //retrieve orders with order status 1 or 2
+ context.model('Order').where('orderStatus').in([1,2])
+ .list().then(function(result) {
+        //WHERE (OrderData.orderStatus IN (1, 2))
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.in = function(objs) {
     this.query.in(objs);
@@ -553,8 +605,18 @@ DataQueryable.prototype.in = function(objs) {
 };
 
 /**
- * @param objs {Array}
+ * Prepares a typical NOT IN comparison.
+ * @param objs {Array} - An array of values which represents the values to be used in expression
  * @returns {DataQueryable}
+ * @example
+ //retrieve orders with order status 1 or 2
+ context.model('Order').where('orderStatus').notIn([1,2])
+ .list().then(function(result) {
+        //WHERE (NOT OrderData.orderStatus IN (1, 2))
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.notIn = function(objs) {
     this.query.notIn(objs);
@@ -572,8 +634,17 @@ DataQueryable.prototype.mod = function(obj, result) {
 };
 
 /**
- * @param value {*}
+ * Prepares a contains comparison (e.g. a string contains another string).
+ * @param value {*} - The right operand of the expression
  * @returns {DataQueryable}
+ * @example
+ //retrieve person where the given name contains
+ context.model('Person').select(['id','givenName','familyName']).where('givenName').contains('ex')
+ .list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.contains = function(value) {
     this.query.contains(value);
@@ -1394,8 +1465,9 @@ DataQueryable.prototype.average = function(attr, callback) {
 };
 /**
  * @private
+ * @param {Function} callback
  */
-DataQueryable.prototype.__executeCount = function(callback) {
+function executeCount_(callback) {
     try {
         var self = this, context = self.ensureContext();
         var clonedQuery = self.query.clone();
