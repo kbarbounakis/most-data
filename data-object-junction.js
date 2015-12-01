@@ -38,11 +38,10 @@ var util = require('util'),
     dataCommon = require('./data-common'),
     types = require('./types'),
     cfg = require('./data-configuration'),
-    DataAssociationMapping = types.DataAssociationMapping,
     DataQueryable = require('./data-queryable').DataQueryable;
 
 /**
- * @class DataObjectJunction
+ * @class
  * @constructor
  * @augments DataQueryable
  * @param {DataObject} obj The parent data object reference
@@ -81,10 +80,10 @@ function DataObjectJunction(obj, association) {
     }
     else if (typeof association === 'object' && association !=null) {
         //get the specified mapping
-        if (association instanceof DataAssociationMapping)
+        if (association instanceof types.DataAssociationMapping)
             self.mapping = association;
         else
-            self.mapping = util._extend(new DataAssociationMapping(), association);
+            self.mapping = util._extend(new types.DataAssociationMapping(), association);
     }
     //get related model
     var relatedModel = this.parent.context.model(self.mapping.childModel);
@@ -463,10 +462,6 @@ DataObjectJunction.prototype.removeSingleObject = function(obj, callback) {
 if (typeof exports !== 'undefined')
 {
     module.exports = {
-        /**
-         * @constructs DataObjectJunction
-         */
         DataObjectJunction:DataObjectJunction
-
     };
 }

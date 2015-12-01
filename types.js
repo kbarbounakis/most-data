@@ -357,6 +357,7 @@ EventEmitter2.prototype.once = function(type, listener) {
 };
 
 /**
+ * @classdesc Represents the event arguments of a data model listener.
  * @class
  * @constructor
  * @property {DataModel|*} model - Represents the underlying model.
@@ -370,7 +371,7 @@ function DataEventArgs() {
 }
 
 /**
- * Represents the main data context.
+ * @classdesc Represents the main data context.
  * @class
  * @augments EventEmitter2
  * @constructor
@@ -407,7 +408,7 @@ DataContext.prototype.finalize = function(cb) {
 util.inherits(DataContext, EventEmitter2);
 
 /**
- * Represents a data model event listener
+ * @classdesc Represents a data model's listener
  * @class
  * @constructor
  * @abstract
@@ -828,7 +829,7 @@ DataModelBatch.prototype.prepare = function(obj) {
 };
 
 /**
- * DataAssociationMapping class describes the association between two models.
+ * @classdesc DataAssociationMapping class describes the association between two models.
  * <p>
  *     An association between two models is described in field attributes. For example
  *     model Order may have an association with model Party (Person or Organization) through the field Order.customer:
@@ -1072,6 +1073,7 @@ function DataResultSet() {
 /**
  * @abstract
  * @constructor
+ * @ignore
  */
 function DataContextEmitter() {
     //

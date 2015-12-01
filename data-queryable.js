@@ -38,7 +38,6 @@ var async=require('async'),
     types = require('./types'),
     cfg = require('./data-configuration'),
     qry = require('most-query'),
-    DataAssociationMapping = types.DataAssociationMapping,
     Q = require('q');
 
 /**
@@ -314,6 +313,7 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
 
 
 /**
+ * @classdesc Represents a dynamic query helper for filtering, paging, grouping and sorting data associated with an instance of DataModel class.
  * @class
  * @property {QueryExpression|*} query - Gets or sets the query expression
  * @property {DataModel|*} model - Gets or sets the underlying data model
@@ -369,7 +369,8 @@ function DataQueryable(model) {
         this.silent(m.$silent);
 }
 /**
- * @returns DataQueryable
+ * Clones the current DataQueryable instance.
+ * @returns DataQueryable - The cloned object.
  */
 DataQueryable.prototype.clone = function() {
     var result = new DataQueryable(this.model);
@@ -398,9 +399,21 @@ DataQueryable.prototype.ensureContext = function() {
 };
 
 /**
- * Prepares the underlying query
- * @param {Boolean=} useOr - Indicates whether a or statement will be used in the resulted statement.
+ * Serializes the underlying query and clears current filter expression for further filter processing. This operation may be used in complex filtering.
+ * @param {Boolean=} useOr - Indicates whether an or statement will be used in the resulted statement.
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of order
+ context.model('Order')
+ .where('orderStatus').equal(1).and('paymentMethod').equal(2)
+ .prepare().where('orderStatus').equal(2).and('paymentMethod').equal(2)
+ .prepare(true)
+ //(((OrderData.orderStatus=1) AND (OrderData.paymentMethod=2)) OR ((OrderData.orderStatus=2) AND (OrderData.paymentMethod=2)))
+ .list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.prepare = function(useOr) {
     this.query.prepare(useOr);
@@ -408,9 +421,18 @@ DataQueryable.prototype.prepare = function(useOr) {
 };
 
 /**
- *
- * @param attr {string}
+ * Initializes a where expression
+ * @param attr {string} - A string which represents the field name that is going to be used as the left operand of this expression
  * @returns {DataQueryable}
+ * @example
+ context.model('Person')
+ .where('user/name').equal('user1@exampl.com')
+ .select('description')
+ .first().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.where = function(attr) {
     if (typeof attr === 'string' && /\//.test(attr)) {
@@ -475,11 +497,11 @@ DataQueryable.prototype.and = function(attr) {
  * Prepares a logical OR expression
  * @param attr {string} - The name of field that is going to be used in this expression
  * @returns {DataQueryable}
- * example
+ * @example
+ //((OrderData.orderStatus=1) OR (OrderData.orderStatus=2)
  context.model('Order').where('orderStatus').equal(1)
  .or('orderStatus').equal(2)
  .list().then(function(result) {
-        //SQL: WHERE ((OrderData.orderStatus=1) OR (OrderData.orderStatus=2)
         done(null, result);
     }).catch(function(err) {
         done(err);
@@ -585,7 +607,7 @@ DataQueryable.prototype.greaterThan = function(obj) {
  * Prepares a greater than or equal comparison.
  * @param obj {*} The right operand of the expression
  * @returns {DataQueryable}
- * * @example
+ * @example
  //retrieve a list of orders where product price is greater than or equal to 800
  context.model('Order')
  .where('orderedItem/price').greaterOrEqual(800)
@@ -603,9 +625,23 @@ DataQueryable.prototype.greaterOrEqual = function(obj) {
 };
 
 /**
- * @param {*} value The value to be compared
- * @param {Number=} result The result of a bitwise and expression
+ * Prepares a bitwise and comparison.
+ * @param {*} value - The right operand of the express
+ * @param {Number=} result - The result of a bitwise and expression
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of permissions for model Person and insert permission mask (2)
+ context.model('Permission')
+ //prepare bitwise AND (((PermissionData.mask & 2)=2)
+ .where('mask').bit(2)
+ .and('privilege').equal('Person')
+ .and('parentPrivilege').equal(null)
+ .list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ *
  */
 DataQueryable.prototype.bit = function(value, result) {
     if (typeof result === 'undefined' || result == null)
@@ -737,8 +773,9 @@ DataQueryable.prototype.notIn = function(objs) {
 };
 
 /**
+ * Prepares a modular arithmetic operation
  * @param {*} obj The value to be compared
- * @param {Number} result The result of modulo expression
+ * @param {Number} result The result of modular expression
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.mod = function(obj, result) {
@@ -1017,6 +1054,7 @@ DataQueryable.prototype.select = function(attr) {
  * Adds a field or an array of fields to select statement
  * @param {String|Array|DataField|*} attr
  * @return {DataQueryable}
+ * @deprecated
  */
 DataQueryable.prototype.alsoSelect = function(attr) {
     var self = this;
@@ -1139,7 +1177,8 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
 };
 
 /**
- * @param {...string} attr
+ * Prepares an ascending sorting operation
+ * @param {string} attr - The field name to use for sorting results
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.orderBy = function(attr) {
@@ -1207,7 +1246,8 @@ DataQueryable.prototype.groupBy = function(attr) {
 };
 
 /**
- * @param attr {string}
+ * Continues a ascending sorting operation
+ * @param {string} attr - The field to use for sorting results
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.thenBy = function(attr) {
@@ -1220,7 +1260,8 @@ DataQueryable.prototype.thenBy = function(attr) {
 };
 
 /**
- * @param attr {string}
+ * Prepares a descending sorting operation
+ * @param {string} attr - The field name to use for sorting results
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.orderByDescending = function(attr) {
@@ -1233,7 +1274,8 @@ DataQueryable.prototype.orderByDescending = function(attr) {
 };
 
 /**
- * @param attr {string}
+ * Continues a descending sorting operation
+ * @param {string} - The field name to use for sorting results
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.thenByDescending = function(attr) {
@@ -1246,9 +1288,18 @@ DataQueryable.prototype.thenByDescending = function(attr) {
 };
 
 /**
- * Executes the specified query against the underlying model and returns the first object.
- * @param {Function=} callback
+ * Executes the specified query against the underlying model and returns the first item.
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
  * @returns {Deferred|*}
+ * @example
+ //retrieve an order by id
+ context.model('Order')
+ .where('id').equal(302)
+ .first().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.first = function(callback) {
     if (typeof callback !== 'function') {
@@ -1317,12 +1368,23 @@ function allInternal(callback) {
     }
     callback = callback || function() {};
     //execute select
-    self.execute(callback);
+    execute_.call(self, callback);
 }
 
 /**
- * @param n {number}
+ * Prepares a paging operation by skipping the specified number of records
+ * @param n {number} - The number of records to be skipped
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of products
+ context.model('Product')
+ .skip(10)
+ .take(10)
+ .list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.skip = function(n) {
     this.query.$skip = n;
@@ -1344,12 +1406,13 @@ function takeInternal(n, callback) {
         self.select();
     }
     //execute select
-    self.execute(callback);
+    execute_.call(self,callback);
 }
 
 /**
- * @param {Number} n - Defines the number of items to take
- * @param {Function=} callback
+ * Prepares a data paging operation by taking the specified number of records
+ * @param {Number} n - The number of records to take
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
  * @returns {DataQueryable|*} - If callback function is missing returns a promise.
  */
 DataQueryable.prototype.take = function(n, callback) {
@@ -1565,7 +1628,7 @@ function countInternal(callback) {
     //append count expression
     self.query.select([qry.fields.count(field.name).from(self.model.viewAdapter)]);
     //execute select
-    self.execute(function(err, result) {
+    execute_.call(self, function(err, result) {
         if (err) { callback.call(self, err, result); return; }
         var value = null;
         if (util.isArray(result)) {
@@ -1796,7 +1859,7 @@ DataQueryable.prototype.postExecute = function(result, callback) {
  * @param {function(Error,*=)} callback
  * @private
  */
-DataQueryable.prototype.execute = function(callback) {
+ function execute_(callback) {
     var self = this, context = self.ensureContext();
     self.migrate(function(err) {
         if (err) { callback(err); return; }
@@ -1867,13 +1930,13 @@ DataQueryable.prototype.execute = function(callback) {
                         }
                     }
                     //execute query
-                    self.finalExecuteInternal(e, callback);
+                    finalExecuteInternal_.call(self, e, callback);
                 }
             });
         }
         else {
             //execute query
-            self.finalExecuteInternal(e, callback);
+            finalExecuteInternal_.call(self, e, callback);
         }
     });
 };
@@ -1883,7 +1946,7 @@ DataQueryable.prototype.execute = function(callback) {
  * @param {*} e
  * @param {function(Error=,*=)} callback
  */
-DataQueryable.prototype.finalExecuteInternal = function(e, callback) {
+ function finalExecuteInternal_(e, callback) {
     var self = this, context = self.ensureContext();
     //pass data queryable to event
     e.emitter = this;
@@ -1897,7 +1960,7 @@ DataQueryable.prototype.finalExecuteInternal = function(e, callback) {
             if (typeof e['result'] !== 'undefined') {
                 //call after execute
                 var result = e['result'];
-                self.afterExecute(result, function(err, result) {
+                afterExecute_.call(self, result, function(err, result) {
                     if (err) { callback(err); return; }
                     if (afterListenerCount==0) { callback(null, result); return; }
                     //raise after execute event
@@ -1910,7 +1973,7 @@ DataQueryable.prototype.finalExecuteInternal = function(e, callback) {
             }
             context.db.execute(e.query, null, function(err, result) {
                 if (err) { callback(err); return; }
-                self.afterExecute(result, function(err, result) {
+                afterExecute_.call(self, result, function(err, result) {
                     if (err) { callback(err); return; }
                     if (afterListenerCount==0) { callback(null, result); return; }
                     //raise after execute event
@@ -1930,7 +1993,7 @@ DataQueryable.prototype.finalExecuteInternal = function(e, callback) {
  * @param {Function} callback
  * @private
  */
-DataQueryable.prototype.afterExecute = function(result, callback) {
+function afterExecute_(result, callback) {
     var self = this, field, parentField, junction;
     if (self.$expand) {
         //get distinct values
@@ -1938,10 +2001,10 @@ DataQueryable.prototype.afterExecute = function(result, callback) {
         async.eachSeries(expands,function(expand, cb) {
             /**
              * get mapping
-             * @type {DataAssociationMapping}
+             * @type {DataAssociationMapping|*}
              */
             var mapping = null;
-            if (expand instanceof DataAssociationMapping) {
+            if (expand instanceof types.DataAssociationMapping) {
                 mapping = expand;
             }
             else {
@@ -2212,8 +2275,19 @@ function toArrayCallback(result, callback) {
 }
 
 /**
- * @param {Boolean=} value
+ * Disables permission listeners and executes the underlying query without applying any permission filters
+ * @param {Boolean=} value - A boolean which represents the silent flag. If value is missing the default parameter is true.
  * @returns {DataQueryable}
+ * @example
+ //retrieve user
+ context.model('User')
+ .where('name').equal('other@example.com')
+ .silent()
+ .first().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.silent = function(value) {
     /**
@@ -2231,6 +2305,7 @@ DataQueryable.prototype.silent = function(value) {
 };
 
 /**
+ * Generates a MD5 hashed string for this DataQueryable instance
  * @returns {string}
  */
 DataQueryable.prototype.toMD5 = function() {
@@ -2261,6 +2336,7 @@ DataQueryable.prototype.asArray = function(value) {
     return this;
 };
 /**
+ * Gets or sets query data. This data may be used in before and after execute listeners.
  * @param {string=} name
  * @param {*=} value
  * @returns {DataQueryable|*}
@@ -2279,13 +2355,15 @@ DataQueryable.prototype.data = function(name, value) {
     return this;
 };
 /**
- * @param {string=} value
+ * Gets or sets a string which represents the title of this DataQueryable instance. This title may be used in caching operations
+ * @param {string=} value - The title of this DataQueryable instance
  * @returns {string|DataQueryable}
  */
 DataQueryable.prototype.title = function(value) {
     return this.data('title', value);
 };
 /**
+ * Gets or sets a boolean which indicates whether results should be cached or not. This parameter is valid for models which have caching mechanisms.
  * @param {string=} value
  * @returns {string|DataQueryable}
  */
@@ -2294,31 +2372,104 @@ DataQueryable.prototype.cache = function(value) {
 };
 
 /**
- * Sets the expandable model or models.
- * @param {String|DataAssociationMapping|Array} model A string or object that represents a model or an array of models to be expanded.
+ * Sets an expandable field or collection of fields. An expandable field produces nested objects based on the association between two models.
+ * @param {...string} attr - A param array of strings which represents the field or the array of fields that are going to be expanded.
+ * If attr is missing then all the previously defined expandable fields will be removed.
  * @returns {DataQueryable}
+ * @example
+ //retrieve an order and expand customer field
+ context.model('Order')
+ //note: the field [orderedItem] is defined as expandable in model definition and it will produce a nested object for each order
+ .select('id','orderedItem','customer')
+ .expand('customer')
+ .where('id').equal(46)
+ .first().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //Result:
+ {
+    "id": 46,
+    "orderedItem": {
+        "id": 413,
+        "additionalType": "Product",
+        "category": "Storage and Networking Gear",
+        "price": 647.13,
+        "model": "FY8135",
+        "releaseDate": "2015-01-15 18:07:42.000+02:00",
+        "name": "LaCie Blade Runner",
+        "dateCreated": "2015-11-23 14:53:04.927+02:00",
+        "dateModified": "2015-11-23 14:53:04.934+02:00"
+    },
+    "customer": {
+        "id": 317,
+        "additionalType": "Person",
+        "alternateName": null,
+        "description": "Nicole Armstrong",
+        "image": "https://s3.amazonaws.com/uifaces/faces/twitter/zidoway/128.jpg",
+        "dateCreated": "2015-11-23 14:52:57.886+02:00",
+        "dateModified": "2015-11-23 14:52:57.917+02:00"
+    }
+}
+ @example //retrieve an order and do not expand customer field
+ {
+    "id": 46,
+    "orderedItem": {
+        "id": 413,
+        "additionalType": "Product",
+        "category": "Storage and Networking Gear",
+        "price": 647.13,
+        "model": "FY8135",
+        "releaseDate": "2015-01-15 18:07:42.000+02:00",
+        "name": "LaCie Blade Runner",
+        "dateCreated": "2015-11-23 14:53:04.927+02:00",
+        "dateModified": "2015-11-23 14:53:04.934+02:00"
+    },
+    "customer": 317
+}
  */
-DataQueryable.prototype.expand = function(model) {
-    var self = this;
-    if (typeof model === 'undefined' || model===null) {
+DataQueryable.prototype.expand = function(attr) {
+    var self = this,
+        arg = (arguments.length>1) ? Array.prototype.slice.call(arguments): attr;
+    if (typeof arg === 'undefined' || arg===null) {
         delete self.$expand;
     }
     else {
         if (!util.isArray(this.$expand))
             self.$expand=[];
-        if (util.isArray(model)) {
+        if (util.isArray(arg)) {
 
-            model.forEach(function(x) { self.$expand.push(x); });
+            arg.forEach(function(x) { self.$expand.push(x); });
         }
         else {
-            self.$expand.push(model);
+            self.$expand.push(arg);
         }
     }
     return self;
 };
 /**
- * @param {boolean=} value
+ * Disables expandable fields
+ * @param {boolean=} value - If the value is true the result will contain only flat objects -without any nested associated object-,
+ * even if model definition contains expandable fields. If value is missing, the default parameter is true
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of orders
+ context.model('Order')
+ .flatten()
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //Results:
+ id  customer  orderStatus  paymentMethod
+ --  --------  -----------  -------------
+ 1   299       5            6
+ 2   337       7            5
+ 3   309       3            3
+ 4   257       2            4
+ 5   285       5            2
  */
 DataQueryable.prototype.flatten = function(value) {
 
@@ -2333,37 +2484,85 @@ DataQueryable.prototype.flatten = function(value) {
     return this;
 };
 /**
- * @param {number|*} x
+ * Prepares an addition (e.g. ([field] + 4))
+ * @param {number|*} x - The
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of products
+ context.model('Product')
+ .select('id','name', 'price')
+ //perform ((ProductData.price + 100)>300)
+ .where('price').add(100).lowerThan(300)
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.add = function(x) {
     this.query.add(x); return this;
 };
 /**
+ * Prepares a subtraction (e.g. ([field] - 4))
  * @param {number|*} x
  * @returns {DataQueryable}
+ //retrieve a list of orders
+ context.model('Product')
+ .select('id','name', 'price')
+ //perform ((ProductData.price - 50)<150)
+ .where('price').subtract(50).lowerThan(150)
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.subtract = function(x) {
     this.query.subtract(x); return this;
 };
 
 /**
+ * Prepares a multiplication (e.g. ([field] * 0.2))
  * @param {number} x
  * @returns {DataQueryable}
+ @example
+ //retrieve a list of orders
+ context.model('Product')
+ .select('id','name', 'price')
+ //perform ((ProductData.price * 0.2)<50)
+ .where('price').multiply(0.2).lowerThan(50)
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.multiply = function(x) {
     this.query.multiply(x); return this;
 };
 
 /**
+ * Prepares a division (e.g. ([field] / 0.2))
  * @param {number} x
  * @returns {DataQueryable}
+ @example
+ //retrieve a list of orders
+ context.model('Product')
+ .select('id','name', 'price')
+ //perform ((ProductData.price / 0.8)>500)
+ .where('price').divide(0.8).greaterThan(500)
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.divide = function(x) {
     this.query.divide(x); return this;
 };
 
 /**
+ * * Prepares a round mathematical expression
  * @param {number=} n
  * @returns {DataQueryable}
  */
@@ -2371,21 +2570,57 @@ DataQueryable.prototype.round = function(n) {
     this.query.round(x); return this;
 };
 /**
- * @param {number} start
- * @param {number=} length
+ * Prepares a substring comparison
+ * @param {number} start - The position where to start the extraction. First character is at index 0
+ * @param {number=} length - The number of characters to extract
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of persons
+ context.model('Person')
+ .select('givenName')
+ .where('givenName').substr(0,4).equal('Alex')
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //Results:
+ givenName
+ ---------
+ Alex
+ Alexis
  */
 DataQueryable.prototype.substr = function(start,length) {
     this.query.substr(start,length); return this;
 };
 /**
- * @param {string} s
+ * Prepares an indexOf comparison
+ * @param {string} s The string to search for
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of persons
+ context.model('Person')
+ .select('givenName')
+ .where('givenName').indexOf('a').equal(1)
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //Results:
+ givenName
+ ---------
+ Daisy
+ Maxwell
+ Mackenzie
+ Zachary
+ Mason
  */
 DataQueryable.prototype.indexOf = function(s) {
     this.query.indexOf(s); return this;
 };
 /**
+ * Prepares a string concatenation expression
  * @param {string} s
  * @returns {DataQueryable}
  */
@@ -2393,66 +2628,152 @@ DataQueryable.prototype.concat = function(s) {
     this.query.concat(s); return this;
 };
 /**
+ * Prepares a string trimming expression
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.trim = function() {
     this.query.trim(); return this;
 };
 /**
+ * Prepares a string length expression
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of persons
+ context.model('Person')
+ .select('givenName')
+ .where('givenName').length().equal(5)
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ @example //Results:
+ givenName
+ ---------
+ Daisy
+ Peter
+ Kylie
+ Colin
+ Lydia
  */
 DataQueryable.prototype.length = function() {
     this.query.length(); return this;
 };
 /**
+ * Prepares an expression by getting the date only value of a datetime field
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of orders
+ context.model('Order')
+ .select('id','paymentDue', 'orderDate')
+ .where('orderDate').getDate().equal('2015-01-16')
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.getDate = function() {
     this.query.getDate(); return this;
 };
 /**
+ * Prepares an expression by getting the year of a datetime field
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of orders made during 2015
+ context.model('Order')
+ .where('orderDate').getYear().equal(2015)
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.getYear = function() {
     this.query.getYear(); return this;
 };
 /**
+ * Prepares an expression by getting the year of a datetime field
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of orders made during 2015
+ context.model('Order')
+ .where('orderDate').getYear().equal(2015)
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ */
+DataQueryable.prototype.getFullYear = function() {
+    this.query.getYear(); return this;
+};
+/**
+ * Prepares an expression by getting the month (from 1 to 12) of a datetime field.
+ * @returns {DataQueryable}
+ * @example
+ //retrieve a list of orders made during October 2015
+ context.model('Order')
+ .where('orderDate').getYear().equal(2015)
+ .and('orderDate').getMonth().equal(10)
+  .take(5).list().then(function(result) {
+        console.table(result.records);
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.getMonth = function() {
     this.query.getMonth(); return this;
 };
 /**
+ * Prepares an expression by getting the day of the month of a datetime field
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of orders
+ context.model('Order')
+ .where('orderDate').getYear().equal(2015)
+ .and('orderDate').getMonth().equal(1)
+ .and('orderDate').getDay().equal(16)
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.getDay = function() {
     this.query.getDay(); return this;
 };
 /**
+ * Prepares an expression by getting the hours (from 0 to 23) a datetime field
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.getHours = function() {
     this.query.getHours(); return this;
 };
 /**
+ * Prepares an expression by getting the minutes (from 0 to 59) a datetime field
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.getMinutes = function() {
     this.query.getMinutes(); return this;
 };
 /**
+ * Prepares an expression by getting the seconds (from 0 to 59) a datetime field
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.getSeconds = function() {
     this.query.getSeconds(); return this;
 };
 /**
+ * Prepares a floor mathematical expression
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.floor = function() {
     this.query.floor(); return this;
 };
 /**
+ * Prepares a ceil mathematical expression
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.ceil = function() {
@@ -2460,22 +2781,42 @@ DataQueryable.prototype.ceil = function() {
 };
 
 /**
+ * Prepares a lower case string comparison
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.toLocaleLowerCase = function() {
     this.query.toLocaleLowerCase(); return this;
 };
 /**
+ * Prepares a lower case string comparison
  * @returns {DataQueryable}
+ * @example
+ //retrieve a list of persons
+ context.model('Person')
+ .where('givenName').toLocaleLowerCase().equal('alexis')
+ .take(5).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
-DataQueryable.prototype.toLowerCase = DataQueryable.prototype.toLocaleLowerCase;
+DataQueryable.prototype.toLowerCase = function() {
+    return this.toLocaleLowerCase();
+};
 /**
+ * Prepares an upper case string comparison
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.toLocaleUpperCase = function() {
     this.query.toLocaleUpperCase(); return this;
 };
-
+/**
+ * Prepares an upper case string comparison
+ * @returns {DataQueryable}
+ */
+DataQueryable.prototype.toUpperCase = function() {
+    return this.toLocaleUpperCase();
+};
 /**
  * @private
  * @param {Function} callback
@@ -2494,8 +2835,19 @@ function valueInternal(callback) {
 }
 
 /**
- * Gets a single value after executing the specified query. In query does not have any fields
- * @param {Function=} callback
+ * Executes the underlying query and a single value.
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
+ * @returns {Deferred|*}
+ * @example
+ //retrieve the full name (description) of a person
+ context.model('Person')
+ .where('user').equal(330)
+ .select('description')
+ .value().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataQueryable.prototype.value = function(callback) {
     if (typeof callback !== 'function') {
@@ -2509,19 +2861,6 @@ DataQueryable.prototype.value = function(callback) {
     else {
         return valueInternal.call(this, callback);
     }
-};
-/**
- * @returns DataQueryable
- */
-DataQueryable.prototype.toUpperCase = function() {
-    return this.toLocaleUpperCase();
-};
-
-/**
- * @returns DataQueryable
- */
-DataQueryable.prototype.toLowerCase = function() {
-    return this.toLocaleLowerCase();
 };
 
 if (typeof exports !== 'undefined')

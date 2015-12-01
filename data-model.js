@@ -1145,7 +1145,7 @@ DataModel.prototype.convert = function(obj, typeConvert)
                 if (typeConvert)
                     convertInternal_.call(self, o);
                 o.context = self.context;
-                o.type = self.name;
+                o.$$type = self.name;
                 arr.push(o);
             }
         });
@@ -1163,7 +1163,7 @@ DataModel.prototype.convert = function(obj, typeConvert)
         if (typeConvert)
             convertInternal_.call(self, result);
         result.context = self.context;
-        result.type = self.name;
+        result.$$type = self.name;
         return result;
     }
 };

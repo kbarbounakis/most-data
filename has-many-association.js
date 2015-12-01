@@ -37,10 +37,9 @@ var util = require('util'),
     async = require('async'),
     qry = require('most-query'),
     types = require('./types'),
-    DataAssociationMapping = types.DataAssociationMapping,
     DataQueryable = require('./data-queryable').DataQueryable;
 /**
- * @class HasManyAssociation
+ * @class
  * @constructor
  * @augments DataQueryable
  * @param {DataObject} obj A DataObject instance that represents the parent data object
@@ -79,10 +78,10 @@ function HasManyAssociation(obj, association)
     }
     else if (typeof association === 'object' && association !=null) {
         //get the specified mapping
-        if (association instanceof DataAssociationMapping)
+        if (association instanceof types.DataAssociationMapping)
             self.mapping = association;
         else
-            self.mapping = util._extend(new DataAssociationMapping(), association);
+            self.mapping = util._extend(new types.DataAssociationMapping(), association);
     }
 
     var q = null;
@@ -119,11 +118,7 @@ util.inherits(HasManyAssociation, DataQueryable);
 if (typeof exports !== 'undefined')
 {
     module.exports = {
-        /**
-         * @constructs HasManyAssociation
-         */
         HasManyAssociation:HasManyAssociation
-
     };
 }
 

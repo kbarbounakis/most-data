@@ -39,12 +39,11 @@ var util = require('util'),
     dataCommon = require('./data-common'),
     types = require('./types'),
     cfg = require('./data-configuration'),
-    DataAssociationMapping = types.DataAssociationMapping,
     DataQueryable = require('./data-queryable').DataQueryable;
 
 
 /**
- * @class DataObjectRelation
+ * @class
  * @constructor
  * @augments DataQueryable
  * @param {DataObject} obj
@@ -167,10 +166,6 @@ DataObjectRelation.prototype.insert = function(obj, callback) {
 if (typeof exports !== 'undefined')
 {
     module.exports = {
-        /**
-         * @constructs DataObjectRelation
-         */
         DataObjectRelation:DataObjectRelation
-
     };
 }

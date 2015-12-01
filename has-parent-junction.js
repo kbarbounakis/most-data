@@ -39,7 +39,6 @@ var util = require('util'),
     dataCommon = require('./data-common'),
     types = require('./types'),
     cfg = require('./data-configuration'),
-    DataAssociationMapping = types.DataAssociationMapping,
     DataQueryable = require('./data-queryable').DataQueryable;
 
 /**
@@ -339,10 +338,6 @@ HasParentJunction.prototype.migrate = function(callback) {
 if (typeof exports !== 'undefined')
 {
     module.exports = {
-        /**
-         * @constructs HasParentJunction
-         */
         HasParentJunction:HasParentJunction
-
     };
 }

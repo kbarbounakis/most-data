@@ -37,7 +37,6 @@ var util = require('util'),
     dataCommon = require('./data-common'),
     types = require('./types'),
     cfg = require('./data-configuration'),
-    DataAssociationMapping = types.DataAssociationMapping,
     DataObjectJunction = require('./data-object-junction').DataObjectJunction,
     DataObjectRelation = require('./data-object-relation').DataObjectRelation,
     HasManyAssociation = require('./has-many-association').HasManyAssociation,
@@ -51,34 +50,83 @@ var STR_MISSING_CALLBACK_ARGUMENT = 'Missing argument. Callback function expecte
     STR_MISSING_ARGUMENT_CODE = 'EARGM';
 
 /**
- * DataObject class represents a data object that is going to be used in data and other operations
+ * @classdesc Represents a data object associated with a data model.
+ * DataObject class may be inherited by other classes that are defined as DataObjectClass of a data model.
  * @class
  * @param {string=} type
  * @param {*=} obj The object that is going to be extended
  * @constructor
  * @augments EventEmitter2
- * @property {DataContext}  context - The HttpContext instance related to this object.
- * @property {*}  selector - An object that represents a collection of selectors associated with this data object e.g is(':new'), is(':valid'), is(':enabled') etc
+ * @property {DataContext}  context - An instance of DataContext class associated with this object.
+ * @property {string} $$type - A string that represents the type of this object.
+ * @property {DataModel} $$model - The data model which is associated with this object.
+ * @property {*} $$id - Gets the identifier of this object based on the associated model's primary key
+ * @property {*} selectors - An object that represents a collection of selectors associated with this data object e.g is(':new'), is(':valid'), is(':enabled') etc
  */
 function DataObject(type, obj)
 {
+    var self = this;
+    /**
+     * @type {DataContext}
+     * @private
+     */
+    var context_ = null;
+    Object.defineProperty(this,'context',{
+        get: function() { return context_; } ,
+        set: function(value) { context_=value; },
+        enumerable:false,
+        configurable:false
+    });
     /**
      * @type {string}
      * @private
      */
-    var __type = null;
+    var type_ = null;
     if (type)
-        __type = type;
-    Object.defineProperty(this,'type',{
-        get: function() { return __type; } ,
-        set: function(value) { __type=value; },
+        type_ = type;
+    else {
+        //get type from constructor name
+        if (/Model$/.test(this.constructor.name)) {
+            type_ = this.constructor.name.replace(/Model$/,'');
+        }
+        else {
+            if (this.constructor.name!=='DataObject')
+                type_ = this.constructor.name;
+        }
+    }
+    Object.defineProperty(this,'$$type',{
+        get: function() { return type_; } ,
+        set: function(value) { type_=value; if (model_) { model_ = null; } },
         enumerable:false,
         configurable:false
     });
-    var __context = null;
-    Object.defineProperty(this,'context',{
-        get: function() { return __context; } ,
-        set: function(value) { __context=value; },
+
+    Object.defineProperty(this,'$$id',{
+        get: function() {
+            if (self.context) {
+                var model = self.$$model;
+                if (model) {
+                    return self[model.primaryKey];
+                }
+            }
+            //by default return id attribute, if any
+            return self['id'];
+        },
+        enumerable:false,
+        configurable:false
+    });
+
+    var model_;
+    Object.defineProperty(this,'$$model',{
+        get: function() {
+            if (typeof type_ === 'undefined' || type_ == null)
+                return;
+            if (model_) { return model_; }
+            if (context_) {
+                model_ = context_.model(type_);
+            }
+            return model_;
+        },
         enumerable:false,
         configurable:false
     });
@@ -98,7 +146,7 @@ function DataObject(type, obj)
     this.selector('new', function(callback) {
         if (typeof callback !== 'function') { return new Error(STR_MISSING_CALLBACK_ARGUMENT, STR_MISSING_ARGUMENT_CODE); }
         var self = this,
-            model = self.getModel();
+            model = self.$$model;
         model.inferState(self, function(err, state) {
             if (err) { return callback(err); }
             callback(null, (state==1));
@@ -106,7 +154,7 @@ function DataObject(type, obj)
     }).selector('live', function(callback) {
         if (typeof callback !== 'function') { return new Error(STR_MISSING_CALLBACK_ARGUMENT, STR_MISSING_ARGUMENT_CODE); }
         var self = this,
-            model = self.getModel();
+            model = self.$$model;
         model.inferState(self, function(err, state) {
             if (err) { return callback(err); }
             callback(null, (state==2));
@@ -136,9 +184,30 @@ function $args ( func ) {
 }
 
 /**
- *
+ * Registers a selector for the current data object
  * @param {string} name
  * @param {function=} selector
+ * @example
+ //retrieve a user, register a selector for enabled and check if user is enabled or not
+ var users = context.model('User');
+ users.where('name').equal('admin@example.com')
+ .first().then(function(result) {
+        var user = users.convert(result);
+        //register a selector to check whether a user is enabled or not
+        user.selector('enabled', function(callback) {
+            this.$$model.where('id').equal(this.id).select('enabled').value(callback);
+        });
+        user.is(":enabled").then(function(result) {
+            if (result) {
+                console.log('User is enabled');
+            }
+            done();
+        }).catch(function(err) {
+            done(null, err);
+        });
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataObject.prototype.selector = function(name, selector) {
     /**
@@ -158,9 +227,27 @@ DataObject.prototype.selector = function(name, selector) {
 };
 
 /**
- *
- * @param {string} selector
- * @returns {Q.IPromise|*}
+ * Executes a selector and returns the result. DataObject class has default selectors for common operations.
+ * The ":new" selector checks whether current data object is new or not. The ":live" selector checks whether current data object already exists or not.
+ * @param {string} selector - A string that represents an already registered selector
+ * @returns {Promise<T>|*}
+ * @example
+ //retrieve a user, and execute :live selector
+ var users = context.model('User');
+ users.where('name').equal('admin@example.com')
+ .first().then(function(result) {
+        var user = users.convert(result);
+        user.is(":live").then(function(result) {
+            if (result) {
+                console.log('User already exists');
+            }
+            done();
+        }).catch(function(err) {
+            done(null, err);
+        });
+    }).catch(function(err) {
+        done(err);
+    });
  */
 DataObject.prototype.is = function(selector) {
     if (!/^:\w+$/.test(selector)) {
@@ -182,35 +269,33 @@ DataObject.prototype.is = function(selector) {
 /**
  * Gets the type of this data object.
  * @returns {string}
+ * @deprecated Use DataObject.$$type instead
+ * @ignore
  */
 DataObject.prototype.getType = function() {
-    if (typeof this.type === 'string')
-        return this.type;
-    return this.constructor.name;
+    return this.$$type;
 };
 /**
- * @returns {DataModel}
+ * Gets the associated data model
+ * @returns {DataModel|undefined}
+ * @deprecated Use DataObject.$$model instead
  */
 DataObject.prototype.getModel = function() {
     if (this.context)
-        return this.context.model(this.getType());
-    return null;
+        return this.context.model(this.$$type);
 };
 
 /**
- * @returns {DataModel}
+ * Gets the identifier of this data object
+ * @returns {*}
+ * @deprecated This function is deprecated. Use DataObject.$$id property instead
  */
 DataObject.prototype.idOf = function() {
-    if (this.context) {
-        var model = this.context.model(this.type);
-        if (model) {
-            return this[model.primaryKey];
-        }
-    }
+    return this.$$id;
 };
 
 DataObject.prototype.removeProperty = function(name) {
-    var model = this.getModel(), field = model.field(name);
+    var model = this.$$model, field = model.field(name);
     if (dataCommon.isNullOrUndefined(field)) {
         var er = new Error('The specified field cannot be found.'); er.code = 'EDATA';
         throw er;
@@ -229,7 +314,7 @@ DataObject.prototype.property = function(name) {
         return null;
     var self = this, er;
     //validate relation based on the given name
-    var model = self.getModel(), field = model.field(name);
+    var model = self.$$model, field = model.field(name);
     if (dataCommon.isNullOrUndefined(field)) {
         er = new Error('The specified field cannot be found.'); er.code = 'EDATA';
         throw er;
@@ -294,7 +379,7 @@ DataObject.prototype.property = function(name) {
  * @param {function(Error=,*=)} callback
  */
 DataObject.prototype.attrOf = function(name, callback) {
-    var model = this.getModel(),
+    var model = this.$$model,
         mapping = model.inferMapping(name);
     if (typeof mapping === 'undefined' || mapping == null) {
         return callback(null, this[name]);
@@ -328,7 +413,7 @@ DataObject.prototype.attr = function(name, callback)
         callback(null, this[name]);
     }
     else {
-        var self = this, model = self.getModel(), field = model.field(name);
+        var self = this, model = self.$$model, field = model.field(name);
         if (field) {
             var mapping = model.inferMapping(field.name);
             if (typeof mapping === 'undefined' || mapping == null) {
@@ -400,27 +485,15 @@ DataObject.prototype.attr = function(name, callback)
 };
 
 /**
+ * Sets the context of this data object
  * @param {DataContext} value
  * @returns {DataObject}
  * @private
+ * @deprecated This function is deprecated. Use DataObject.context property instead
+ * @ignore
  */
 DataObject.prototype.setContext = function(value) {
-    if (this.context === undefined )
-    {
-        var __context = null;
-        Object.defineProperty(this,'context',{
-            get: function() {
-                return __context;
-            } ,
-            set: function(value) {
-                __context=value;
-            },
-            enumerable:false,
-            configurable:false
-        });
-    }
     this.context = value;
-    return this;
 };
 /**
  *
@@ -443,22 +516,20 @@ DataObject.prototype.query = function(attr)
 {
     return new DataObjectRelation(this, attr);
 };
+
 /**
- * Saves the current data object by executing this action against the underlying database.
- * @param context {DataContext}
- * @param callback {Function}
+ * @param {DataContext} context - The underlying data context
+ * @param {Function} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  */
-DataObject.prototype.save = function(context, callback) {
-    var self = this, type = self.getType();
+function save_(context, callback) {
+    var self = this, type = self.$$type;
     if (!type) {
-        callback.call(self, new Error('Object type cannot be empty during save operation.'));
-        return;
+        return callback.call(self, new types.DataException('ETYPE', 'Object type cannot be empty during save operation.'));
     }
     //get current application
     var model = context.model(type);
     if (!model) {
-        callback.call(self, new Error('Data model cannot be found.'));
-        return;
+        return callback.call(self, new types.DataException('EMODEL','Data model cannot be found.'));
     }
     var i;
     //register before listeners
@@ -474,22 +545,58 @@ DataObject.prototype.save = function(context, callback) {
         model.on('after.save', afterListener);
     }
     model.save(self, callback);
+}
+
+/**
+ * Saves the current data object.
+ * @param context {DataContext=} - The current data context.
+ * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @returns {Promise<T>|*} - If callback parameter is missing then returns a Promise object.
+ * @example
+ //retrieve an order and change paymentDue date
+ var orders = context.model('Order');
+ orders.where('id').equal(46)
+ .first().then(function(result) {
+        var order = orders.convert(result);
+        order.paymentDue = moment().add(7, 'days').toDate();
+        order.save().then(function() {
+            done(null, order);
+        }).catch(function(err) {
+            done(err);
+        });
+    }).catch(function(err) {
+        done(err);
+    });
+ */
+DataObject.prototype.save = function(context, callback) {
+    var self = this;
+    if (typeof callback !== 'function') {
+        var Q = require('q'), deferred = Q.defer();
+        save_.call(self, context || self.context, function(err) {
+            if (err) { return deferred.reject(err); }
+            deferred.resolve(null);
+        });
+        return deferred.promise;
+    }
+    else {
+        return save_.call(self, context || self.context, callback);
+    }
 };
 /**
- * Deletes the current data object by executing this action against the underlying database.
- * @param context {DataContext}
- * @param callback {Function}
+ * @param {DataContext} context
+ * @param {Function} callback
+ * @private
  */
-DataObject.prototype.remove = function(context, callback) {
+function remove_(context, callback) {
     var self = this;
-    if (!self.type) {
-        callback.call(self, new Error('Object type cannot be empty during delete operation.'));
+    if (typeof self.$$type === 'undefined' || self.$$type == null) {
+        callback.call(self, new types.DataException('ETYPE','Object type cannot be empty during remove operation.'));
         return;
     }
     //get current application
-    var model = context.model(self.type);
+    var model = context.model(self.$$type);
     if (!model) {
-        callback.call(self, new Error('Data model cannot be found.'));
+        callback.call(self, new types.DataException('EMODEL','Data model cannot be found.'));
         return;
     }
     //register before listeners
@@ -504,9 +611,43 @@ DataObject.prototype.remove = function(context, callback) {
         var afterListener = afterListeners[j];
         model.on('after.remove', afterListener);
     }
-    model.delete(self, callback);
-};
+    model.remove(self, callback);
+}
 
+/**
+ * Deletes the current data object.
+ * @param context {DataContext=} - The current data context.
+ * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @returns {Promise<T>|*} - If callback parameter is missing then returns a Promise object.
+ * @example
+ //retrieve a order, and remove it
+ var orders = context.model('Order');
+ orders.where('id').equal(4)
+ .first().then(function(result) {
+        var order = orders.convert(result);
+        order.remove().then(function() {
+            done();
+        }).catch(function(err) {
+            done(err);
+        });
+    }).catch(function(err) {
+        done(err);
+    });
+ */
+DataObject.prototype.remove = function(context, callback) {
+    var self = this;
+    if (typeof callback !== 'function') {
+        var Q = require('q'), deferred = Q.defer();
+        remove_.call(self, context || self.context, function(err) {
+            if (err) { return deferred.reject(err); }
+            deferred.resolve(null);
+        });
+        return deferred.promise;
+    }
+    else {
+        return remove_.call(self, context || self.context, callback);
+    }
+};
 
 if (typeof exports !== 'undefined')
 {

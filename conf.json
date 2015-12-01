@@ -6,5 +6,8 @@
         "include": ["./"],
         "includePattern": ".+\\.js(doc)?$",
         "exclude":[ "util.js" ]
+    },
+    "opts": {
+        "readme":"README.md"
     }
 }

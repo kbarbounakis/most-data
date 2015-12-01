@@ -36,10 +36,9 @@ var util = require('util'),
     async = require('async'),
     qry = require('most-query'),
     types = require('./types'),
-    DataAssociationMapping = types.DataAssociationMapping,
     DataQueryable = require('./data-queryable').DataQueryable;
 /**
- * @class HasOneAssociation
+ * @class
  * @constructor
  * @augments DataQueryable
  * @param {DataObject} obj A DataObject instance that represents the parent data object
@@ -120,10 +119,6 @@ util.inherits(HasOneAssociation, DataQueryable);
 if (typeof exports !== 'undefined')
 {
     module.exports = {
-        /**
-         * @constructs HasOneAssociation
-         */
         HasOneAssociation:HasOneAssociation
-
     };
 }
