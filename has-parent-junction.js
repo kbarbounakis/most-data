@@ -42,18 +42,102 @@ var util = require('util'),
     DataQueryable = require('./data-queryable').DataQueryable;
 
 /**
- * @class HasParentJunction
+ * @classdesc Represents a many-to-many association between two data models.
+ * <p>
+ *     This association may be defined in a field of a child model as follows:
+ * </p>
+ * <pre class="prettyprint"><code>
+ {
+     "name": "User", "id": 90, "title": "Users", "inherits": "Account", "hidden": false, "sealed": false, "abstract": false, "version": "1.4",
+     "fields": [
+        ...
+        {
+			"name": "groups", "title": "User Groups", "description": "A collection of groups where user belongs.",
+			"type": "Group",
+			"expandable": true,
+			"mapping": {
+				"associationAdapter": "GroupMembers", "parentModel": "Group",
+				"parentField": "id", "childModel": "User", "childField": "id",
+				"associationType": "junction", "cascade": "delete",
+				"select": [
+					"id",
+					"name",
+					"alternateName"
+				]
+			}
+		}
+        ...
+     ]
+     }
+ </code></pre>
+ <p>
+ where model [User] has a many-to-many association with model [Group] in order to define the groups where a user belongs.
+ This association will produce a database table with name of the specified association adapter name. If this name is missing
+ then it will produce a table with a default name which comes of the concatenation of the model and the associated model.
+ </p>
+ <p>
+    An instance of HasParentJunction class overrides DataQueryable methods for filtering associated objects:
+ </p>
+ <pre class="prettyprint"><code>
+ //check if the selected user belongs to Administrators group by querying user groups
+ var users = context.model('User');
+ users.where('name').equal('alexis.rees@example.com')
+ .first().then(function(result) {
+        var user = users.convert(result);
+        user.property('groups').where('name').equal('Users').count().then(function(result) {
+            done(null, result);
+        });
+    }).catch(function(err) {
+        done(err);
+    });
+ </code></pre>
+ <p>
+ Connects two objects (by inserting an association between parent and child object):
+ </p>
+ <pre class="prettyprint"><code>
+ //add the selected user to Administrators
+ var users = context.model('User');
+ users.where('name').equal('alexis.rees@example.com')
+ .first().then(function(result) {
+        var user = users.convert(result);
+        user.property('groups').insert({ name:"Administrators" }).then(function(result) {
+            done(null, result);
+        });
+    }).catch(function(err) {
+        done(err);
+    });
+ </code></pre>
+ <p>
+ Disconnects two objects (by removing an existing association):
+ </p>
+ <pre class="prettyprint"><code>
+ //remove the selected user from Administrators group
+ var users = context.model('User');
+ users.where('name').equal('alexis.rees@example.com')
+ .first().then(function(result) {
+        var user = users.convert(result);
+        user.property('groups').remove({ name:"Administrators" }).then(function(result) {
+            done(null, result);
+        });
+    }).catch(function(err) {
+        done(err);
+    });
+ </code></pre>
+ * @class
  * @constructor
  * @augments DataQueryable
  * @param {DataObject} obj The parent data object reference
- * @param {String|*} association A string that represents the name of the field which holds association mapping or the association mapping itself.
+ * @param {string|*} association - A string that represents the name of the field which holds association mapping or the association mapping itself.
+ * @property {DataModel} baseModel - The model associated with this data object junction
+ * @property {DataObject} parent - Gets or sets the parent data object associated with this instance of DataObjectJunction class.
+ * @property {DataAssociationMapping} mapping - Gets or sets the mapping definition of this data object association.
  */
 function HasParentJunction(obj, association) {
     /**
      * @type {DataObject}
      * @private
      */
-    var __parent = obj,
+    var parent_ = obj,
         self = this,
         model,
         DataModel = require('./data-model').DataModel;
@@ -62,15 +146,11 @@ function HasParentJunction(obj, association) {
      * @type DataObject
      */
     Object.defineProperty(this, 'parent', { get: function () {
-        return __parent;
+        return parent_;
     }, set: function (value) {
-        __parent = value;
+        parent_ = value;
     }, configurable: false, enumerable: false});
 
-    /**
-     * @type {DataAssociationMapping}
-     */
-    this.mapping = undefined;
     if (typeof association === 'string') {
         //infer mapping from field name
         //set relation mapping
@@ -108,12 +188,7 @@ function HasParentJunction(obj, association) {
     right[associationAdapter] = [parentField];
     this.query.join(this.mapping.associationAdapter, []).with([left, right]).where(childField).equal(obj[this.mapping.childField]).prepare();
 
-    /**
-     * Gets the model that holds association data
-     * @type {DataModel}
-     */
-    this.baseModel = undefined;
-    var baseModel = null;
+    var baseModel;
     Object.defineProperty(this, 'baseModel', {
         get: function() {
             if (baseModel)
@@ -161,7 +236,7 @@ util.inherits(HasParentJunction, DataQueryable);
  * @param {Function} callback
  * @private
  */
-HasParentJunction.prototype.insertSingleObject = function(obj, callback) {
+function insertSingleObject_(obj, callback) {
     var self = this;
     //get parent and child
     var parent = obj;
@@ -191,13 +266,9 @@ HasParentJunction.prototype.insertSingleObject = function(obj, callback) {
             }
         }
     });
-};
+}
 
-/**
- * @param {*|Array} obj An item of a collection of items that is going to be related with parent object
- * @param {Function} callback
- */
-HasParentJunction.prototype.insert = function(obj, callback) {
+function insert_(obj, callback) {
     var self = this;
     var arr = [];
     if (util.isArray(obj))
@@ -217,7 +288,7 @@ HasParentJunction.prototype.insert = function(obj, callback) {
                 }
                 //validate if child identifierr exists
                 if (parent.hasOwnProperty(self.mapping.parentField)) {
-                    self.insertSingleObject(parent, function(err) {
+                    insertSingleObject_.call(self, parent, function(err) {
                         cb(err);
                     });
                 }
@@ -236,7 +307,7 @@ HasParentJunction.prototype.insert = function(obj, callback) {
                             }
                             else {
                                 parent[self.mapping.parentField] = result[self.mapping.parentField];
-                                self.insertSingleObject(parent, function(err) {
+                                insertSingleObject_.call(self, parent, function(err) {
                                     cb(err);
                                 });
                             }
@@ -246,8 +317,40 @@ HasParentJunction.prototype.insert = function(obj, callback) {
 
             }, callback);
         }
-    })
+    });
+}
 
+/**
+ * Inserts an association between parent object and the given object or array of objects.
+ * @param {*|Array} obj - An object or an array of objects to be related with parent object
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @returns {Promise<T>|*} - If callback parameter is missing then returns a Promise object.
+ * @example
+ //add the selected user to Administrators
+ var users = context.model('User');
+ users.where('name').equal('alexis.rees@example.com')
+ .first().then(function(result) {
+        var user = users.convert(result);
+        user.property('groups').insert({ name:"Administrators" }).then(function(result) {
+            done(null, result);
+        });
+    }).catch(function(err) {
+        done(err);
+    });
+ */
+HasParentJunction.prototype.insert = function(obj, callback) {
+    var self = this;
+    if (typeof callback !== 'function') {
+        var Q = require('q'), deferred = Q.defer();
+        insert_.call(self, obj, function(err) {
+            if (err) { return deferred.reject(err); }
+            deferred.resolve(null);
+        });
+        return deferred.promise;
+    }
+    else {
+        return insert_.call(self, obj, callback);
+    }
 };
 
 /**
@@ -256,7 +359,7 @@ HasParentJunction.prototype.insert = function(obj, callback) {
  * @param {Function} callback
  * @private
  */
-HasParentJunction.prototype.removeSingleObject = function(obj, callback) {
+function removeSingleObject_(obj, callback) {
     var self = this;
     //get parent and child
     var parent = obj;
@@ -280,15 +383,10 @@ HasParentJunction.prototype.removeSingleObject = function(obj, callback) {
             }
         }
     });
-};
+}
 
-/**
- * @param {*|Array} obj An item of a collection of items that is going to be related with parent object
- * @param {Function} callback
- */
-HasParentJunction.prototype.remove = function(obj, callback) {
-    var self = this;
-    var arr = [];
+function remove_(obj, callback) {
+    var self = this, arr = [];
     if (util.isArray(obj))
         arr = obj;
     else {
@@ -319,7 +417,7 @@ HasParentJunction.prototype.remove = function(obj, callback) {
                         }
                         else {
                             parent[self.mapping.parentField] = result[self.mapping.parentField];
-                            self.removeSingleObject(parent, function(err) {
+                            removeSingleObject_.call(self, parent, function(err) {
                                 cb(err);
                             });
                         }
@@ -327,7 +425,40 @@ HasParentJunction.prototype.remove = function(obj, callback) {
                 });
             }, callback);
         }
-    })
+    });
+}
+
+/**
+ * Removes the association between parent object and the given object or array of objects.
+ * @param {*|Array} obj - An object or an array of objects to be disconnected from parent object
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @returns {Promise<T>|*} - If callback parameter is missing then returns a Promise object.
+ * @example
+ //remove the selected user from Administrators group
+ var users = context.model('User');
+ users.where('name').equal('alexis.rees@example.com')
+ .first().then(function(result) {
+        var user = users.convert(result);
+        user.property('groups').remove({ name:"Administrators" }).then(function(result) {
+            done(null, result);
+        });
+    }).catch(function(err) {
+        done(err);
+    });
+ */
+HasParentJunction.prototype.remove = function(obj, callback) {
+    var self = this;
+    if (typeof callback !== 'function') {
+        var Q = require('q'), deferred = Q.defer();
+        remove_.call(self, obj, function(err) {
+            if (err) { return deferred.reject(err); }
+            deferred.resolve(null);
+        });
+        return deferred.promise;
+    }
+    else {
+        return remove_.call(self, obj, callback);
+    }
 };
 
 HasParentJunction.prototype.migrate = function(callback) {

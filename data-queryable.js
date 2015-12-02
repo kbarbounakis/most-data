@@ -315,7 +315,7 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
 /**
  * @classdesc Represents a dynamic query helper for filtering, paging, grouping and sorting data associated with an instance of DataModel class.
  * @class
- * @property {QueryExpression|*} query - Gets or sets the query expression
+ * @property {QueryExpression|*} query - Gets or sets the current query expression
  * @property {DataModel|*} model - Gets or sets the underlying data model
  * @constructor
  * @param model {DataModel|*}
@@ -327,10 +327,6 @@ function DataQueryable(model) {
      * @private
      */
     var q = null;
-    /**
-     * @type {QueryExpression}
-     */
-    this.query = undefined;
     /**
      * Gets or sets an array of expandable models
      * @type {Array}
@@ -347,10 +343,6 @@ function DataQueryable(model) {
      * @private
      */
     var m = model;
-    /**
-     * @type {DataModel}
-     */
-    this.model = undefined;
     Object.defineProperty(this, 'query', { get: function() {
         if (!q) {
             if (!m) {
@@ -390,6 +382,7 @@ DataQueryable.prototype.clone = function() {
 /**
  * Ensures data queryable context and returns the current data context. This function may be overriden.
  * @returns {DataContext}
+ * @ignore
  */
 DataQueryable.prototype.ensureContext = function() {
     if (this.model!=null)

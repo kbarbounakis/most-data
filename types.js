@@ -291,6 +291,7 @@ DataAdapter.prototype.createView = function(name, query, callback) {
 };
 
 /**
+ * @classdesc EventEmitter2 class is an extension of node.js EventEmitter class where listeners are excuting in series.
  * @class
  * @augments EventEmitter
  * @constructor

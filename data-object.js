@@ -293,7 +293,12 @@ DataObject.prototype.getModel = function() {
 DataObject.prototype.idOf = function() {
     return this.$$id;
 };
-
+/**
+ * @param name
+ * @returns {DataObject}
+ * @deprecated
+ * @ignore
+ */
 DataObject.prototype.removeProperty = function(name) {
     var model = this.$$model, field = model.field(name);
     if (dataCommon.isNullOrUndefined(field)) {
@@ -374,33 +379,80 @@ DataObject.prototype.property = function(name) {
         throw er;
     }
 };
+
 /**
- * @param {String} name
- * @param {function(Error=,*=)} callback
+ * @param {string} name - The name of the attribute
+ * @param {Function} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
  */
-DataObject.prototype.attrOf = function(name, callback) {
-    var model = this.$$model,
+function attrOf_(name, callback) {
+    var self = this, model = this.$$model,
         mapping = model.inferMapping(name);
     if (typeof mapping === 'undefined' || mapping == null) {
-        return callback(null, this[name]);
-    }
-    if (this.hasOwnProperty(name)) {
-        if (typeof this[name] === 'object' && this[name] != null) {
-            callback(null, this[name][mapping.parentField]);
-        }
-        else if (this[name] == null) {
-            callback();
+        if (self.hasOwnProperty(name)) {
+            return callback(null, self[name]);
         }
         else {
-            callback(null, this[name]);
+            model.where(model.primaryKey).equal(self[model.primaryKey]).select(name).value(function(err, result) {
+                if (err) { return callback(err); }
+                self[name] = result;
+                return callback(null, result);
+            });
+        }
+    }
+    //if mapping association defines foreign key association
+    if (mapping.associationType==='association' && mapping.childModel === model.name) {
+        //if object has already this property
+        if (self.hasOwnProperty(name)) {
+            //if property is an object
+            if (typeof self[name] === 'object' && self[name] != null) {
+                //return the defined parent field
+                callback(null, self[name][mapping.parentField]);
+            }
+            else if (self[name] == null) {
+                callback();
+            }
+            else {
+                callback(null, self[name]);
+            }
+        }
+        else {
+            //otherwise get value from db
+            model.where(model.primaryKey).equal(this[model.primaryKey]).select(mapping.childField).flatten().value(function(err, result) {
+                if (err) { return callback(err); }
+                self[name] = result;
+                return callback(null, result);
+            });
         }
     }
     else {
-        model.where(model.primaryKey).equal(this[model.primaryKey]).select(mapping.childField).flatten().asArray().first(function(err, result) {
-            if (err) { return callback(err); }
-            this[name] = result;
-            return callback(null, result);
+        return callback();
+    }
+
+}
+
+/**
+ * Gets the value of the specified attribute.
+ * If the object has already a property with the specified name and the property does not have
+ * an association mapping then returns the property value.
+ * Otherwise if attribute has an association mapping (it defines an association with another model) then
+ * returns the foreign key value
+ *
+ * @param {string} name - The name of the attribute to retrieve
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
+ * @returns {Promise<T>|*} If callback is missing then returns a promise.
+ */
+DataObject.prototype.attrOf = function(name, callback) {
+    var self = this;
+    if (typeof callback !== 'function') {
+        var Q = require('q'), deferred = Q.defer();
+        attrOf_.call(self,  name, function(err, result) {
+            if (err) { return deferred.reject(err); }
+            deferred.resolve(result);
         });
+        return deferred.promise;
+    }
+    else {
+        return attrOf_.call(self, name, callback);
     }
 };
 /**
@@ -418,7 +470,7 @@ DataObject.prototype.attr = function(name, callback)
             var mapping = model.inferMapping(field.name);
             if (typeof mapping === 'undefined' || mapping == null) {
                 if (self[model.primaryKey]) {
-                    model.where(model.primaryKey).equal(self[model.primaryKey]).select([name]).first(function(err, result) {
+                    model.where(model.primaryKey).equal(self[model.primaryKey]).select(name).first(function(err, result) {
                         if (err) { callback(err); return; }
                         var value = null;
                         if (result) {
@@ -498,7 +550,8 @@ DataObject.prototype.setContext = function(value) {
 /**
  *
  * @param {DataContext} context The current data context
- * @param {Function} fn A function that represents the code to be invoked
+ * @param {Function} fn - A function that represents the code to be invoked
+ * @ignore
  */
 DataObject.prototype.execute = function(context, fn) {
     var self = this;

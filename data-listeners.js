@@ -36,6 +36,7 @@ var async = require('async'),
     util = require('util'),
     dataCache = require('./data-cache');
 /**
+ * @classdesc Represents an event listener for validating not nullable fields. This listener is automatically  registered in all data models.
  * @class
  * @constructor
  */
@@ -43,9 +44,9 @@ function NotNullConstraintListener() {
     //
 }
 /**
- *
- * @param {DataEventArgs} e
- * @param {Function} callback
+ * Occurs before creating or updating a data object and validates not nullable fields.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 NotNullConstraintListener.prototype.beforeSave = function(e, callback) {
 
@@ -74,6 +75,7 @@ NotNullConstraintListener.prototype.beforeSave = function(e, callback) {
 };
 
 /**
+ * @classdesc Represents an event listener for validating data model's unique constraints. This listener is automatically registered in all data models.
  * @class
  * @constructor
  */
@@ -81,9 +83,9 @@ function UniqueContraintListener() {
     //
 }
 /**
- *
- * @param {DataEventArgs} e
- * @param  {Function} callback
+ * Occurs before creating or updating a data object and validates the unique constraints of data model.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 UniqueContraintListener.prototype.beforeSave = function(e, callback) {
 
@@ -173,7 +175,7 @@ UniqueContraintListener.prototype.beforeSave = function(e, callback) {
 };
 
 /**
- * @classdesc A default event listener for calculating values
+ * @classdesc Represents an event listener for calculating field values. This listener is automatically registered in all data models.
  * @class
  * @constructor
  */
@@ -181,7 +183,7 @@ function CalculatedValueListener() {
     //
 }
 /**
- * Occurs before creating or updating a data object.
+ * Occurs before creating or updating a data object and calculates field values with the defined calculation expression.
  * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
  * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
@@ -268,6 +270,7 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
 /**
  * @class
  * @constructor
+ * @ignore
  */
 function DataModelLookupCachingListener() {
     //
@@ -308,7 +311,7 @@ DataModelLookupCachingListener.prototype.afterRemove = function(e, callback) {
 
 
 /**
- * Represents data object default value listener
+ * @classdesc Represents an event listener for calculating default values. This listener is automatically registered in all data models.
  * @class
  * @constructor
  */
@@ -316,9 +319,9 @@ function DefaultValueListener() {
     //
 }
 /**
- *
- * @param {DataEventArgs} e
- * @param {Function} callback
+ * Occurs before creating or updating a data object and calculates default values with the defined value expression.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 DefaultValueListener.prototype.beforeSave = function(e, callback) {
 
