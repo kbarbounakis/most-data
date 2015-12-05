@@ -31,9 +31,10 @@
 /**
  * @ignore
  */
-var dataCommon = require('./data-common'),
-    async = require('async'),
-    util = require('util');
+var dataCommon = require("./data-common"),
+    types = require("./types"),
+    async = require("async"),
+    util = require("util");
 
 /**
  * Validates data object's state based on any unique constraint defined.
@@ -44,140 +45,186 @@ function DataStateValidatorListener() {
     //
 }
 /**
- *
- * @param {DataEventArgs|*} e
- * @param  {function(Error=)} callback
+ * @param {*} obj
+ * @param {Function} callback
+ * @private
+ */
+function mapKey_(obj, callback) {
+    var self = this;
+    if (typeof obj === 'undefined' || obj == null) {
+        return callback(new Error('Object cannot be null at this context'));
+    }
+    if (self.primaryKey && obj[self.primaryKey]) {
+        //already mapped
+        return callback(null, true);
+    }
+    //get unique constraints
+    var arr = self.constraintCollection.filter(function(x) { return x.type==='unique' }), objectFound=false;
+    if (arr.length==0) {
+        //do nothing and exit
+        return callback();
+    }
+    async.eachSeries(arr, function(constraint, cb) {
+        try {
+            if (objectFound) {
+                return cb();
+            }
+            /**
+             * @type {DataQueryable}
+             */
+            var q;
+            if (util.isArray(constraint.fields)) {
+                for (var i = 0; i < constraint.fields.length; i++) {
+                    var attr = constraint.fields[i];
+                    if (!obj.hasOwnProperty(attr)) {
+                        cb();
+                        return;
+                    }
+                    var value = obj[attr];
+                    //check field mapping
+                    var mapping = self.inferMapping(attr);
+                    if (!dataCommon.isNullOrUndefined(mapping)) {
+                        if (typeof obj[attr] === 'object') {
+                            value=obj[attr][mapping.parentField];
+                        }
+                    }
+                    if (dataCommon.isNullOrUndefined(value))
+                        value = null;
+                    if (q)
+                        q.and(attr).equal(value);
+                    else
+                        q = self.where(attr).equal(value);
+                }
+                if (dataCommon.isNullOrUndefined(q)) {
+                    cb();
+                }
+                else {
+                    q.silent().flatten().select(self.primaryKey).value(function(err, result) {
+                        if (err) {
+                            cb(err);
+                        }
+                        else if (result) {
+                            //set primary key value
+                            obj[self.primaryKey] = result;
+                            //object found
+                            objectFound=true;
+                            cb();
+                        }
+                        else {
+                            cb();
+                        }
+                    });
+                }
+            }
+            else {
+                cb();
+            }
+        }
+        catch(e) {
+            cb(e);
+        }
+    }, function(err) {
+        callback(err, objectFound);
+    });
+}
+
+/**
+ * Occurs before creating or updating a data object and validates object state.
+ * @param {DataEventArgs|*} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 DataStateValidatorListener.prototype.beforeSave = function(e, callback) {
     try {
         if (dataCommon.isNullOrUndefined(e)) {
-            callback();
-            return;
-        }
-        if (dataCommon.isNullOrUndefined(e.state)) {e.state = 1; }
-        //if state is different than inserted then do nothing and return
-        if (e.state!=1) {
             return callback();
         }
+        if (dataCommon.isNullOrUndefined(e.state)) {e.state = 1; }
 
         var model = e.model, target = e.target;
         //if model or target is not defined do nothing and exit
         if (dataCommon.isNullOrUndefined(model) || dataCommon.isNullOrUndefined(target)) {
             return callback();
         }
+        //get key state
+        var keyState = (model.primaryKey && target[model.primaryKey]);
         //if target has $state property defined, set this state and exit
-        if (!dataCommon.isNullOrUndefined(target.$state)) {
-            //set state
-            e.state = target.$state;
-            //and exit
-            return callback();
+        if (e.target.$state) {
+            e.state = e.target.$state;
         }
-        if (!dataCommon.isNullOrUndefined(model.primaryKey)) {
-            if (!dataCommon.isNullOrUndefined(target[model.primaryKey])) {
-                //The primary key exists, so do nothing
-                e.state = 2;
+        //if object has primary key
+        else if (keyState) {
+            e.state = 2
+        }
+        //if state is Update (2)
+        if (e.state == 2) {
+            //if key exists exit
+            if (keyState)
                 return callback();
+            else {
+                return mapKey_.call(model, target, function(err) {
+                    if (err) { return callback(err); }
+                    //if object is mapped with a key exit
+                    return callback();
+                });
             }
         }
-        //get constraint collection (from both model and base model)
-        var arr = model.constraintCollection.filter(function(x) { return x.type==='unique' }), context = model.context, objectFound=false;
-        if (arr.length==0) {
-            //do nothing and exit
+        else if (e.state == 1) {
+            if (!keyState) {
+                return mapKey_.call(model, target, function(err, result) {
+                    if (err) { return callback(err); }
+                    if (result) {
+                        //set state to Update
+                        e.state = 2
+                    }
+                    return callback();
+                });
+            }
+            //otherwise do nothing
             return callback();
         }
-        async.eachSeries(arr, function(constraint, cb) {
-            try {
-                if (objectFound) {
-                    return cb();
-                }
-                /**
-                 * @type {DataQueryable}
-                 */
-                var q;
-                if (util.isArray(constraint.fields)) {
-                    for (var i = 0; i < constraint.fields.length; i++) {
-                        var attr = constraint.fields[i];
-                        if (!e.target.hasOwnProperty(attr)) {
-                            cb();
-                            return;
-                        }
-                        var value = e.target[attr];
-                        //check field mapping
-                        var mapping = e.model.inferMapping(attr);
-                        if (!dataCommon.isNullOrUndefined(mapping)) {
-                            if (typeof e.target[attr] === 'object') {
-                                value=e.target[attr][mapping.parentField];
-                            }
-                        }
-                        if (dataCommon.isNullOrUndefined(value))
-                            value = null;
-                        if (q)
-                            q.and(attr).equal(value);
-                        else
-                            q = e.model.where(attr).equal(value);
-                    }
-                    if (dataCommon.isNullOrUndefined(q)) {
-                        cb();
-                    }
-                    else {
-                        if (typeof context.unattended === 'function') {
-                            //find object (in unattended model)
-                            context.unattended(function(ccb) {
-                                q.silent().flatten().select([model.primaryKey]).first(function(err, result) {
-                                    if (err) {
-                                        ccb(err);
-                                    }
-                                    else if (result) {
-                                        e.target[model.primaryKey] = result[model.primaryKey];
-                                        //change state (updated)
-                                        e.state = 2;
-                                        //object found
-                                        objectFound = true;
-                                        ccb();
-                                    }
-                                    else {
-                                        ccb();
-                                    }
-                                });
-                            },function(err) {
-                                cb(err);
-                            });
-                        }
-                        else {
-                            q.silent().flatten().select([model.primaryKey]).first(function(err, result) {
-                                if (err) {
-                                    cb(err);
-                                }
-                                else if (result) {
-                                    //set primary key value
-                                    e.target[model.primaryKey] = result[model.primaryKey];
-                                    //change state (updated)
-                                    e.state = 2;
-                                    //object found
-                                    objectFound=true;
-                                    cb();
-                                }
-                                else {
-                                    cb();
-                                }
-                            });
-                        }
-                    }
-                }
-                else {
-                    cb();
-                }
-            }
-            catch(e) {
-                cb(e);
-            }
-        }, function(err) {
-            callback(err);
-        });
+        else {
+            return callback();
+        }
+
     }
     catch(er) {
         callback(er);
     }
+};
+/**
+ * Occurs before removing a data object and validates object state.
+ * @param {DataEventArgs|*} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ */
+DataStateValidatorListener.prototype.beforeRemove = function(e, callback) {
+    //validate event arguments
+    if (dataCommon.isNullOrUndefined(e)) { return callback(); }
+    //validate state (the default is Delete=4)
+    if (dataCommon.isNullOrUndefined(e.state)) {e.state = 4; }
+    var model = e.model, target = e.target;
+    //if model or target is not defined do nothing and exit
+    if (dataCommon.isNullOrUndefined(model) || dataCommon.isNullOrUndefined(target)) {
+        return callback();
+    }
+    //if object primary key is already defined
+    if (model.primaryKey && target[model.primaryKey]) {
+            e.state = 4;
+            //do nothing and exist
+            return callback();
+    }
+    mapKey_.call(model, target, function(err, result) {
+        if (err) {
+            return callback(err);
+        }
+        else if (result) {
+            //continue and exit
+            return callback();
+        }
+        else {
+            callback(new types.DataException('EFOUND', 'The target object cannot be found.',null, model.name));
+        }
+    });
+
 };
 
 if (typeof exports !== 'undefined')

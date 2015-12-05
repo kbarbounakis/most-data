@@ -383,6 +383,7 @@ DataObject.prototype.property = function(name) {
 /**
  * @param {string} name - The name of the attribute
  * @param {Function} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
+ * @private
  */
 function attrOf_(name, callback) {
     var self = this, model = this.$$model,
@@ -573,6 +574,7 @@ DataObject.prototype.query = function(attr)
 /**
  * @param {DataContext} context - The underlying data context
  * @param {Function} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @private
  */
 function save_(context, callback) {
     var self = this, type = self.$$type;

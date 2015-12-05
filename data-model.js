@@ -50,7 +50,8 @@ var string = require('string'),
     DataObjectAssociationListener = dataAssociations.DataObjectAssociationListener,
     DataField = types.DataField,
     DataModelView = require('./data-model-view').DataModelView,
-    DataFilterResolver = require('./data-filter-resolver').DataFilterResolver;
+    DataFilterResolver = require('./data-filter-resolver').DataFilterResolver,
+    Q = require("q");
 
 /**
  * @class EmptyQueryExpression
@@ -195,6 +196,7 @@ function EmptyQueryExpression() {
  * @property {boolean} abstract - Gets or sets a boolean that indicates whether current model is an abstract model or not.
  * @property {string} version - Gets or sets the version of this data model.
  * @property {string} type - Gets or sets an internal type for this model.
+ * @property {DataCachingType|string} caching - Gets or sets a string that indicates the caching type for this model. The default value is none.
  * @property {string} inherits - Gets or sets a string that contains the model that is inherited by the current model.
  * @property {DataField[]} fields - Gets or sets an array that represents the collection of model fields.
  * @property {DataModelEventListener[]} eventListeners - Gets or sets an array that represents the collection of model listeners.
@@ -217,6 +219,7 @@ function DataModel(obj) {
     this.abstract = false;
     this.version = '0.1';
     this.type = 'data';
+    this.caching = 'none';
     this.fields = [];
     this.eventListeners = [];
     this.constraints = [];
@@ -441,6 +444,7 @@ DataModel.prototype.clone = function(context) {
     var perms = require('./data-permission');
     //1. State validator listener
     this.on('before.save', DataStateValidatorListener.prototype.beforeSave);
+    this.on('before.remove', DataStateValidatorListener.prototype.beforeRemove);
     //2. Default values Listener
     this.on('before.save', DefaultValueListener.prototype.beforeSave);
     //3. Calculated values listener
@@ -843,7 +847,7 @@ DataModel.prototype.take = function(n, callback) {
 /**
  * Returns an instance of DataResultSet of the current model.
  * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
- * @returns {Deferred|*} If callback parameter is missing then returns a Deferred object.
+ * @returns {Promise<T>|*} If callback parameter is missing then returns a Promise object.
  * @deprecated Use DataModel.asQueryable().list().
  * @example
  context.model('User').list(function(err, result) {
@@ -859,7 +863,7 @@ DataModel.prototype.list = function(callback) {
 /**
  * Returns the first item of the current model.
  * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
- * @returns {Deferred|*} If callback parameter is missing then returns a Deferred object.
+ * @returns {Promise<T>|*} If callback parameter is missing then returns a Promise object.
  * @deprecated Use DataModel.asQueryable().first().
  * @example
  context.model('User').first(function(err, result) {
@@ -892,7 +896,7 @@ DataModel.prototype.get = function(key, callback) {
 /**
  * Returns the last item of the current model based.
  * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
- * @returns {Deferred|*} If callback parameter is missing then returns a Deferred object.
+ * @returns {Promise<T>|*} If callback parameter is missing then returns a Promise object.
  * @example
  context.model('User').last(function(err, result) {
     if (err) { return done(err); }
@@ -943,7 +947,7 @@ DataModel.prototype.orderByDescending = function(attr) {
  * Returns the maximum value for a field.
  * @param {string} attr - A string that represents the name of the field.
  * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
- * @returns {Deferred|*} If callback parameter is missing then returns a Deferred object.
+ * @returns {Promise<T>|*} If callback parameter is missing then returns a Promise object.
  */
 DataModel.prototype.max = function(attr, callback) {
     var result = new DataQueryable(this);
@@ -954,7 +958,7 @@ DataModel.prototype.max = function(attr, callback) {
  * Returns the minimum value for a field.
  * @param {string} attr - A string that represents the name of the field.
  * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
- * @returns {Deferred|*} If callback parameter is missing then returns a Deferred object.
+ * @returns {Promise<T>|*} If callback parameter is missing then returns a Promise object.
  */
 DataModel.prototype.min = function(attr, callback) {
     var result = new DataQueryable(this);
@@ -1329,13 +1333,14 @@ DataModel.prototype.new = function(obj)
 {
     return this.cast(obj);
 };
+
 /**
- * Saves the given object or array of objects
- * @param obj {*|Array}
- * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ *
+ * @param {*|Array} obj
+ * @param {Function} callback
+ * @private
  */
-DataModel.prototype.save = function(obj, callback)
-{
+function save_(obj, callback) {
     var self = this;
     if (typeof obj=='undefined' || obj == null) {
         callback.call(self, null);
@@ -1343,7 +1348,7 @@ DataModel.prototype.save = function(obj, callback)
     }
     //ensure migration
     self.migrate(function(err) {
-       if (err) { callback(err); return; }
+        if (err) { callback(err); return; }
         //do save
         var arr = [];
         if (util.isArray(obj)) {
@@ -1376,7 +1381,36 @@ DataModel.prototype.save = function(obj, callback)
             callback.call(self, err, res);
         });
     });
+}
 
+/**
+ * Saves the given object or array of objects
+ * @param obj {*|Array}
+ * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @returns {Promise<T>|*} - If callback parameter is missing then returns a Promise object.
+ * @example
+ //save a new group (Sales)
+ var group = { "description":"Sales Users", "name":"Sales" };
+ context.model("Group").save(group).then(function() {
+        console.log('A new group was created with ID ' + group.id);
+        done();
+    }).catch(function(err) {
+        done(err);
+    });
+ */
+DataModel.prototype.save = function(obj, callback)
+{
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        save_.call(this, obj, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise;
+    }
+    else {
+        return save_.call(this, obj, callback);
+    }
 };
 /**
  * Infers the state of the given object.
@@ -1502,13 +1536,14 @@ function saveBaseObject_(obj, callback) {
                     //get updated object
                     self.recast(e.target, target, function(err) {
                         if (err) {
+                            //and return error
                             callback.call(self, err);
                         }
                         else {
                             //execute after update events
                             self.emit('after.save',e, function(err) {
-                                //invoke callback
-                                callback.call(self, err, e.target);
+                                //and return
+                                return callback.call(self, err, e.target);
                             });
                         }
                     });
@@ -1596,73 +1631,98 @@ DataModel.prototype.superTypes = function() {
 };
 
 /**
- * Performs an insert operation of the given object or array of objects
- * @param obj {*|Array} The item or the array of items to insert
- * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @param {*|Array} obj
+ * @param {Function} callback
+ * @private
  */
-DataModel.prototype.insert = function(obj, callback)
-{
-    var self = this, key = self.key();
-    callback = callback || function() {};
-    if ((obj==null) || obj === undefined) {
-        callback.call(self, null);
-    }
-
-    var setState = function(x, state) {
-        Object.defineProperty(x,'$state',{
-            get: function() {
-                return state;
-            }
-            ,configurable:false,enumerable:false
-        });
-    };
-    if (!util.isArray(obj))
-    {
-        if (key.type=='Counter') {
-            if (obj[key])
-                callback.call(self,new Error('Invalid object state. Primary key cannot be defined while an object is going to be inserted.'));
-        }
-        setState(obj, 1);
-    }
-    else {
-        obj.forEach(function(x) {
-            setState(x, 1);
-        });
-    }
-    this.save(obj, callback);
-};
-
-/**
- * Updates an item or an array of items
- * @param obj {*|Array} - The item or the array of items to update
- * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
- */
-DataModel.prototype.update = function(obj, callback)
-{
-    var self = this, key = self.key();
+function update_(obj, callback) {
+    var self = this;
     //ensure callback
     callback = callback || function() {};
     if ((obj==null) || obj === undefined) {
         callback.call(self, null);
     }
-    //todo::validate state for each object
-    if (!util.isArray(obj))
-    {
-        if (key.type=='Counter') {
-            if (!obj[key])
-                callback.call(self,new Error('Invalid object state. Primary key cannot be empty while an object is going to be updated.'));
-        }
+    //set state
+    if (util.isArray(obj)) {
+        obj.forEach(function(x) {x['$state'] = 2; })
     }
-    this.save(obj, callback);
+    else {
+        obj['$state'] = 2;
+    }
+    self.save(obj, callback);
+}
+
+/**
+ * Updates an item or an array of items
+ * @param obj {*|Array} - The item or the array of items to update
+ * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @returns {Promise<T>|*} - If callback parameter is missing then returns a Promise object.
+ */
+DataModel.prototype.update = function(obj, callback)
+{
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        update_.call(this, obj, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise;
+    }
+    else {
+        return update_.call(this, obj, callback);
+    }
 };
 
 /**
- * Deleted the given object or array of objects
- * @param obj {*|Array} The item or the array of items to delete
- * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @param {*|Array} obj
+ * @param {Function} callback
+ * @private
  */
-DataModel.prototype.remove = function(obj, callback)
+function insert_(obj, callback) {
+    var self = this;
+    //ensure callback
+    callback = callback || function() {};
+    if ((obj==null) || obj === undefined) {
+        callback.call(self, null);
+    }
+    //set state
+    if (util.isArray(obj)) {
+        obj.forEach(function(x) {x['$state'] = 1; })
+    }
+    else {
+        obj['$state'] = 1;
+    }
+    self.save(obj, callback);
+}
+
+/**
+ * Inserts an item or an array of items
+ * @param obj {*|Array} - The item or the array of items to update
+ * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @returns {Promise<T>|*} - If callback parameter is missing then returns a Promise object.
+ */
+DataModel.prototype.insert = function(obj, callback)
 {
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        insert_.call(this, obj, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise;
+    }
+    else {
+        return insert_.call(this, obj, callback);
+    }
+};
+
+/**
+ *
+ * @param {*|Array} obj
+ * @param {Function} callback
+ * @private
+ */
+function remove_(obj, callback) {
     var self = this;
     if (obj==null)
     {
@@ -1683,7 +1743,7 @@ DataModel.prototype.remove = function(obj, callback)
         var db = self.context.db;
         db.executeInTransaction(function(cb) {
             async.eachSeries(arr, function(item, removeCallback) {
-                removeSingleObject_.call(self, item, function(err, result) {
+                removeSingleObject_.call(self, item, function(err) {
                     if (err) {
                         removeCallback.call(self, err);
                         return;
@@ -1701,6 +1761,35 @@ DataModel.prototype.remove = function(obj, callback)
             callback.call(self, err);
         });
     });
+}
+
+/**
+ * Deletes the given object or array of objects
+ * @param obj {*|Array} The item or the array of items to delete
+ * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @returns {Promise<T>|*} - If callback parameter is missing then returns a Promise object.
+ * @example
+ //remove group (Sales)
+ var group = { "name":"Sales" };
+ context.model("Group").remove(group).then(function() {
+        done();
+    }).catch(function(err) {
+        done(err);
+    });
+ */
+DataModel.prototype.remove = function(obj, callback)
+{
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        remove_.call(this, obj, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise;
+    }
+    else {
+        return remove_.call(this, obj, callback);
+    }
 };
 
 /**
@@ -1722,14 +1811,12 @@ DataModel.prototype.remove = function(obj, callback)
     var e = {
         model: self,
         target: obj,
-        state:4
+        state: 4
     };
-
     //register data association listener
     self.once('before.remove', DataObjectAssociationListener.prototype.afterSave);
-
     //execute before update events
-    self.emit('before.remove', e, function(err, result) {
+    self.emit('before.remove', e, function(err) {
         //if an error occured
         if (err) {
             //invoke callback with error
@@ -1762,6 +1849,7 @@ DataModel.prototype.remove = function(obj, callback)
             });
         }
     });
+
 }
 
 /**

@@ -485,6 +485,8 @@ var FloatRegex =/^[+-]?\d+(\.\d+)?$/g;
  * @param {string=} code - A string that represents an error code
  * @param {string=} message - The error message
  * @param {string=} innerMessage - The error inner message
+ * @param {string=} model - The target model
+ * @param {string=} field - The target field
  * @constructor
  * @property {string} code - A string that represents an error code e.g. EDATA
  * @property {string} message -  The error message.
@@ -492,13 +494,78 @@ var FloatRegex =/^[+-]?\d+(\.\d+)?$/g;
  * @property {number} status - A number that represents an error status. This error status may be used for throwing the approriate HTTP error.
  * @augments Error
  */
-function DataException(code, message, innerMessage) {
+function DataException(code, message, innerMessage, model, field) {
     this.code  = code || 'EDATA';
+    if (model)
+        this.model = model;
+    if (field)
+        this.field = field;
     this.message = message || 'A general data error occured.';
-    if (typeof innerMessage !== 'undefined')
+    if (innerMessage)
         this.innerMessage = innerMessage;
 }
 util.inherits(DataException, Error);
+
+/**
+ * @classdesc Extends Error object for throwing not null exceptions.
+ * @class
+ * @param {string=} message - The error message
+ * @param {string=} innerMessage - The error inner message
+ * @constructor
+ * @property {string} code - A string that represents an error code. The default error code is ENULL.
+ * @property {string} message -  The error message.
+ * @property {string} innerMessage - The error inner message.
+ * @property {number} status - A number that represents an error status. This error status may be used for throwing the approriate HTTP error. The default status is 409 (Conflict)
+ * @property {string} model - The target model name
+ * @property {string} field - The target field name
+ * @augments Error
+ */
+function NotNullException(message, innerMessage, model, field) {
+    NotNullException.super_.call(this, 'ENULL', message || 'A value is required', innerMessage, model, field);
+    this.status = 409;
+}
+util.inherits(NotNullException, DataException);
+
+/**
+ * @classdesc Extends Error object for throwing not found exceptions.
+ * @class
+ * @param {string=} message - The error message
+ * @param {string=} innerMessage - The error inner message
+ * @constructor
+ * @property {string} code - A string that represents an error code. The default error code is EFOUND.
+ * @property {string} message -  The error message.
+ * @property {string} innerMessage - The error inner message.
+ * @property {number} status - A number that represents an error status. This error status may be used for throwing the approriate HTTP error. The default status is 404 (Conflict)
+ * @property {string} model - The target model name
+ * @augments Error
+ */
+function DataNotFoundException(message, innerMessage, model) {
+    DataNotFoundException.super_.call(this, 'EFOUND', message || 'The requested data was not found.', innerMessage, model);
+    this.status = 404;
+}
+util.inherits(DataNotFoundException, DataException);
+
+/**
+ * @classdesc Extends Error object for throwing not null exceptions.
+ * @class
+ * @param {string=} message - The error message
+ * @param {string=} innerMessage - The error inner message
+ * @constructor
+ * @property {string} code - A string that represents an error code. The default error code is ENULL.
+ * @property {string} message -  The error message.
+ * @property {string} innerMessage - The error inner message.
+ * @property {number} status - A number that represents an error status. This error status may be used for throwing the approriate HTTP error. The default status is 409 (Conflict)
+ * @property {string} model - The target model name
+ * @property {string} constraint - The target constraint name
+ * @augments Error
+ */
+function UniqueConstraintException(message, innerMessage, model, constraint) {
+    UniqueConstraintException.super_.call(this, 'EUNQ', message || 'A unique constraint violated', innerMessage, model);
+    if (constraint)
+        this.constraint = constraint;
+    this.status = 409;
+}
+util.inherits(UniqueConstraintException, DataException);
 
 /**
  * @classdesc Represents an access denied data exception.
@@ -1102,8 +1169,30 @@ var DataObjectState = {
     Delete:4
 };
 
+/**
+ * An enumeration of the available data caching types
+ * @enum {string}
+ */
+var DataCachingType = {
+    /**
+     * Data will never be cached (none)
+     */
+    None: 'none',
+    /**
+     * Data will always be cached (always)
+     */
+    Always: 'always',
+    /**
+     * Data will conditionally be cached (conditional)
+     */
+    Conditional: 'conditional'
+};
+
 var types =
 {
+    PrivilegeType:PrivilegeType,
+    DataObjectState:DataObjectState,
+    DataCachingType:DataCachingType,
     DataQueryableField: DataQueryableField,
     DataAdapter: DataAdapter,
     DataContext: DataContext,
@@ -1196,7 +1285,10 @@ var types =
         }
     },
     DataException:DataException,
+    NotNullException:NotNullException,
+    UniqueConstraintException:UniqueConstraintException,
     AccessDeniedException:AccessDeniedException,
+    DataNotFoundException:DataNotFoundException,
     DataField:DataField,
     DataResultSet:DataResultSet,
     DataModelEventListener:DataModelEventListener,

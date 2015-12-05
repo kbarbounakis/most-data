@@ -49,6 +49,7 @@ var util = require('util'),
  * @param {DataObject} obj
  * @param {String} name
  * @property {DataObject} parent Gets or sets the parent data object
+ * @ignore
  */
 function DataObjectRelation(obj, name)
 {

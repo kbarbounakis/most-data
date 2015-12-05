@@ -193,7 +193,12 @@ var dataCommon = {
      * @param {Error|string|{message:string,stack:string}|*} data
      */
     log:function(data) {
-        util.log(data);
+        if (data instanceof Error) {
+            console.log(data);
+        }
+        else {
+            util.log(data);
+        }
         if (data.stack) {
             util.log(data.stack);
         }

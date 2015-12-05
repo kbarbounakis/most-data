@@ -34,7 +34,9 @@
 var async = require('async'),
     dataCommon = require('./data-common'),
     util = require('util'),
-    dataCache = require('./data-cache');
+    types = require('./types');
+
+
 /**
  * @classdesc Represents an event listener for validating not nullable fields. This listener is automatically  registered in all data models.
  * @class
@@ -45,7 +47,7 @@ function NotNullConstraintListener() {
 }
 /**
  * Occurs before creating or updating a data object and validates not nullable fields.
- * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {DataEventArgs|*} e - An object that represents the event arguments passed to this operation.
  * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 NotNullConstraintListener.prototype.beforeSave = function(e, callback) {
@@ -65,7 +67,9 @@ NotNullConstraintListener.prototype.beforeSave = function(e, callback) {
         if ((((value == null) || (value===undefined))  && (e.state==1))
             || ((value == null) && (typeof value!=='undefined') && (e.state == 2)))
         {
-            cb(new Error(util.format('%s property of %s model cannot be null.', attr.title || name, e.model.title || e.model.name)));
+            var er = new types.NotNullException('A value is required.', null, e.model.name, attr.name);
+            if (process.env.NODE_ENV==='development') { dataCommon.log(er); }
+            return cb(er);
         }
         else
             cb(null);
@@ -84,7 +88,7 @@ function UniqueContraintListener() {
 }
 /**
  * Occurs before creating or updating a data object and validates the unique constraints of data model.
- * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {DataEventArgs|*} e - An object that represents the event arguments passed to this operation.
  * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 UniqueContraintListener.prototype.beforeSave = function(e, callback) {
@@ -155,16 +159,19 @@ UniqueContraintListener.prototype.beforeSave = function(e, callback) {
                     }
                     //if object already exists
                     if (objectExists) {
+                        var er;
                         //so throw exception
                         if (constraint.description) {
-                            cb(new Error(constraint.description));
+                            er = new types.UniqueConstraintException(constraint.description, null, e.model.name);
                         }
                         else {
-                            cb(new Error("Object already exists. Operation is not valid due to a unique constraint."))
+                            er = new types.UniqueConstraintException("Object already exists. A unique constraint violated.", null, e.model.name);
                         }
+                        if (process.env.NODE_ENV==='development') { dataCommon.log(er); }
+                        return cb(er);
                     }
                     else {
-                        cb(null);
+                        return cb();
                     }
                 }
             });
@@ -268,45 +275,112 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
 
 
 /**
+ * @classdesc Represents a data caching listener which is going to be used while executing queries against
+ * data models where data caching is enabled.
  * @class
  * @constructor
- * @ignore
  */
-function DataModelLookupCachingListener() {
+function DataCachingListener() {
     //
 }
 /**
- *
- * @param {DataEventArgs} e
- * @param {Function} callback
+ * Occurs before executing an query expression, validates data caching configuration and gets cached data.
+ * @param {DataEventArgs|*} event - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
-DataModelLookupCachingListener.prototype.afterSave = function(e, callback) {
+DataCachingListener.prototype.beforeExecute = function(event, callback) {
     try {
-        if (dataCommon.isNullOrUndefined(e.model)) {
-            callback();
-            return;
+        var cache = require('./data-cache');
+        if (typeof event === 'undefined' || event == null) {
+            return callback();
         }
-        //get item key
-        var key = '/' + e.model.name + '/lookup';
-        if (dataCache.current) {
-            //remove item by key
-            dataCache.current.remove(key);
+        if (event.query && event.query.$select) {
+            //create hash
+            var hash;
+            if (event.emitter && typeof event.emitter.toMD5 === 'function') {
+                //get hash from emitter (DataQueryable)
+                hash = event.emitter.toMD5();
+            }
+            else {
+                //else calculate hash
+                hash = dataCommon.md5({ query: event.query });
+            }
+            //format cache key
+            var key = '/' + event.model.name + '/?query=' + hash;
+            //calculate execution time (debug)
+            var logTime = new Date().getTime();
+            //query cache
+            cache.current.get(key, function(err, result) {
+                if (err) {
+                    dataCommon.log('DataCacheListener: An error occured while trying to get cached data.');
+                    dataCommon.log(err);
+                }
+                if (typeof result !== 'undefined') {
+                    //delete expandables
+                    if (event.emitter) {
+                        delete event.emitter.$expand;
+                    }
+                    //set cached flag
+                    event['cached'] = true;
+                    //set execution default
+                    event['result'] = result;
+                    //log execution time (debug)
+                    try {
+                        if (process.env.NODE_ENV==='development') {
+                            dataCommon.log(util.format('Cache (Execution Time:%sms):%s', (new Date()).getTime()-logTime, key));
+                        }
+                    }
+                    catch(err) { }
+                    //exit
+                    return callback();
+                }
+                else {
+                    //do nothing and exit
+                    return callback();
+                }
+            });
         }
-        callback();
+        else {
+            return callback();
+        }
     }
-    catch (e) {
-        if (process.NODE_ENV==='development')
-            dataCommon.log(e);
-        callback();
+    catch (err) {
+        return callback(err);
     }
 };
 /**
- *
- * @param {DataEventArgs} e
- * @param {Function} callback
+ * Occurs before executing an query expression, validates data caching configuration and stores data to cache.
+ * @param {DataEventArgs|*} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
-DataModelLookupCachingListener.prototype.afterRemove = function(e, callback) {
-    DataModelLookupCachingListener.prototype.afterSave(e, callback);
+DataCachingListener.prototype.afterExecute = function(event, callback) {
+    try {
+        var cache = require('./data-cache');
+        if (event.query && event.query.$select) {
+            if (typeof event.result !== 'undefined' && !event.cached) {
+                //create hash
+                var hash;
+                if (event.emitter && typeof event.emitter.toMD5 === 'function') {
+                    //get hash from emitter (DataQueryable)
+                    hash = event.emitter.toMD5();
+                }
+                else {
+                    //else calculate hash
+                    hash = dataCommon.md5({ query: event.query });
+                }
+                var key = '/' + event.model.name + '/?query=' + hash;
+                if (process.env.NODE_ENV==='development') {
+                    dataCommon.debug('DataCacheListener: Setting data to cache [' + key + ']');
+                }
+                cache.current.add(key, event.result);
+                return callback();
+            }
+        }
+        return callback();
+    }
+    catch(err) {
+        return callback(err);
+    }
 };
 
 
@@ -320,7 +394,7 @@ function DefaultValueListener() {
 }
 /**
  * Occurs before creating or updating a data object and calculates default values with the defined value expression.
- * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {DataEventArgs|*} e - An object that represents the event arguments passed to this operation.
  * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 DefaultValueListener.prototype.beforeSave = function(e, callback) {
@@ -422,7 +496,7 @@ if (typeof exports !== 'undefined')
         NotNullConstraintListener:NotNullConstraintListener,
         UniqueContraintListener:UniqueContraintListener,
         CalculatedValueListener:CalculatedValueListener,
-        DataModelLookupCachingListener:DataModelLookupCachingListener,
+        DataCachingListener:DataCachingListener,
         DefaultValueListener:DefaultValueListener
     };
 }

@@ -233,9 +233,6 @@ DataCache.prototype.get = function(key, callback) {
  * @private
  */
 var dataCache = {
-    /**
-     * @constructs DataCache
-     */
     DataCache:DataCache
 };
 /**
