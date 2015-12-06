@@ -38,6 +38,8 @@ var dataCache = require('./data-cache'),
 /**
  * @class
  * @constructor
+ * @ignore
+ * @deprecated
  */
 function DataObjectCachingListener() {
     //

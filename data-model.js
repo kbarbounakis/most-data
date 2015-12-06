@@ -429,7 +429,7 @@ DataModel.prototype.clone = function(context) {
 
     var CalculatedValueListener = dataListeners.CalculatedValueListener,
         DefaultValueListener = dataListeners.DefaultValueListener,
-        DataObjectCachingListener = require('./data-object-caching-listener').DataObjectCachingListener,
+        DataCachingListener = dataListeners.DataCachingListener,
         DataStateValidatorListener = require('./data-state-validator').DataStateValidatorListener;
 
     //register system event listeners
@@ -451,14 +451,20 @@ DataModel.prototype.clone = function(context) {
     this.on('before.save', CalculatedValueListener.prototype.beforeSave);
     //before execute
     this.on('before.execute', perms.DataPermissionEventListener.prototype.beforeExecute);
+
+    //register before execute caching
+    if (this.caching=='always' || this.caching=='conditional') {
+        this.on('before.execute', DataCachingListener.prototype.beforeExecute);
+    }
+    //register after execute caching
+    if (this.caching=='always' || this.caching=='conditional') {
+        this.on('after.execute', DataCachingListener.prototype.afterExecute);
+    }
+
     //before save (validate permissions)
     this.on('before.save', perms.DataPermissionEventListener.prototype.beforeSave);
     //before remove (validate permissions)
     this.on('before.remove', perms.DataPermissionEventListener.prototype.beforeRemove);
-    //after save (clear caching)
-    this.on('after.save', DataObjectCachingListener.prototype.afterSave);
-    //after remove (clear caching)
-    this.on('after.remove', DataObjectCachingListener.prototype.afterRemove);
     /**
      * change:8-Jun 2015
      * description: Set lookup default listeners as obsolete.

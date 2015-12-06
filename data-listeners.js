@@ -276,7 +276,48 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
 
 /**
  * @classdesc Represents a data caching listener which is going to be used while executing queries against
- * data models where data caching is enabled.
+ * data models where data caching is enabled. This listener is registered by default.
+ <p>
+      Data caching may be disabled when <a href="DataModel.html">DataModel</a>.caching property is set to 'none'. This is the default behaviour of a data model.
+ </p>
+ <pre class="prettyprint"><code>
+ {
+     "name": "Order", ... , "caching":"none"
+     ...
+ }
+ </code></pre>
+ <p>
+ Data caching may be used when <a href="DataModel.html">DataModel</a>.caching property is set to 'always'.
+ </p>
+ <pre class="prettyprint"><code>
+ {
+     "name": "OrderStatus", ... , "caching":"always"
+     ...
+ }
+ </code></pre>
+ <p>
+ Data caching may be conditionally enabled when <a href="DataModel.html">DataModel</a>.caching property is set to 'conditional'.
+ </p>
+ <pre class="prettyprint"><code>
+ {
+     "name": "Product", ... , "caching":"conditional"
+     ...
+ }
+ </code></pre>
+ <p>
+ In this case, data caching will be used when an instance of <a href="DataQueryable.html">DataQueryable</a> class requests data with cache equal to true:
+ </p>
+ <pre class="prettyprint"><code>
+    context.model('Product')
+            .where('category').is('Laptops')
+            .cache(true)
+            .orderBy('name')
+            .list().then(function(result) {
+                done(null, result);
+            }).catch(function(err) {
+                done(err);
+            });
+ </code></pre>
  * @class
  * @constructor
  */
@@ -293,6 +334,17 @@ DataCachingListener.prototype.beforeExecute = function(event, callback) {
         var cache = require('./data-cache');
         if (typeof event === 'undefined' || event == null) {
             return callback();
+        }
+        //validate caching
+        var caching = (event.model.caching==='always' || event.model.caching==='conditional');
+        if (!caching) { return callback(); }
+        //validate conditional caching
+        if (event.model.caching==='conditional') {
+            if (event.emitter && typeof event.emitter.data == 'function') {
+                if (!event.emitter.data('cache')) {
+                    return callback();
+                }
+            }
         }
         if (event.query && event.query.$select) {
             //create hash
@@ -356,6 +408,17 @@ DataCachingListener.prototype.beforeExecute = function(event, callback) {
 DataCachingListener.prototype.afterExecute = function(event, callback) {
     try {
         var cache = require('./data-cache');
+        //validate caching
+        var caching = (event.model.caching==='always' || event.model.caching==='conditional');
+        if (!caching) { return callback(); }
+        //validate conditional caching
+        if (event.model.caching==='conditional') {
+            if (event.emitter && typeof event.emitter.data == 'function') {
+                if (!event.emitter.data('cache')) {
+                    return callback();
+                }
+            }
+        }
         if (event.query && event.query.$select) {
             if (typeof event.result !== 'undefined' && !event.cached) {
                 //create hash

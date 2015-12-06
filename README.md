@@ -285,9 +285,33 @@ Use data object grouping and produce on-the-fly statistical results based on the
             done(err);
         });
 
-## Data model triggers
+## Data model listeners
 Data model definition may contains a collection of event listeners which represents a set of procedures that
 are going to be executed before and after inserting, updating or deleting a data object.
+
+    //Order.json schema
+    ...
+    "eventListeners": [
+        { "name":"New Order Notification", "type":"/app/controllers/new-order-listener" }
+    ]
+    ...
+
+    //new-order-listener.js listener
+    ...
+    exports.afterSave = function(event, callback) {
+        if (event.state!=1) { return callback(); }
+        //use most web mailer module
+        var mm = require("most-web-mailer");
+         mm.mailer(context).subject("New Order Notification")
+         .subject("New Order")
+         .template("new-order-notification")
+         .to("employee1@example.com")
+         .test()
+         .send(event.target, function(err, res) {
+            if (err) { return done(err); }
+            return done();
+        });
+    }
 
 ## Data model privileges
 Data model definition may contain a collection of privileges which should be given in users or groups.
@@ -301,8 +325,14 @@ User access rights will be validated during read, insert, update or delete data 
     ...
 
 ## Data caching
-The most-data module allows developers to use data caching mechanisms
-through [DataCache](https://docs.themost.io/most-data/DataQueryable.html) class.
+The most-data module allows developers to use data caching mechanisms while getting data.
+DataModel.caching property indicates whether data will be cached or not.
+
+    {
+        "name": "OrderStatus", "id": 9507079, "title": "Order Status", "hidden": false, "sealed": false,
+        "abstract": false, "version": "1.1", "caching":"always"
+    }
+
 
 ## Data seeding
 Data model definition may contain a seed property which is a collection of data items to be inserted
@@ -338,3 +368,154 @@ Data model definition may contain a seed property which is a collection of data 
 
 
 ## Data Connectors
+There are different data connectors for the most popular database engines:
+#### MOST Web Framework MySQL Adapter for connecting with MySQL Database Server
+
+Install the data adapter:
+
+    npm install most-data-mysql
+
+Append the adapter type in application configuration (app.json#adapterTypes):
+
+    ...
+     "adapterTypes": [
+     ...
+     { "name":"MySQL Data Adapter", "invariantName": "mysql", "type":"most-data-mysql" }
+     ...
+     ]
+
+Register an adapter in application configuration (app.json#adapters):
+
+    adapters: [
+     ...
+     { "name":"development", "invariantName":"mysql", "default":true,
+         "options": {
+           "host":"localhost",
+           "port":3306,
+           "user":"user",
+           "password":"password",
+           "database":"test"
+         }
+     }
+     ...
+     ]
+
+#### MOST Web Framework MSSQL Adapter for connecting with Microsoft SQL Database Server
+
+Install the data adapter:
+
+    npm install most-data-mssql
+
+Append the adapter type in application configuration (app.json#adapterTypes):
+
+    ...
+     "adapterTypes": [
+     ...
+     { "name":"MSSQL Data Adapter", "invariantName": "mssql", "type":"most-data-mssql" }
+     ...
+     ]
+
+Register an adapter in application configuration (app.json#adapters):
+
+    adapters: [
+     ...
+     { "name":"development", "invariantName":"mssql", "default":true,
+            "options": {
+              "server":"localhost",
+              "user":"user",
+              "password":"password",
+              "database":"test"
+            }
+        }
+     ...
+     ]
+
+#### MOST Web Framework PostgreSQL Adapter for connecting with PostgreSQL Database Server
+
+Install the data adapter:
+
+    npm install most-data-pg
+
+Append the adapter type in application configuration (app.json#adapterTypes):
+
+    ...
+     "adapterTypes": [
+     ...
+     { "name":"PostgreSQL Data Adapter", "invariantName": "postgres", "type":"most-data-pg" }
+     ...
+     ]
+
+Register an adapter in application configuration (app.json#adapters):
+
+    adapters: [
+     ...
+     { "name":"development", "invariantName":"postgres", "default":true,
+            "options": {
+              "host":"localhost",
+              "post":5432,
+              "user":"user",
+              "password":"password",
+              "database":"db"
+            }
+        }
+     ...
+     ]
+
+#### MOST Web Framework Oracle Adapter for connecting with Oracle Database Server
+
+Install the data adapter:
+
+    npm install most-data-oracle
+
+Append the adapter type in application configuration (app.json#adapterTypes):
+
+    ...
+     "adapterTypes": [
+     ...
+     { "name":"Oracle Data Adapter", "invariantName": "oracle", "type":"most-data-oracle" }
+     ...
+     ]
+
+Register an adapter in application configuration (app.json#adapters):
+
+    adapters: [
+     ...
+     { "name":"development", "invariantName":"oracle", "default":true,
+            "options": {
+              "host":"localhost",
+              "port":1521,
+              "user":"user",
+              "password":"password",
+              "service":"orcl",
+              "schema":"PUBLIC"
+            }
+        }
+     ...
+     ]
+
+#### MOST Web Framework SQLite Adapter for connecting with Sqlite Databases
+
+Install the data adapter:
+
+    npm install most-data-sqlite
+
+Append the adapter type in application configuration (app.json#adapterTypes):
+
+    ...
+     "adapterTypes": [
+     ...
+     { "name":"SQLite Data Adapter", "invariantName": "sqlite", "type":"most-data-sqlite" }
+     ...
+     ]
+
+Register an adapter in application configuration (app.json#adapters):
+
+    adapters: [
+     ...
+     { "name":"development", "invariantName":"sqlite", "default":true,
+            "options": {
+                database:"db/local.db"
+            }
+        }
+     ...
+     ]
