@@ -1,4 +1,6 @@
-# MOST Web Framework Data Module
+# MOST Web Framework ORM Module
+
+Visit [Documentation Home](https://docs.themost.io/most-data/)
 
 The most-data module is the main ORM module of [MOST Web Framework](https://github.com/kbarbounakis/most-web) applications and enables developers
 to write scalable data-driven applications and services.
@@ -114,7 +116,7 @@ triggers, associations, privileges, data views etc:
     }
 ## Automatic data model migration
 Each data model will be automatically migrated after its first use.
-DataModel.version property enables data model versioning:
+[DataModel](https://docs.themost.io/most-data/DataModel.html).version property enables data model versioning:
 
     {
         "name": "User", "id": 90, "title": "Users", "inherits": "Account", "hidden": false,
@@ -124,7 +126,7 @@ DataModel.version property enables data model versioning:
     }
 
 ## Data model inheritance
-MOST data models support model inheritance. DataModel.inherits property defines the inherited model of data model.
+MOST data models support model inheritance. [DataModel](https://docs.themost.io/most-data/DataModel.html).inherits property defines the inherited model of data model.
 
     //User model inherits Account model
     {
@@ -326,7 +328,7 @@ User access rights will be validated during read, insert, update or delete data 
 
 ## Data caching
 The most-data module allows developers to use data caching mechanisms while getting data.
-DataModel.caching property indicates whether data will be cached or not.
+[DataModel](https://docs.themost.io/most-data/DataModel.html).caching property indicates whether data will be cached or not.
 
     {
         "name": "OrderStatus", "id": 9507079, "title": "Order Status", "hidden": false, "sealed": false,

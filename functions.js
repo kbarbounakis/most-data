@@ -217,6 +217,7 @@ FunctionContext.prototype.me = FunctionContext.prototype.user;
 var functions = {
     /**
      * @namespace
+     * @ignore
      */
     classes: {
         FunctionContext: FunctionContext

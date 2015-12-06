@@ -294,6 +294,7 @@ var cfg = {
     },
     /**
      * @namespace
+     * @ignore
      */
     classes: {
         /**
