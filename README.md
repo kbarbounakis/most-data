@@ -1,6 +1,6 @@
 # MOST Web Framework ORM Module
 
-Visit [Documentation Home](https://docs.themost.io/most-data/)
+[Documentation Home](https://docs.themost.io/most-data/)
 
 The most-data module is the main ORM module of [MOST Web Framework](https://github.com/kbarbounakis/most-web) applications and enables developers
 to write scalable data-driven applications and services.
