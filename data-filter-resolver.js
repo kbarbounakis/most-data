@@ -74,7 +74,11 @@ DataFilterResolver.prototype.resolveMethod = function(name, args, callback) {
  */
 DataFilterResolver.prototype.me = function(callback) {
     var fx = new functions.classes.FunctionContext(this.context, this);
-    fx.user(callback);
+    fx.user().then(function(value) {
+        callback(null, value)
+    }).catch(function(err) {
+        callback(err);
+    });
 };
 /**
  * @param {Function} callback

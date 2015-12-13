@@ -33,7 +33,8 @@
  */
 var types = require('./types'),
     util = require('util'),
-    dataCommon = require('./data-common');
+    dataCommon = require('./data-common'),
+    Q = require("q");
 /**
  * @class FunctionContext
  * @param {DataContext|*=} context
@@ -91,20 +92,38 @@ FunctionContext.prototype.eval = function(expr, callback) {
     }
 
 };
-
-FunctionContext.prototype.now = function(callback) {
-    if (typeof callback === 'undefined') { return (new Date()); }
-    callback(null, new Date());
+/**
+ * @returns {Promise<T>|*}
+ */
+FunctionContext.prototype.now = function() {
+    var deferred = Q.defer();
+    process.nextTick(function() {
+        deferred.resolve(new Date());
+    });
+    return deferred.promise;
 };
-
-FunctionContext.prototype.today = function(callback) {
-    if (typeof callback === 'undefined') { return (new Date()).getDate(); }
-    callback(null, (new Date()).getDate());
+/**
+ * @returns {Promise<T>|*}
+ */
+FunctionContext.prototype.today = function() {
+    var deferred = Q.defer();
+    process.nextTick(function() {
+        deferred.resolve((new Date()).getDate());
+    });
+    return deferred.promise;
 };
-
-FunctionContext.prototype.newid = function(callback) {
-    callback = callback || function() {};
-    this.model.context.db.selectIdentity(this.model.sourceAdapter, this.model.primaryKey, callback);
+/**
+ * @returns {Promise<T>|*}
+ */
+FunctionContext.prototype.newid = function() {
+    var deferred = Q.defer();
+    this.model.context.db.selectIdentity(this.model.sourceAdapter, this.model.primaryKey, function(err, result) {
+        if (err) {
+            return deferred.reject(err);
+        }
+        deferred.resolve(result);
+    });
+    return deferred.promise;
 };
 
 var UUID_CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'.split('');
@@ -126,11 +145,21 @@ function newGuidInternal() {
         }
     }
     return uuid.join('');
-};
-
-FunctionContext.prototype.newGuid = function(callback) {
-    if (typeof callback === 'undefined') { return newGuidInternal(); }
-    callback(null, newGuidInternal());
+}
+/**
+ * @returns {Promise<T>|*}
+ */
+FunctionContext.prototype.newGuid = function() {
+    var deferred = Q.defer();
+    process.nextTick(function() {
+        try {
+            deferred.resolve(newGuidInternal());
+        }
+        catch(err) {
+            deferred.reject(err)
+        }
+    });
+    return deferred.promise;
 };
 
 
@@ -143,76 +172,104 @@ function randomIntSync (min, max) {
  * @param {number} max
  * @param {function(Error=,number=)=} callback
  */
-FunctionContext.prototype.int = function(min, max, callback) {
-    if (typeof callback === 'undefined') { return randomIntSync(min, max); }
-    callback(null, randomIntSync(min, max))
-};
-/***
- * Generates a random string with the specified length. The default length is 8.
- * @param {number} length
- * @param {function(Error=,String=)=} callback
- */
-FunctionContext.prototype.chars = function(length, callback) {
-
-    length = length || 8;
-    var chars = "abcdefghkmnopqursuvwxz2456789ABCDEFHJKLMNPQURSTUVWXYZ";
-    var str = "";
-    for(var i = 0; i < length; i++) {
-        str += chars.substr(randomIntSync(0, chars.length-1),1);
-    }
-    if (typeof callback === 'undefined') { return str; }
-    callback(null, str);
-};
-/***
- * Generates a random password with the specified length. The default length is 8.
- * @param {number} length
- * @param {function(Error=,String=)} callback
- */
-FunctionContext.prototype.password = function(length, callback) {
-    length = length || 8;
-    var chars = "abcdefghkmnopqursuvwxz2456789ABCDEFHJKLMNPQURSTUVWXYZ";
-    var str = "";
-    for(var i = 0; i < length; i++) {
-        str += chars.substr(randomIntSync(0, chars.length-1),1);
-    }
-    if (typeof callback === 'undefined') { return '{clear}' + str; }
-    callback(null, '{clear}' + str);
-};
-
-FunctionContext.prototype.user = function(callback) {
-    callback = callback || function() {};
-    var self = this, context = self.model.context;
-    var user = context.interactiveUser || context.user || { };
-    if (user['id']) {
-        return callback(null, user['id']);
-    }
-    var userModel = context.model('User'), parser, undefinedUser = null;
-    userModel.where('name').equal(user.name).silent().select(['id','name']).first(function(err, result) {
-        if (err) {
-            dataCommon.log(err);
-            //try to get undefined user
-            parser = types.parsers['parse' + userModel.field('id').type];
-            if (typeof parser === 'function')
-                undefinedUser = parser(null);
-            return callback(null, undefinedUser);
+FunctionContext.prototype.int = function(min, max) {
+    var deferred = Q.defer();
+    process.nextTick(function() {
+        try {
+            return deferred.resolve(randomIntSync(min, max));
         }
-        else if (dataCommon.isNullOrUndefined(result)) {
-            //try to get undefined user
-            parser = types.parsers['parse' + userModel.field('id').type];
-            if (typeof parser === 'function')
-                undefinedUser = parser(null);
-            return callback();
+        catch (err) {
+            deferred.reject(err);
         }
-        else {
-            callback(null, result.id);
-        }
+        deferred.resolve((new Date()).getDate());
     });
 };
 /**
- * Returns the current context user identifier
- * @param {Function} callback
+ * @param {number} length
+ * @returns {Promise<T>|*}
  */
-FunctionContext.prototype.me = FunctionContext.prototype.user;
+FunctionContext.prototype.chars = function(length) {
+
+    var deferred = Q.defer();
+    process.nextTick(function() {
+        try {
+            length = length || 8;
+            var chars = "abcdefghkmnopqursuvwxz2456789ABCDEFHJKLMNPQURSTUVWXYZ";
+            var str = "";
+            for(var i = 0; i < length; i++) {
+                str += chars.substr(randomIntSync(0, chars.length-1),1);
+            }
+            deferred.resolve(str);
+        }
+        catch (err) {
+            return deferred.reject(err);
+        }
+    });
+    return deferred.promise;
+};
+/**
+ * @param {number} length
+ * @returns {Promise<T>|*}
+ */
+FunctionContext.prototype.password = function(length) {
+    var deferred = Q.defer();
+    process.nextTick(function() {
+        try {
+            length = length || 8;
+            var chars = "abcdefghkmnopqursuvwxz2456789ABCDEFHJKLMNPQURSTUVWXYZ",
+                str = "";
+            for(var i = 0; i < length; i++) {
+                str += chars.substr(randomIntSync(0, chars.length-1),1);
+            }
+            if (typeof callback === 'undefined') { return '{clear}' + str; }
+            deferred.resolve('{clear}' + str);
+        }
+        catch (err) {
+            return deferred.reject(err);
+        }
+    });
+    return deferred.promise;
+};
+/**
+ * @returns {Promise<T>|*}
+ */
+FunctionContext.prototype.user = function() {
+    var self = this, context = self.model.context, deferred = Q.defer();
+    var user = context.interactiveUser || context.user || { };
+    process.nextTick(function() {
+        if (user.id) {
+            return deferred.resolve(user.id);
+        }
+        var userModel = context.model('User'), parser, undefinedUser = null;
+        userModel.where('name').equal(user.name).silent().select('id').first(function(err, result) {
+            if (err) {
+                dataCommon.log(err);
+                //try to get undefined user
+                parser = types.parsers['parse' + userModel.field('id').type];
+                if (typeof parser === 'function')
+                    undefinedUser = parser(null);
+                return deferred.resolve(undefinedUser);
+            }
+            else if (dataCommon.isNullOrUndefined(result)) {
+                //try to get undefined user
+                parser = types.parsers['parse' + userModel.field('id').type];
+                if (typeof parser === 'function')
+                    undefinedUser = parser(null);
+                return deferred.resolve(undefinedUser);
+            }
+            else {
+                return deferred.resolve(result.id);
+            }
+        });
+    });
+    return deferred.promise;
+};
+/**
+ * @returns {Promise<T>|*}
+ */
+FunctionContext.prototype.me = function() {
+    return this.user();
+};
 
 var functions = {
     /**

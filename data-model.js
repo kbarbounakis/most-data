@@ -2077,12 +2077,12 @@ DataModel.prototype.migrateInternal = function(db, callback) {
             callback(err);
         }
         else {
-            self.seedInternal(callback);
+            seedInternal_.call(self, callback);
         }
     });
 };
 
-DataModel.prototype.seedInternal = function(callback) {
+function seedInternal_(callback) {
     var self = this;
     try {
         /**
@@ -2105,19 +2105,7 @@ DataModel.prototype.seedInternal = function(callback) {
                 if (count==0) {
                     //set items state to new
                     items.forEach(function(x) {x.$state=1; });
-                    //check for unattended execution support
-                    if (typeof self.context.unattended === 'function') {
-                        self.context.unattended(function(cb) {
-                            //seed items
-                            self.save(items, cb);
-                        }, function(err) {
-                            callback(err);
-                        });
-                    }
-                    else {
-                        //seed items
-                        self.save(items, callback);
-                    }
+                    self.silent().save(items, callback);
                 }
                 else {
                     //model was already seeded

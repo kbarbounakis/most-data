@@ -199,6 +199,7 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
     var functions = require('./functions'),
         functionContext = functions.createContext();
     util._extend(functionContext, e);
+    functionContext.context = e.model.context;
     //find all attributes that have a default value
     var attrs = e.model.attributes.filter(function(x) { return (x.calculation!==undefined); });
     async.eachSeries(attrs, function(attr, cb) {
