@@ -77,14 +77,29 @@ FunctionContext.prototype.eval = function(expr, callback) {
         //todo::validate function name and execute sync functions without callback (e.g. randomIntSync(1,10))
         //check parameters (match[3])
         if (match[3].length==0) {
-            expr2eval = expr1.replace(/(fn:)\s?(.*?)\s?\((.*?)\)/, "(function() { this.$2(callback); });");
+            expr2eval = expr1.replace(/(fn:)\s?(.*?)\s?\((.*?)\)/, "(function() { return this.$2(); });");
         }
         else {
-            expr2eval = expr1.replace(/(fn:)\s?(.*?)\s?\((.*?)\)/, "(function() { this.$2($3,callback); });");
+            expr2eval = expr1.replace(/(fn:)\s?(.*?)\s?\((.*?)\)/, "(function() { return this.$2($3); });");
         }
         //evaluate expression
-        var f = eval(expr2eval);
-        f.call(this);
+        try {
+            var f = eval(expr2eval);
+            var value1 = f.call(this);
+            if (typeof value1 !== 'undefined' && value1 !=null && typeof value1.then === 'function') {
+                value1.then(function(result) {
+                    return callback(null, result);
+                }).catch(function(err) {
+                    callback(err);
+                });
+            }
+            else {
+                return callback(null, result);
+            }
+        }
+        catch(err) {
+            callback(err);
+        }
     }
     else {
         util.log(util.format('Cannot evaluate %s.', expr1));
