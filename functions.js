@@ -185,7 +185,7 @@ function randomIntSync (min, max) {
  * Generates a random integer value between the given minimum and maximum value
  * @param {number} min
  * @param {number} max
- * @param {function(Error=,number=)=} callback
+ * @returns {Promise<T>|*}
  */
 FunctionContext.prototype.int = function(min, max) {
     var deferred = Q.defer();
@@ -198,6 +198,7 @@ FunctionContext.prototype.int = function(min, max) {
         }
         deferred.resolve((new Date()).getDate());
     });
+    return deferred.promise;
 };
 /**
  * @param {number} length
