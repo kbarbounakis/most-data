@@ -427,6 +427,14 @@ DataModel.prototype.clone = function(context) {
  */
  function registerListeners_() {
 
+    //change: 2015-01-19
+    //description: change default max listeners (10) to 32 in order to avoid node.js message
+    // for reaching the maximum number of listeners
+    //author: k.barbounakis@gmail.com
+    if (typeof this.setMaxListeners === 'function') {
+        this.setMaxListeners(32);
+    }
+
     var CalculatedValueListener = dataListeners.CalculatedValueListener,
         DefaultValueListener = dataListeners.DefaultValueListener,
         DataCachingListener = dataListeners.DataCachingListener,
@@ -1990,7 +1998,7 @@ DataModel.prototype.migrate = function(callback)
                     tr(null);
                     return;
                 }
-                self.migrateInternal(db, function(err) {
+                migrateInternal_.call(self, db, function(err) {
                     if (err) { tr(err); return; }
                     tr(null);
                 });
@@ -2011,7 +2019,7 @@ DataModel.prototype.migrate = function(callback)
                         tr(null);
                         return;
                     }
-                    self.migrateInternal(db, function(err) {
+                    migrateInternal_.call(self, db, function(err) {
                         if (err) { tr(err); return; }
                         tr(null);
                     });
@@ -2027,12 +2035,8 @@ DataModel.prototype.migrate = function(callback)
         callback(err);
     });
 }
-/**
- * @param db {DataAdapter}
- * @param callback {Function}
- * @private
- */
-DataModel.prototype.migrateInternal = function(db, callback) {
+
+function migrateInternal_(db, callback) {
 
     var self = this;
     var view = self.viewAdapter, adapter = self.sourceAdapter;

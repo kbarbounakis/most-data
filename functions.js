@@ -237,7 +237,6 @@ FunctionContext.prototype.password = function(length) {
             for(var i = 0; i < length; i++) {
                 str += chars.substr(randomIntSync(0, chars.length-1),1);
             }
-            if (typeof callback === 'undefined') { return '{clear}' + str; }
             deferred.resolve('{clear}' + str);
         }
         catch (err) {
