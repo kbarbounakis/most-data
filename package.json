@@ -1,6 +1,6 @@
 {
   "name": "most-data",
-  "version": "0.2.15",
+  "version": "0.2.16",
   "description": "Most Web Framework Object Relational Mapping Module",
   "homepage": "http://www.most-framework.com/",
   "repository": {
@@ -31,7 +31,7 @@
     "node-cache": "^1.1.0",
     "q": "~1.1.1",
     "string": "1.5.1",
-    "moment":"2.8.4"
+    "moment": "2.8.4"
   },
   "main": "index",
   "scripts": {},
