@@ -232,16 +232,17 @@ DataConfiguration.prototype.model = function(name)
     var self = this, i;
     if (typeof name !== 'string')
         return null;
+    //first of all try to find if model definition is already in cache
+    if (typeof this.models[name] !== 'undefined')
+    //and return it
+        return this.models[name];
+    //otherwise try to find model with case insensitivity
     var keys = Object.keys(this.models), mr = new RegExp('^' + name + '$','i');
     for (i = 0; i < keys.length; i++) {
         mr.lastIndex=0;
         if (mr.test(keys[i]))
             return this.models[keys[i]];
     }
-    //try to find if model definition is already in cache
-    if (typeof this.models[name] !== 'undefined')
-        //and return it
-        return this.models[name];
     //otherwise open definition file
     var modelPath = path.join(process.cwd(),'config', 'models');
     if (!fs.existsSync(modelPath)) {

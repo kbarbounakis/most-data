@@ -28,7 +28,7 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-var dataCommon = require("common");
+var dataCommon = require("./data-common");
 /**
  * Occurs before creating or updating a data object and validates not nullable fields.
  * @param {DataEventArgs|*} event - An object that represents the event arguments passed to this operation.

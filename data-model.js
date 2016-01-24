@@ -1633,12 +1633,15 @@ function saveBaseObject_(obj, callback) {
         }
     });
 }
-
-DataModel.prototype.superTypes = function() {
+/**
+ * Gets an array of strings which contains the super types of this model e.g. User model may have ['Account','Thing'] as super types
+ * @returns {Array}
+ */
+DataModel.prototype.getSuperTypes = function() {
     var result=[];
     var baseModel = this.base();
     while(baseModel!=null) {
-        result.unshift(baseModel);
+        result.unshift(baseModel.name);
         baseModel = baseModel.base();
     }
     return result;
@@ -2179,7 +2182,7 @@ DataModel.prototype.dataviews = function(name) {
  * @param {DataAssociationMapping|*} mapping
  * @private
  */
-  function cacheMappingInternal(field, mapping) {
+  function cacheMapping_(field, mapping) {
     if (typeof field === 'undefined' || field == null)
         return;
     //cache mapping
@@ -2191,7 +2194,7 @@ DataModel.prototype.dataviews = function(name) {
             cachedField = this.attributes.find(function(x) { return x.name === field.name });
             if (cachedField) {
                 //add overriden field
-                cachedModel.fields.push(util._extend({}, cachedField));
+                cachedModel.fields.push(util._extend({ }, cachedField));
                 cachedField = cachedModel.fields[cachedModel.fields.length-1];
                 //clear attributes
                 this._clearAttributes();
@@ -2201,7 +2204,7 @@ DataModel.prototype.dataviews = function(name) {
         //add mapping
             cachedField.mapping = mapping;
     }
-};
+}
 
 /**
  * Gets a field association mapping based on field attributes, if any. Otherwise returns null.
@@ -2210,25 +2213,101 @@ DataModel.prototype.dataviews = function(name) {
  */
 DataModel.prototype.inferMapping = function(name) {
     var self = this;
+    //ensure model cached mappings
+    var conf = cfg.current.model(self.name);
+    if (typeof conf.mappings_ === 'undefined') {
+        conf.mappings_ = { };
+    }
+    if (typeof conf.mappings_[name] !== 'undefined') {
+        return conf.mappings_[name];
+    }
     var field = self.field(name), result;
-
     if (!field)
         return null;
     if (field.mapping) {
-        //validate mapping
-        return util._extend(new types.DataAssociationMapping(), field.mapping);
+        //if field model is different than the current model
+        if (field.model !== self.name) {
+            //if field mapping is already associated with the current model
+            // (child or parent model is equal to the current model)
+            if ((field.mapping.childModel===self.name) || (field.mapping.parentModel===self.name)) {
+                //cache mapping
+                conf.mappings_[name] = field.mapping;
+                //do nothing and return field mapping
+                return field.mapping;
+            }
+            //get super types
+            var superTypes = self.getSuperTypes();
+            //map an inherited association
+            //1. super model has a foreign key association with another model
+            //(where super model is the child or the parent model)
+            if (field.mapping.associationType === 'association') {
+                //create a new cloned association
+                result = new types.DataAssociationMapping(field.mapping);
+                //check super types
+                if (superTypes.indexOf(field.mapping.childModel)>=0) {
+                    //set child model equal to current model
+                    result.childModel = self.name;
+                }
+                else if (superTypes.indexOf(field.mapping.parentModel)>=0) {
+                    //set child model equal to current model
+                    result.childModel = self.name;
+                }
+                else {
+                    //this is an exception
+                    throw new types.DataException("EMAP","An inherited data association cannot be mapped.");
+                }
+                //cache mapping
+                conf.mappings_[name] = result;
+                //and finally return the newly created DataAssociationMapping object
+                return result;
+            }
+            //2. super model has a junction (many-to-many association) with another model
+            //(where super model is the child or the parent model)
+            else if (field.mapping.associationType === 'junction') {
+                //create a new cloned association
+                result = new types.DataAssociationMapping(field.mapping);
+                if (superTypes.indexOf(field.mapping.childModel)>=0) {
+                    //set child model equal to current model
+                    result.childModel = self.name;
+                }
+                else if (superTypes.indexOf(field.mapping.parentModel)>=0) {
+                    //set parent model equal to current model
+                    result.parentModel = self.name;
+                }
+                else {
+                    //this is an exception
+                    throw new types.DataException("EMAP","An inherited data association cannot be mapped.");
+                }
+                //cache mapping
+                conf.mappings_[name] = result;
+                //and finally return the newly created DataAssociationMapping object
+                return result;
+            }
+        }
+        //in any other case return the assocation mapping object
+        if (field.mapping instanceof types.DataAssociationMapping) {
+            //cache mapping
+            conf.mappings_[name] = field.mapping;
+            //and return
+            return field.mapping;
+        }
+        result = util._extend(new types.DataAssociationMapping(), field.mapping);
+        //cache mapping
+        conf.mappings_[name] = field.mapping;
+        //and return
+        return result;
     }
     else {
         //get field model type
         var associatedModel = self.context.model(field.type);
-        if (associatedModel==null)
+        if ((typeof associatedModel === 'undefined') || (associatedModel == null))
         {
             return null;
         }
         //in this case we have two possible associations. Junction or Foreign Key association
         //try to find a field that belongs to the associated model and holds the foreign key of this model.
         var associatedField = associatedModel.attributes.find(function(x) {
-           return x.type== self.name;
+           return x.type === self.name;
         });
         if (associatedField)
         {
@@ -2245,7 +2324,7 @@ DataModel.prototype.inferMapping = function(name) {
                     oneToOne:false
                 });
                 //cache mapping
-                cacheMappingInternal.call(self, field, result);
+                conf.mappings_[name] = result;
                 //and finally return mapping
                 return result;
             }
@@ -2263,7 +2342,7 @@ DataModel.prototype.inferMapping = function(name) {
                     refersTo:field.property || field.name
                 });
                 //cache mapping
-                cacheMappingInternal.call(self, field, result);
+                conf.mappings_[name] = result;
                 //and finally return mapping
                 return result;
             }
@@ -2284,7 +2363,7 @@ DataModel.prototype.inferMapping = function(name) {
                     oneToOne: false
                 });
                 //cache mapping
-                cacheMappingInternal.call(self, field, result);
+                conf.mappings_[name] = result;
                 //and finally return mapping
                 return result;
             }
@@ -2299,7 +2378,7 @@ DataModel.prototype.inferMapping = function(name) {
                     oneToOne: false
                 });
                 //cache mapping
-                cacheMappingInternal.call(self, field, result);
+                conf.mappings_[name] = result;
                 //and finally return mapping
                 return result;
             }
