@@ -50,6 +50,17 @@ function DataAttributeResolver() {
 }
 
 DataAttributeResolver.prototype.orderByNestedAttribute = function(attr) {
+    var nestedAttribute = DataAttributeResolver.prototype.testNestedAttribute(attr);
+    if (nestedAttribute) {
+        var matches = /^(\w+)\((\w+)\/(\w+)\)$/i.exec(nestedAttribute.name);
+        if (matches)   {
+            return DataAttributeResolver.prototype.selectAggregatedAttribute.call(this, matches[1], matches[2] + "/" + matches[3]);
+        }
+        matches = /^(\w+)\((\w+)\/(\w+)\/(\w+)\)$/i.exec(nestedAttribute.name);
+        if (matches)   {
+            return DataAttributeResolver.prototype.selectAggregatedAttribute.call(this, matches[1], matches[2] + "/" + matches[3] + "/" + matches[4]);
+        }
+    }
     return DataAttributeResolver.prototype.resolveNestedAttribute.call(this, attr);
 };
 
@@ -1102,7 +1113,25 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
         //get field
         field = this.model.field(matches[2]);
         //get aggregate function
-        aggr = matches[1];
+        aggr = matches[1].toLowerCase();
+        //test nested attribute aggregation
+        if (dataCommon.isNullOrUndefined(field) && /\//.test(matches[2])) {
+            //resolve nested attribute
+            var nestedAttr = DataAttributeResolver.prototype.resolveNestedAttribute.call(this, matches[2]);
+            //if nested attribute exists
+            if (nestedAttr) {
+                if (typeof alias === 'undefined' || alias == null) {
+                    var nestedMatches = /as\s(\w+)$/i.exec(attr);
+                    alias = dataCommon.isNullOrUndefined(nestedMatches) ? aggr.concat('Of_', matches[2].replace(/\//g, "_")) : nestedMatches[1];
+                }
+                /**
+                 * @type {Function}
+                 */
+                var fn = qry.fields[aggr];
+                //return query field
+                return fn(nestedAttr.$name).as(alias);
+            }
+        }
         if (typeof  field === 'undefined' || field === null)
             throw new Error(util.format('The specified field %s cannot be found in target model.', matches[2]));
         if (typeof alias === 'undefined' || alias == null) {
