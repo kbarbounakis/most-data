@@ -95,7 +95,7 @@ FunctionContext.prototype.eval = function(expr, callback) {
                 });
             }
             else {
-                return callback(null, result);
+                return callback(null, value1);
             }
         }
         catch(err) {

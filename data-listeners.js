@@ -257,6 +257,9 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
                 return cb();
             }
         }
+        else if (expr.indexOf('fn:')==0) {
+           return cb(new Error ('fn: syntax is deprecated.'));
+        }
         else {
             functionContext.eval(expr, function(err, result) {
                 if (err) {
@@ -535,7 +538,11 @@ DefaultValueListener.prototype.beforeSave = function(e, callback) {
                     return cb();
                 }
             }
-            else {
+            else if (expr.indexOf('fn:')==0) {
+                return cb(new Error ('fn: syntax is deprecated.'));
+            }
+            else  {
+
                 functionContext.eval(expr, function(err, result) {
                     if (err) {
                         cb(err);
