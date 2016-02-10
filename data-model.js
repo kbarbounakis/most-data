@@ -2219,7 +2219,10 @@ DataModel.prototype.inferMapping = function(name) {
         conf.mappings_ = { };
     }
     if (typeof conf.mappings_[name] !== 'undefined') {
-        return conf.mappings_[name];
+        if (conf.mappings_[name] instanceof types.DataAssociationMapping)
+            return conf.mappings_[name];
+        else
+            return  new types.DataAssociationMapping(conf.mappings_[name]);
     }
     var field = self.field(name), result;
     if (!field)
@@ -2231,9 +2234,9 @@ DataModel.prototype.inferMapping = function(name) {
             // (child or parent model is equal to the current model)
             if ((field.mapping.childModel===self.name) || (field.mapping.parentModel===self.name)) {
                 //cache mapping
-                conf.mappings_[name] = field.mapping;
+                conf.mappings_[name] = new types.DataAssociationMapping(field.mapping);
                 //do nothing and return field mapping
-                return field.mapping;
+                return conf.mappings_[name];
             }
             //get super types
             var superTypes = self.getSuperTypes();
