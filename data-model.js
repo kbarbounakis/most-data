@@ -2296,7 +2296,7 @@ DataModel.prototype.inferMapping = function(name) {
         }
         result = util._extend(new types.DataAssociationMapping(), field.mapping);
         //cache mapping
-        conf.mappings_[name] = field.mapping;
+        conf.mappings_[name] = result;
         //and return
         return result;
     }
