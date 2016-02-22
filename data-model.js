@@ -468,7 +468,6 @@ DataModel.prototype.clone = function(context) {
         this.on('after.execute', DataCachingListener.prototype.afterExecute);
     }
 
-
     /**
      * change:8-Jun 2015
      * description: Set lookup default listeners as obsolete.
@@ -513,7 +512,6 @@ DataModel.prototype.clone = function(context) {
             }
         }
     }
-
     //before execute
     this.on('before.execute', perms.DataPermissionEventListener.prototype.beforeExecute);
     //before save (validate permissions)
