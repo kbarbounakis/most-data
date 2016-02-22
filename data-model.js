@@ -457,8 +457,7 @@ DataModel.prototype.clone = function(context) {
     this.on('before.save', DefaultValueListener.prototype.beforeSave);
     //3. Calculated values listener
     this.on('before.save', CalculatedValueListener.prototype.beforeSave);
-    //before execute
-    this.on('before.execute', perms.DataPermissionEventListener.prototype.beforeExecute);
+
 
     //register before execute caching
     if (this.caching=='always' || this.caching=='conditional') {
@@ -469,10 +468,7 @@ DataModel.prototype.clone = function(context) {
         this.on('after.execute', DataCachingListener.prototype.afterExecute);
     }
 
-    //before save (validate permissions)
-    this.on('before.save', perms.DataPermissionEventListener.prototype.beforeSave);
-    //before remove (validate permissions)
-    this.on('before.remove', perms.DataPermissionEventListener.prototype.beforeRemove);
+
     /**
      * change:8-Jun 2015
      * description: Set lookup default listeners as obsolete.
@@ -517,6 +513,13 @@ DataModel.prototype.clone = function(context) {
             }
         }
     }
+
+    //before execute
+    this.on('before.execute', perms.DataPermissionEventListener.prototype.beforeExecute);
+    //before save (validate permissions)
+    this.on('before.save', perms.DataPermissionEventListener.prototype.beforeSave);
+    //before remove (validate permissions)
+    this.on('before.remove', perms.DataPermissionEventListener.prototype.beforeRemove);
 };
 
 DataModel.prototype.join = function(model) {
