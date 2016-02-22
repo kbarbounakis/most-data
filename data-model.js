@@ -579,7 +579,18 @@ DataModel.prototype.filter = function(params, callback) {
             member = attr.name;
         if (DataAttributeResolver.prototype.testNestedAttribute.call(self,member)) {
             try {
-                var expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(self, member);
+                var member1 = member.split("/"),
+                    mapping = self.inferMapping(member1[0]),
+                    expr;
+                if (mapping && mapping.associationType === 'junction') {
+                    var expr1 = DataAttributeResolver.prototype.resolveJunctionAttributeJoin.call(self, member);
+                    expr = expr1.$expand;
+                    //replace member expression
+                    member = expr1.$select.$name.replace(/\./g,"/");
+                }
+                else {
+                    expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(self, member);
+                }
                 if (expr) {
                     var arrExpr = [];
                     if (util.isArray(expr))

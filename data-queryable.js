@@ -101,7 +101,25 @@ DataAttributeResolver.prototype.selectAggregatedAttribute = function(aggr, attr)
 DataAttributeResolver.prototype.resolveNestedAttribute = function(attr) {
     var self = this;
     if (typeof attr === 'string' && /\//.test(attr)) {
-        var expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(this.model, attr), arr, obj;
+        var member = attr.split('/'), expr, arr, obj, select;
+        //change: 18-Feb 2016
+        //description: Support many to many (junction) resolving
+        var mapping = self.model.inferMapping(member[0]);
+        if (mapping && mapping.associationType === 'junction') {
+            var expr1 = DataAttributeResolver.prototype.resolveJunctionAttributeJoin.call(self.model, attr);
+            //select field
+            select = expr1.$select;
+            //get expand
+            expr = expr1.$expand;
+        }
+        else {
+            expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(self.model, attr);
+            //select field
+            if (member.length>2)
+                select = qry.fields.select(member[2]).from(member[1]);
+            else
+                select  = qry.fields.select(member[1]).from(member[0]);
+        }
         if (expr) {
             if (typeof this.query.$expand === 'undefined' || null) {
                 this.query.$expand = expr;
@@ -128,12 +146,7 @@ DataAttributeResolver.prototype.resolveNestedAttribute = function(attr) {
                         self.query.$expand.push(y);
                 });
             }
-            //add field
-            var member = attr.split('/');
-            if (member.length>2) {
-                return qry.fields.select(member[2]).from(member[1]);
-            }
-            return qry.fields.select(member[1]).from(member[0]);
+            return select;
         }
         else {
             throw new Error('Member join expression cannot be empty at this context');
@@ -322,6 +335,98 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
 
 };
 
+/**
+ * @param {string} attr
+ * @returns {*}
+ */
+DataAttributeResolver.prototype.resolveJunctionAttributeJoin = function(attr) {
+    var self = this, member = attr.split("/");
+    //get the data association mapping
+    var mapping = self.inferMapping(member[0]);
+    //if mapping defines a junction between two models
+    if (mapping && mapping.associationType === "junction") {
+        //get field
+        var field = self.field(member[0]), entity, expr, q;
+        //first approach (default association adapter)
+        //the underlying model is the parent model e.g. Group > Group Members
+        if (mapping.parentModel === self.name) {
+            q =qry.query(self.viewAdapter).select(['*']);
+            //init an entity based on association adapter (e.g. GroupMembers as members)
+            entity = qry.entity(mapping.associationAdapter).as(field.name);
+            //init join expression between association adapter and current data model
+            //e.g. Group.id = GroupMembers.parentId
+            expr = qry.query().where(qry.fields.select(mapping.parentField).from(self.viewAdapter))
+                    .equal(qry.fields.select("parentId").from(field.name));
+            //append join
+            q.join(entity).with(expr);
+            //return the resolved attribute for futher proccesing e.g. members.id
+            if (member[1] === mapping.childField) {
+                return {
+                    $expand:[q.$expand],
+                    $select:qry.fields.select("valueId").from(field.name)
+                }
+            }
+            else {
+                //get child model
+                var childModel = self.context.model(mapping.childModel);
+                if (dataCommon.isNullOrUndefined(childModel)) {
+                    throw new types.DataException("EJUNC","The associated model cannot be found.");
+                }
+                //create new join
+                var alias = field.name + "_" + childModel.name;
+                entity = qry.entity(childModel.viewAdapter).as(alias);
+                expr = qry.query().where(qry.fields.select("valueId").from(field.name))
+                    .equal(qry.fields.select(mapping.childField).from(alias));
+                //append join
+                q.join(entity).with(expr);
+                return {
+                    $expand:q.$expand,
+                    $select:qry.fields.select(member[1]).from(alias)
+                }
+            }
+        }
+        else {
+            q =qry.query(self.viewAdapter).select(['*']);
+            //the underlying model is the child model
+            //init an entity based on association adapter (e.g. GroupMembers as groups)
+            entity = qry.entity(mapping.associationAdapter).as(field.name);
+            //init join expression between association adapter and current data model
+            //e.g. Group.id = GroupMembers.parentId
+            expr = qry.query().where(qry.fields.select(mapping.childField).from(self.viewAdapter))
+                .equal(qry.fields.select("valueId").from(field.name));
+            //append join
+            q.join(entity).with(expr);
+            //return the resolved attribute for futher proccesing e.g. members.id
+            if (member[1] === mapping.parentField) {
+                return {
+                    $expand:[q.$expand],
+                    $select:qry.fields.select("parentId").from(field.name)
+                }
+            }
+            else {
+                //get parent model
+                var parentModel = self.context.model(mapping.parentModel);
+                if (dataCommon.isNullOrUndefined(parentModel)) {
+                    throw new types.DataException("EJUNC","The associated model cannot be found.");
+                }
+                //create new join
+                var parentAlias = field.name + "_" + parentModel.name;
+                entity = qry.entity(parentModel.viewAdapter).as(parentAlias);
+                expr = qry.query().where(qry.fields.select("parentId").from(field.name))
+                    .equal(qry.fields.select(mapping.parentField).from(parentAlias));
+                //append join
+                q.join(entity).with(expr);
+                return {
+                    $expand:q.$expand,
+                    $select:qry.fields.select(member[1]).from(parentAlias)
+                }
+            }
+        }
+    }
+    else {
+        throw new types.DataException("EJUNC","The target model does not have a many to many association defined by the given attribute.","", self.name, attr);
+    }
+};
 
 /**
  * @classdesc Represents a dynamic query helper for filtering, paging, grouping and sorting data associated with an instance of DataModel class.
