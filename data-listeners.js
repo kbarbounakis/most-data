@@ -33,6 +33,7 @@
  */
 var async = require('async'),
     dataCommon = require('./data-common'),
+    moment = require("moment"),
     util = require('util'),
     types = require('./types');
 
