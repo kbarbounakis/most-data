@@ -1254,6 +1254,13 @@ function cast_(obj, state) {
                 (x.readonly && (typeof x.calculation!=='undefined') && state==2) ||
                 (x.readonly && (typeof x.value!=='undefined') && state==1) ||
                 (x.readonly && (typeof x.calculation!=='undefined') && state==1);
+        }).filter(function(y) {
+            /*
+            change: 2016-02-27
+            author:k.barbounakis@gmail.com
+            description:exclude non editable attributes on update operation
+             */
+            return (y.state==2) ? (y.hasOwnProperty("editable") ? y.editable : true) : true;
         }).forEach(function(x) {
             name = obj.hasOwnProperty(x.property) ? x.property : x.name;
             if (obj.hasOwnProperty(name))

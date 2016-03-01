@@ -1012,7 +1012,8 @@ function DataAssociationMapping(obj) {
  * @property {boolean} model - Gets or sets the parent model of this field.
  * @property {*} value - Gets or sets the default value of this field.
  * @property {*} calculation - Gets or sets the calculated value of this field.
- * @property {boolean} readonly - Gets or sets a boolean that indicates whether a field is readonly.
+ * @property {boolean} readonly - Gets or sets a boolean which indicates whether a field is readonly.
+ * @property {boolean} editable - Gets or sets a boolean which indicates whether a field is available for edit. The default value is true.
  * @property {DataAssociationMapping} mapping - Get or sets a relation mapping for this field.
  * @property {string} coltype - Gets or sets a string that indicates the data field's column type. This attribute is used in data view definition
  * @property {boolean} expandable - Get or sets whether the current field defines an association mapping and the associated data object(s) must be included while getting data.
@@ -1029,6 +1030,7 @@ function DataField() {
     this.readonly = false;
     this.expandable = false;
     this.virtual = false;
+    this.editable = true;
 }
 
 /**

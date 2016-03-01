@@ -10,8 +10,8 @@
             "True"
         ],
         "label": "Boolean",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [],
         "supertypes": [
             "DataType"
@@ -24,8 +24,8 @@
         "comment": "",
         "id": "DataType",
         "label": "Data Type",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [
             "Boolean",
             "Date",
@@ -44,8 +44,8 @@
         "comment": "",
         "id": "Date",
         "label": "Date",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [],
         "supertypes": [
             "DataType"
@@ -60,8 +60,8 @@
         "comment": "",
         "id": "DateTime",
         "label": "Date Time",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [],
         "supertypes": [
             "DataType"
@@ -77,8 +77,8 @@
         "comment": "",
         "id": "Float",
         "label": "Float",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [],
         "supertypes": [
             "Number"
@@ -94,8 +94,8 @@
         "comment": "",
         "id": "Integer",
         "label": "Integer",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [],
         "supertypes": [
             "Number"
@@ -111,8 +111,8 @@
         "comment": "",
         "id": "Counter",
         "label": "Counter",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [],
         "supertypes": [
             "Number"
@@ -128,8 +128,8 @@
         "comment": "",
         "id": "Duration",
         "label": "Duration",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [],
         "supertypes": [
             "Number"
@@ -144,8 +144,8 @@
         "comment": "",
         "id": "Number",
         "label": "Number",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [
             "Float",
             "Integer"
@@ -163,8 +163,8 @@
         "comment": "",
         "id": "Text",
         "label": "Text",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [
             "URL"
         ],
@@ -181,8 +181,8 @@
         "comment": "",
         "id": "Time",
         "label": "Time",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [],
         "supertypes": [
             "DataType"
@@ -198,8 +198,8 @@
         "comment": "",
         "id": "URL",
         "label": "URL",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [],
         "supertypes": [
             "Text"
@@ -215,8 +215,8 @@
         "comment": "",
         "id": "Language",
         "label": "Language",
-        "properties": [],
-        "specific_properties": [],
+        "properties": {},
+        "specific_properties": {},
         "subtypes": [],
         "supertypes": [
             "Text"
@@ -224,5 +224,43 @@
         "url": "http://schema.org/URL",
         "type": "string",
          "sqlType":"Text"
+    },
+    "Model": {
+        "ancestors": [
+            "DataType",
+            "Text"
+        ],
+        "comment": "",
+        "id": "Model",
+        "label": "Model",
+        "properties": {
+          "pattern": "^(\\w+)$"
+        },
+        "specific_properties": {},
+        "subtypes": [],
+        "supertypes": [
+            "Text"
+        ],
+        "type": "string",
+        "sqlType":"Text"
+    },
+    "ObjectURI": {
+      "ancestors": [
+        "DataType",
+        "Text"
+      ],
+      "comment": "A string which represents a relative object URI e.g. /User/100 or /Order/12345 where the first segment represents a model associated an object and the second an object identifier like object ID.",
+      "id": "ObjectURI",
+      "label": "Object URI",
+      "properties": {
+        "pattern": "^\\/(\\w+)\\/(\\w+)$"
+      },
+      "specific_properties": {},
+      "subtypes": [],
+      "supertypes": [
+        "Text"
+      ],
+      "type": "string",
+      "sqlType":"Text"
     }
 }
