@@ -2234,6 +2234,9 @@ DataModel.prototype.inferMapping = function(name) {
     var self = this;
     //ensure model cached mappings
     var conf = cfg.current.model(self.name);
+    if (typeof conf === "undefined" || conf == null) {
+        return;
+    }
     if (typeof conf.mappings_ === 'undefined') {
         conf.mappings_ = { };
     }

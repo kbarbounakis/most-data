@@ -480,7 +480,7 @@ function queryUser(context, username, callback) {
                 callback();
                 return;
             }
-            users.where('name').equal(username).silent().select(['id', 'name']).first(function(err, result) {
+            users.where('name').equal(username).silent().select('id', 'name').first(function(err, result) {
                 if (err) {
                     callback(err);
                 }
@@ -493,7 +493,7 @@ function queryUser(context, username, callback) {
                     //get anonymous user object
                     var user = users.convert(result);
                     //get user groups
-                    user.property('groups').select(['id', 'name']).silent().all(function(err, groups) {
+                    user.property('groups').select('id', 'name').silent().all(function(err, groups) {
                         if (err) {
                             callback(err);
                             return;
