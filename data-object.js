@@ -393,7 +393,7 @@ function attrOf_(name, callback) {
             return callback(null, self[name]);
         }
         else {
-            model.where(model.primaryKey).equal(self[model.primaryKey]).select(name).value(function(err, result) {
+         return model.where(model.primaryKey).equal(self[model.primaryKey]).select(name).value(function(err, result) {
                 if (err) { return callback(err); }
                 self[name] = result;
                 return callback(null, result);
