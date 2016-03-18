@@ -1018,6 +1018,7 @@ function DataAssociationMapping(obj) {
  * @property {string} coltype - Gets or sets a string that indicates the data field's column type. This attribute is used in data view definition
  * @property {boolean} expandable - Get or sets whether the current field defines an association mapping and the associated data object(s) must be included while getting data.
  * @property {string} section - Gets or sets the section where the field belongs.
+ * @property {boolean} nested - Gets or sets a boolean which indicates whether this field allows object(s) to be nested and updatable during an insert or update operation
  * @property {string} description - Gets or sets a short description for this field.
  * @property {string} help - Gets or sets a short help for this field.
  * @property {string} appearance - Gets or sets the appearance template of this field, if any.

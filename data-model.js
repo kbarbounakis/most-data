@@ -45,6 +45,7 @@ var string = require('string'),
     dataCommon = require('./data-common'),
     dataListeners = require('./data-listeners'),
     dataAssociations = require('./data-associations'),
+    DataNestedObjectListener = require("./data-nested-object-listener").DataNestedObjectListener,
     DataQueryable = require('./data-queryable').DataQueryable,
     DataAttributeResolver = require('./data-queryable').DataAttributeResolver,
     DataObjectAssociationListener = dataAssociations.DataObjectAssociationListener,
@@ -354,15 +355,20 @@ function DataModel(obj) {
     */
     this.primaryKey = undefined;
     //local variable for DateModel.primaryKey
-    var _primaryKey;
+    var primaryKey_;
     Object.defineProperty(this, 'primaryKey' , { get: function() {
-        if (typeof _primaryKey !== 'undefined') { return _primaryKey; }
+        return self.getPrimaryKey();
+    }, enumerable: false, configurable: false});
+
+    this.getPrimaryKey = function() {
+        if (typeof primaryKey_ !== 'undefined') { return primaryKey_; }
         var p = self.fields.find(function(x) { return x.primary==true; });
         if (p) {
-            _primaryKey = p.name;
-            return _primaryKey;
+            primaryKey_ = p.name;
+            return primaryKey_;
         }
-    }, enumerable: false, configurable: false});
+    };
+
     /**
      * Gets an array that contains model attribute names
      * @type Array
@@ -1517,6 +1523,8 @@ function saveBaseObject_(obj, callback) {
         target: obj,
         state:state
     };
+    //register nested objects listener (before save)
+    self.once('before.save', DataNestedObjectListener.prototype.beforeSave);
     //register data association listener (before save)
     self.once('before.save', DataObjectAssociationListener.prototype.beforeSave);
     //register data association listener
@@ -1849,6 +1857,8 @@ DataModel.prototype.remove = function(obj, callback)
         target: obj,
         state: 4
     };
+    //register nested objects listener
+    self.once('before.remove', DataNestedObjectListener.prototype.beforeRemove);
     //register data association listener
     self.once('before.remove', DataObjectAssociationListener.prototype.afterSave);
     //execute before update events
