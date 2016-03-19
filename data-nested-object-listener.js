@@ -62,29 +62,28 @@ function beforeSave_(attr, event, callback) {
         event.model.where(key)
             .equal(event.target[key])
             .select(key,name)
-            .expand(name)
             .silent()
-            .first(function(err, result) {
-                if (err) { return callback(err); }
+            .first().then(function( result) {
                 if (dataCommon.isNullOrUndefined(result)) { return callback(new Error('Invalid object state.')); }
                 if (dataCommon.isNullOrUndefined(result[name])) {
-                    nestedModel.silent().save(nestedObj, function(err) {
-                        callback(err);
+                    //first of all delete address id from target
+                    delete nestedObj[nestedModel.getPrimaryKey()];
+                    //save data
+                    nestedModel.silent().save(nestedObj).then(function() {
+                        return callback();
+                    }).catch(function(err) {
+                        return callback(err);
                     });
                 }
                 else {
-                    //first of all delete address id from target
-                    delete nestedObj[nestedModel.getPrimaryKey()];
-                    //extend original address
-                    util._extend(result[name], nestedObj);
-                    //save data
-                    nestedModel.silent().save(result[name], function(err) {
-                        if (err) { return callback(err); }
-                        //set saved address to target
-                        nestedObj = result[name];
-                        callback();
+                    nestedModel.silent().save(nestedObj).then(function() {
+                        return callback();
+                    }).catch(function(err) {
+                        return callback(err);
                     });
                 }
+        }).catch(function(err) {
+            return callback(err);
         });
     }
     else {
@@ -196,12 +195,14 @@ function DataNestedObjectListener() {
 DataNestedObjectListener.prototype.beforeSave = function (event, callback) {
     try {
         var nested = event.model.attributes.filter(function(x) {
-            return x.nested;
+            return x.nested && (x.model.name === event.model.name);
         });
         if (nested.length == 0) { return callback(); }
         async.eachSeries(nested, function(attr, cb) {
+            dataCommon.debug("NESTED: Saving nested object. " + JSON.stringify(attr));
             return beforeSave_(attr, event, cb);
         }, function(err) {
+            dataCommon.debug("NESTED: Commit nested object.");
             return callback(err);
         });
     }
@@ -264,7 +265,7 @@ function beforeRemoveMany_(attr, event, callback) {
 DataNestedObjectListener.prototype.beforeRemove = function (event, callback) {
     try {
         var nested = event.model.attributes.filter(function(x) {
-            return x.nested;
+            return x.nested && (x.model.name === event.model.name);
         });
         if (nested.length == 0) { return callback(); }
         async.eachSeries(nested, function(attr, cb) {

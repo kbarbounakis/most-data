@@ -264,6 +264,8 @@ FunctionContext.prototype.user = function() {
                 parser = types.parsers['parse' + userModel.field('id').type];
                 if (typeof parser === 'function')
                     undefinedUser = parser(null);
+                //set id for next calls
+                user.id = undefinedUser;
                 return deferred.resolve(undefinedUser);
             }
             else if (dataCommon.isNullOrUndefined(result)) {
@@ -271,9 +273,13 @@ FunctionContext.prototype.user = function() {
                 parser = types.parsers['parse' + userModel.field('id').type];
                 if (typeof parser === 'function')
                     undefinedUser = parser(null);
+                //set id for next calls
+                user.id = undefinedUser;
                 return deferred.resolve(undefinedUser);
             }
             else {
+                //set id for next calls
+                user.id = result.id;
                 return deferred.resolve(result.id);
             }
         });
