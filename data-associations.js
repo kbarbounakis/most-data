@@ -83,6 +83,13 @@ DataObjectAssociationListener.prototype.beforeSave = function(e, callback) {
                         if (e.target[childField].hasOwnProperty(mapping.parentField)) {
                             return cb();
                         }
+                        //change:21-Mar 2016
+                        //description: check if association belongs to this model or it's inherited from any base model
+                        //if current association belongs to base model
+                        if (e.model.name !== field.model) {
+                            //do nothing and exit
+                            return cb();
+                        }
                         //get associated mode
                         var associatedModel = e.model.context.model(mapping.parentModel),
                             er;

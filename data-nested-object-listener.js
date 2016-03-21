@@ -194,9 +194,12 @@ function DataNestedObjectListener() {
  */
 DataNestedObjectListener.prototype.beforeSave = function (event, callback) {
     try {
+        //get attributes with nested property set to on
         var nested = event.model.attributes.filter(function(x) {
-            return x.nested && (x.model.name === event.model.name);
+            //only if these attributes belong to current model
+            return x.nested && (x.model === event.model.name);
         });
+        //if there are no attribute defined as nested do nothing
         if (nested.length == 0) { return callback(); }
         async.eachSeries(nested, function(attr, cb) {
             dataCommon.debug("NESTED: Saving nested object. " + JSON.stringify(attr));
@@ -264,9 +267,12 @@ function beforeRemoveMany_(attr, event, callback) {
 
 DataNestedObjectListener.prototype.beforeRemove = function (event, callback) {
     try {
+        //get attributes with nested property set to on
         var nested = event.model.attributes.filter(function(x) {
-            return x.nested && (x.model.name === event.model.name);
+            //only if these attributes belong to current model
+            return x.nested && (x.model === event.model.name);
         });
+        //if there are no attribute defined as nested, do nothing and exit
         if (nested.length == 0) { return callback(); }
         async.eachSeries(nested, function(attr, cb) {
             return beforeRemove_(attr, event, cb);

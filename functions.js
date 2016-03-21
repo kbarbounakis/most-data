@@ -253,7 +253,7 @@ FunctionContext.prototype.user = function() {
     var self = this, context = self.model.context, deferred = Q.defer();
     var user = context.interactiveUser || context.user || { };
     process.nextTick(function() {
-        if (user.id) {
+        if (typeof user.id !== 'undefined') {
             return deferred.resolve(user.id);
         }
         var userModel = context.model('User'), parser, undefinedUser = null;
