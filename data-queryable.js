@@ -1628,6 +1628,27 @@ DataQueryable.prototype.list = function(callback) {
         return listInternal.call(this, callback);
     }
 };
+
+/**
+ * @returns {Promise|*}
+ */
+DataQueryable.prototype.getItems = function() {
+    var self = this, d = Q.defer();
+    process.nextTick(function() {
+        delete self.query.$inlinecount;
+        if (!self.query.hasFields()) {
+            self.select();
+        }
+        execute_.call(self,function(err, result) {
+            if (err) {
+                return d.reject(err);
+            }
+            return d.resolve(result);
+        });
+    });
+    return d.promise;
+};
+
 /**
  * @private
  * @param {Function} callback

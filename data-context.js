@@ -106,6 +106,9 @@ function DefaultDataContext()
             __db__ = adapterType.createInstance(adapter.options);
             return __db__;
         },
+        set : function(value) {
+            __db__ = value;
+        },
         configurable : false,
         enumerable:false });
 }
@@ -202,6 +205,9 @@ function NamedDataContext(name)
             //otherwise load adapter
             __db__ = adapterType.createInstance(adapter.options);
             return __db__;
+        },
+        set : function(value) {
+            __db__ = value;
         },
         configurable : false,
         enumerable:false });
