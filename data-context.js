@@ -29,7 +29,6 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 /**
- * @type {{inherits:Function,_extend:Function,isArray:Function,format:Function}}
  * @ignore
  */
 var util = require('util'),
@@ -69,20 +68,20 @@ function DefaultDataContext()
      * @type {types.DataAdapter|DataAdapter}
      * @private
      */
-    var __db__= null;
+    var db_= null;
     this.__finalize__ = function() {
-        if (__db__)
-            __db__.close();
-        __db__=null;
+        if (db_)
+            db_.close();
+        db_=null;
     };
-
+    var self = this;
     Object.defineProperty(this, 'db', {
         get : function() {
-            if (__db__)
-                return __db__;
+            if (db_)
+                return db_;
             //otherwise load database options from configuration
-            var adapter = cfg.current.adapters.find(function(x) {
-                return x.default;
+            var adapter = self.getConfiguration().adapters.find(function(x) {
+                return x["default"];
             });
             if (typeof adapter ==='undefined' || adapter==null) {
                 er = new Error('The default data adapter is missing.'); er.code = 'EADAPTER';
@@ -91,7 +90,7 @@ function DefaultDataContext()
             /**
              * @type {{createInstance:Function}|*}
              */
-            var adapterType = cfg.current.adapterTypes[adapter.invariantName];
+            var adapterType = self.getConfiguration().adapterTypes[adapter.invariantName];
             //validate data adapter type
             var er;
             if (typeof adapterType === 'undefined' || adapterType == null) {
@@ -103,17 +102,25 @@ function DefaultDataContext()
                 throw er;
             }
             //otherwise load adapter
-            __db__ = adapterType.createInstance(adapter.options);
-            return __db__;
+            db_ = adapterType.createInstance(adapter.options);
+            return db_;
         },
         set : function(value) {
-            __db__ = value;
+            db_ = value;
         },
         configurable : false,
         enumerable:false });
 }
 
 util.inherits(DefaultDataContext, types.DataContext);
+
+/**
+ * Gets an instance of DataConfiguration class which is associated with this data context
+ * @returns {DataConfiguration}
+ */
+DefaultDataContext.prototype.getConfiguration = function() {
+    return cfg.current;
+};
 
 /**
  * Gets an instance of DataModel class based on the given name.
@@ -124,7 +131,7 @@ DefaultDataContext.prototype.model = function(name) {
     var self = this;
     if ((name == null) || (name === undefined))
         return null;
-    var obj = cfg.current.model(name);
+    var obj = self.getConfiguration().model(name);
     if (typeof obj === 'undefined' || obj==null)
         return null;
     var DataModel = require('./data-model').DataModel,
@@ -160,31 +167,31 @@ function NamedDataContext(name)
      * @type {DataAdapter}
      * @private
      */
-    var __db__;
+    var db_;
     /**
      * @private
      */
     this.__finalize__ = function() {
         try {
-            if (__db__)
-                __db__.close();
+            if (db_)
+                db_.close();
         }
         catch(e) {
             dataCommon.debug('An error occure while closing the underlying database context.');
             dataCommon.debug(e);
         }
-        __db__ = null;
+        db_ = null;
     };
     //set the name specified
-    var __name__ = name;
+    var self = this, name_ = name;
 
     Object.defineProperty(this, 'db', {
         get : function() {
-            if (__db__)
-                return __db__;
+            if (db_)
+                return db_;
             //otherwise load database options from configuration
-            var adapter = cfg.current.adapters.find(function(x) {
-                return x.name == __name__;
+            var adapter = self.getConfiguration().adapters.find(function(x) {
+                return x.name == name_;
             });
             var er;
             if (typeof adapter ==='undefined' || adapter==null) {
@@ -192,7 +199,7 @@ function NamedDataContext(name)
                 throw er;
             }
             //get data adapter type
-            var adapterType = cfg.current.adapterTypes[adapter.invariantName];
+            var adapterType = self.getConfiguration().adapterTypes[adapter.invariantName];
             //validate data adapter type
             if (typeof adapterType === 'undefined' || adapterType == null) {
                 er = new Error('Invalid adapter type.'); er.code = 'EADAPTER';
@@ -203,14 +210,22 @@ function NamedDataContext(name)
                 throw er;
             }
             //otherwise load adapter
-            __db__ = adapterType.createInstance(adapter.options);
-            return __db__;
+            db_ = adapterType.createInstance(adapter.options);
+            return db_;
         },
         set : function(value) {
-            __db__ = value;
+            db_ = value;
         },
         configurable : false,
         enumerable:false });
+
+    /**
+     * Gets an instance of DataConfiguration class which is associated with this data context
+     * @returns {DataConfiguration}
+     */
+    this.getConfiguration = function() {
+        return cfg.getNamedConfiguration(name_);
+    }
 
 }
 util.inherits(NamedDataContext, types.DataContext);
@@ -224,7 +239,7 @@ NamedDataContext.prototype.model = function(name) {
     var self = this;
     if ((name == null) || (name === undefined))
         return null;
-    var obj = cfg.current.model(name);
+    var obj = self.getConfiguration().model(name);
     if (typeof obj === 'undefined' || obj==null)
         return null;
     var DataModel = require('./data-model').DataModel;
@@ -245,13 +260,7 @@ NamedDataContext.prototype.finalize = function(cb) {
 if (typeof exports !== 'undefined')
 {
     module.exports = {
-        /**
-         * @constructs DefaultDataContext
-         */
         DefaultDataContext:DefaultDataContext,
-        /**
-         * @constructs DefaultDataContext
-         */
         NamedDataContext:NamedDataContext
 
     };

@@ -237,7 +237,7 @@ DataAdapter.prototype.open = function(callback) {
 
 /**
  * Closes the underlying database connection
- * @param {Function} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  */
 DataAdapter.prototype.close = function(callback) {
     //
@@ -399,6 +399,15 @@ function DataContext() {
 DataContext.prototype.model = function(name) {
     return null;
 };
+
+/**
+ * Gets an instance of DataConfiguration class which is associated with this data context
+ * @returns {DataConfiguration}
+ */
+DataContext.prototype.getConfiguration = function() {
+    return null;
+};
+
 /**
  * @param cb {Function}
  */

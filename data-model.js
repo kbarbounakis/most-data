@@ -238,12 +238,12 @@ function DataModel(obj) {
      * @type {DataContext}
      * @private
      */
-    var __context__ = null;
+    var context_ = null;
     var self = this;
     Object.defineProperty(this, 'context', { get: function() {
-        return __context__;
+        return context_;
     }, set: function(value) {
-        __context__ = value;
+        context_ = value;
     }, enumerable: false, configurable: false});
 
     Object.defineProperty(this, 'sourceAdapter', { get: function() {
@@ -308,7 +308,7 @@ function DataModel(obj) {
         //enumerate fields
         self.fields.forEach(function(x) {
             if (typeof x.many === 'undefined') {
-                if (typeof cfg.current.dataTypes[x.type] === 'undefined')
+                if (typeof self.context.getConfiguration().dataTypes[x.type] === 'undefined')
                     //set one-to-many attribute (based on a naming convention)
                     x.many = pluralExpression.test(x.name) || (x.mapping && x.mapping.associationType === 'junction');
                 else
@@ -1163,7 +1163,7 @@ DataModel.prototype.convert = function(obj, typeConvert)
             }
         }
         //cache DataObject class property
-        cfg.current.models[self.name]['DataObjectClass'] = self['DataObjectClass'] = DataObjectClass;
+        self.context.getConfiguration().models[self.name]['DataObjectClass'] = self['DataObjectClass'] = DataObjectClass;
     }
 
     if (util.isArray(obj)) {
@@ -1946,7 +1946,10 @@ DataModel.prototype.ensureModel = function(callback) {
         return;
     }
     //get migration model
-    var migrationModel = new DataModel(cfg.current.models.Migration);
+    var conf = self.context.getConfiguration();
+    if (typeof conf.models["Migration"] === 'undefined')
+        conf.models["Migration"] = new DataModel(require("./migration.json"));
+    var migrationModel = new DataModel(conf.models["Migration"]);
     migrationModel.context = self.context;
     //ensure migration
     var version = self.version!=null ? self.version : '0.0';
@@ -1974,9 +1977,10 @@ DataModel.prototype.migrate = function(callback)
     var self = this;
     //cache: data model migration
     //prepare migration cache
-    cfg.current.cache = cfg.current.cache || {};
-    cfg.current.cache[self.name] = cfg.current.cache[self.name] || {};
-    if (cfg.current.cache[self.name].version==self.version) {
+    var conf = self.context.getConfiguration();
+    conf.cache = conf.cache || {};
+    conf.cache[self.name] = conf.cache[self.name] || {};
+    if (conf.cache[self.name].version==self.version) {
         //model has already been migrated, so do nothing
         callback();
         return;
@@ -2006,7 +2010,7 @@ DataModel.prototype.migrate = function(callback)
     //get all related models
     var models = [];
     self.fields.filter(function(x) {
-        return (!cfg.current.dataTypes[x.type] && (self.name!=x.type));
+        return (!conf.dataTypes[x.type] && (self.name!=x.type));
     }).forEach(function(x) {
         var m = context.model(x.type);
         if (m) {
@@ -2060,9 +2064,9 @@ DataModel.prototype.migrate = function(callback)
         }
     }, function(err) {
         if (!err) {
-            //set migration info to configuration cache (cfg.current.cache.model.version=[current version])
+            //set migration info to configuration cache (conf.cache.model.version=[current version])
             //cache: data model migration
-            cfg.current.cache[self.name].version = self.version;
+            conf.cache[self.name].version = self.version;
         }
         callback(err);
     });
@@ -2215,7 +2219,7 @@ DataModel.prototype.dataviews = function(name) {
     if (typeof field === 'undefined' || field == null)
         return;
     //cache mapping
-    var cachedModel = cfg.current.models[this.name];
+    var cachedModel = this.getConfiguration().models[this.name];
     if (cachedModel) {
         var cachedField = cachedModel.fields.find(function(x) { return x.name === field.name });
         if (typeof cachedField === 'undefined') {
@@ -2243,7 +2247,7 @@ DataModel.prototype.dataviews = function(name) {
 DataModel.prototype.inferMapping = function(name) {
     var self = this;
     //ensure model cached mappings
-    var conf = cfg.current.model(self.name);
+    var conf = self.getConfiguration().model(self.name);
     if (typeof conf === "undefined" || conf == null) {
         return;
     }
@@ -2427,14 +2431,6 @@ DataModel.prototype.inferMapping = function(name) {
  * @name process#NODE_ENV
  * @memberof process
  */
-
-/**
- * register migration model
- */
-cfg.current.models.Migration =(function() {
-    var data = require('./migration');
-    return new DataModel(data);
-}).call();
 
 if (typeof exports !== 'undefined') {
     module.exports = {

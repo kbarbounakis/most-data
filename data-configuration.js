@@ -281,6 +281,11 @@ DataConfiguration.prototype.model = function(name)
 /**
  * @private
  */
+var namedConfiguations_ = { };
+
+/**
+ * @private
+ */
 var cfg = {
     /**
      * @type DataConfiguration
@@ -292,6 +297,23 @@ var cfg = {
      */
     createInstance: function() {
         return new DataConfiguration();
+    },
+    /**
+     * Gets or creates a named configuration
+     * @param {string} name
+     * @returns {DataConfiguration}
+     */
+    getNamedConfiguration: function(name) {
+        if (typeof name !== 'string') {
+            throw new Error("Invalid configuration name. Expected string.");
+        }
+        if (name.length == 0) {
+            throw new Error("Invalid argument. Configuration name may not be empty string.");
+        }
+        if (typeof namedConfiguations_[name] !== 'undefined')
+            return namedConfiguations_[name];
+        namedConfiguations_[name] = new DataConfiguration();
+        return namedConfiguations_[name];
     },
     /**
      * @namespace
@@ -308,14 +330,14 @@ var cfg = {
  * @type DataConfiguration
  * @private
  */
-var __cfg;
+var cfg_;
 
 Object.defineProperty(cfg, 'current', {
     get: function() {
-        if (__cfg)
-            return __cfg;
-        __cfg = new DataConfiguration();
-        return __cfg;
+        if (cfg_)
+            return cfg_;
+        cfg_ = new DataConfiguration();
+        return cfg_;
     }, configurable:false, enumerable:false
     });
 
