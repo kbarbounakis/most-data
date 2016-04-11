@@ -167,10 +167,10 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
     context.user = context.user || { name:'anonymous',authenticationType:'None' };
     //change: 2-May 2015
     //description: Use unattended execution account as an escape permission check account
-    var cfg = require('./data-configuration');
-    if (typeof cfg.current.auth !== 'undefined' || cfg.current.auth != null)
+    var authSettings = context.getConfiguration().getAuthSettings();
+    if (authSettings)
     {
-        var unattendedExecutionAccount=cfg.current.auth.unattendedExecutionAccount;
+        var unattendedExecutionAccount=authSettings.unattendedExecutionAccount;
         if ((typeof unattendedExecutionAccount !== 'undefined'
             || unattendedExecutionAccount != null)
             && (unattendedExecutionAccount===context.user.name))
@@ -430,6 +430,7 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
                 else {
                     if (e.throwError && !e.result) {
                         var error = new types.AccessDeniedException();
+                        error.model = model.name;
                         callback(error);
                     }
                     else {
@@ -639,10 +640,10 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
     context.user = context.user || { name:'anonymous',authenticationType:'None' };
     //change: 2-May 2015
     //description: Use unattended execution account as an escape permission check account
-    var cfg = require('./data-configuration');
-    if (typeof cfg.current.auth !== 'undefined' || cfg.current.auth != null)
+    var authSettings = context.getConfiguration().getAuthSettings();
+    if (authSettings)
     {
-        var unattendedExecutionAccount=cfg.current.auth.unattendedExecutionAccount;
+        var unattendedExecutionAccount=authSettings.unattendedExecutionAccount;
         if ((typeof unattendedExecutionAccount !== 'undefined'
             || unattendedExecutionAccount != null)
             && (unattendedExecutionAccount===context.user.name))

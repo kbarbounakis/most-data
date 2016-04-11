@@ -45,68 +45,22 @@ var model = require('./data-model'),
     DataFilterResolver = require('./data-filter-resolver').DataFilterResolver;
 
 /**
- * @exports most-data
  * @private
  */
 var dat = {
-    /**
-     * @namespace
-     * @memberof module:most-data
-     */
     cfg: cfg,
-    /**
-     * @namespace
-     * @memberof module:most-data
-     */
     common: dataCommon,
-    /**
-     * @type {types}
-     * @memberOf module:most-data
-     */
     types: types,
-    /**
-     * @type {dataCache}
-     * @memberOf module:most-data
-     */
     cache:dataCache,
-    /**
-     * @namespace
-     * @memberOf module:most-data
-     */
     classes: {
         DataObject : require('./data-object'),
-        /**
-         * DefaultDataContext class constructor.
-         */
         DefaultDataContext: DefaultDataContext,
-        /**
-         * NamedDataContext class constructor.
-         */
         NamedDataContext: NamedDataContext,
-        /**
-         * FunctionContext constructor.
-         */
         FunctionContext:functions.classes.FunctionContext,
-        /**
-         * @see DataQueryable
-         */
         DataQueryable: DataQueryable,
-        /**
-         * DataModel class constructor
-         * @see DataModel
-         */
         DataModel: DataModel,
-        /**
-         * DataFilterResolver class constructor
-         */
         DataFilterResolver: DataFilterResolver,
-        /**
-         * DataPermissionEventListener class constructor
-         */
         DataPermissionEventListener:perms.DataPermissionEventListener,
-        /**
-         * DataPermissionEventArgs class constructor
-         */
         DataPermissionEventArgs:perms.DataPermissionEventArgs
     },
     /**
@@ -149,8 +103,5 @@ var dat = {
 
 if (typeof exports !== 'undefined')
 {
-    /**
-     * @module most-data
-     */
     module.exports = dat;
 }

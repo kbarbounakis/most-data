@@ -1947,10 +1947,7 @@ DataModel.prototype.ensureModel = function(callback) {
     }
     //get migration model
     var conf = self.context.getConfiguration();
-    if (typeof conf.models["Migration"] === 'undefined')
-        conf.models["Migration"] = new DataModel(require("./migration.json"));
-    var migrationModel = new DataModel(conf.models["Migration"]);
-    migrationModel.context = self.context;
+    var migrationModel = self.context.model("migration");
     //ensure migration
     var version = self.version!=null ? self.version : '0.0';
     migrationModel.where('appliesTo').equal(self.sourceAdapter).and('version').equal(version).count(function(err, result) {
@@ -2247,7 +2244,7 @@ DataModel.prototype.dataviews = function(name) {
 DataModel.prototype.inferMapping = function(name) {
     var self = this;
     //ensure model cached mappings
-    var conf = self.getConfiguration().model(self.name);
+    var conf = self.context.getConfiguration().model(self.name);
     if (typeof conf === "undefined" || conf == null) {
         return;
     }

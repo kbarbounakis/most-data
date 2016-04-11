@@ -291,8 +291,5 @@ var dataCommon = {
 
 if (typeof exports !== 'undefined')
 {
-    /**
-     * @type {{log: Function, debug: Function, dasherize: Function, isNullOrUndefined: Function, isDefined: Function, randomInt: Function, randomChars: Function, md5: Function}}
-     */
     module.exports = dataCommon;
 }

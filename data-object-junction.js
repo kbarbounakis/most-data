@@ -187,9 +187,11 @@ function DataObjectJunction(obj, association) {
         get: function() {
             if (baseModel)
                 return baseModel;
-            //sarch in cache (configuration.current.cache)
-            if (cfg.current.models[self.mapping.associationAdapter]) {
-                baseModel = new DataModel(cfg.current.models[self.mapping.associationAdapter]);
+            //get parent context
+            var context = self.parent.context, conf = context.getConfiguration();
+            //search in cache (configuration.current.cache)
+            if (conf.models[self.mapping.associationAdapter]) {
+                baseModel = new DataModel(conf.models[self.mapping.associationAdapter]);
                 baseModel.context = self.parent.context;
                 return baseModel;
             }
@@ -202,7 +204,7 @@ function DataObjectJunction(obj, association) {
             var adapter = self.mapping.associationAdapter;
             baseModel = self.parent.context.model(adapter);
             if (dataCommon.isNullOrUndefined(baseModel)) {
-                cfg.current.models[self.mapping.associationAdapter] = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
+                conf.models[self.mapping.associationAdapter] = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
                     { name: "id", type:"Counter", primary: true },
                     { name: DataObjectJunction.STR_OBJECT_FIELD, nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
                     { name: DataObjectJunction.STR_VALUE_FIELD, nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
@@ -214,7 +216,7 @@ function DataObjectJunction(obj, association) {
                         }
                     ]};
                 //initialize base model
-                baseModel = new DataModel(cfg.current.models[self.mapping.associationAdapter]);
+                baseModel = new DataModel(conf.models[self.mapping.associationAdapter]);
                 baseModel.context = self.parent.context;
             }
             return baseModel;
@@ -463,8 +465,9 @@ function insertSingleObject_(obj, callback) {
 DataObjectJunction.prototype.migrate = function(callback)
 {
     var self = this;
-    //auto migrate junction table
-    var migrationModel = cfg.current.models.Migration.clone(self.parent.context);
+    //get migration model
+    var migrationModel = self.parent.context.model("Migration");
+    //get related model
     var relationModel = self.getRelationModel();
     migrationModel.find({ appliesTo:relationModel.source, version: relationModel.version }).first(function(err, result) {
         if (err) {

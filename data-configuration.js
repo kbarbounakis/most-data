@@ -64,7 +64,9 @@ function DataConfiguration() {
      * @type {*}
      * @ignore
      */
-    this.models = { };
+    this.models = {
+        "Migration":require("./migration.json")
+    };
 
     /**
      * @type {*}
@@ -222,7 +224,43 @@ function DataConfiguration() {
         }
     });
 
+    //ensure authentication settings
+    config.settings = config.settings || { };
+    config.settings.auth = config.settings.auth || { };
+    this.getAuthSettings = function() {
+        try {
+            return config.settings.auth;
+        }
+        catch(e) {
+            var er = new Error('An error occured while trying to load auth configuration');
+            er.code = "ECONF";
+            throw er;
+        }
+    };
+    
+    var path_ = path.join(process.cwd(),'config', 'models');
+
+    /**
+     * Gets a string which represents the path where schemas exist. The default location is the config/models folder. 
+     * @returns {string}
+     */
+    this.getModelPath = function() {
+        return path_;
+    };
+    /**
+     * Sets a string which represents the path where schemas exist.
+     * @param p
+     * @returns {DataConfiguration}
+     */
+    this.setModelPath = function(p) {
+        path_ = p;   
+        return this;
+    }
+
 }
+
+
+
 /**
  * @returns {*}
  * @param name {string}
@@ -244,7 +282,7 @@ DataConfiguration.prototype.model = function(name)
             return this.models[keys[i]];
     }
     //otherwise open definition file
-    var modelPath = path.join(process.cwd(),'config', 'models');
+    var modelPath = this.getModelPath();
     if (!fs.existsSync(modelPath)) {
         //models folder does not exist
         //so set model to null
@@ -310,19 +348,18 @@ var cfg = {
         if (name.length == 0) {
             throw new Error("Invalid argument. Configuration name may not be empty string.");
         }
+        if (/^current$/i.test(name)) {
+            return cfg.current;
+        }
         if (typeof namedConfiguations_[name] !== 'undefined')
             return namedConfiguations_[name];
         namedConfiguations_[name] = new DataConfiguration();
         return namedConfiguations_[name];
     },
     /**
-     * @namespace
      * @ignore
      */
     classes: {
-        /**
-         * @memberof module:most-data/data-configuration.classes
-         */
         DataConfiguration:DataConfiguration
     }
 };

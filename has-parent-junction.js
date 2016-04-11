@@ -193,9 +193,10 @@ function HasParentJunction(obj, association) {
         get: function() {
             if (baseModel)
                 return baseModel;
-            //sarch in cache (configuration.current.cache)
-            if (cfg.current.models[self.mapping.associationAdapter]) {
-                baseModel = new DataModel(cfg.current.models[self.mapping.associationAdapter]);
+            var conf = self.parent.context.getConfiguration();
+            //search in cache (configuration.current.cache)
+            if (conf.models[self.mapping.associationAdapter]) {
+                baseModel = new DataModel(conf.models[self.mapping.associationAdapter]);
                 baseModel.context = self.parent.context;
                 return baseModel;
             }
@@ -207,7 +208,7 @@ function HasParentJunction(obj, association) {
             var adapter = self.mapping.associationAdapter;
             baseModel = self.parent.context.model(adapter);
             if (dataCommon.isNullOrUndefined(baseModel)) {
-                cfg.current.models[adapter] = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
+                conf.models[adapter] = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
                     { name: "id", type:"Counter", primary: true },
                     { name: 'parentId', nullable:false, type:parentField.type },
                     { name: 'valueId', nullable:false, type:childField.type } ],
@@ -219,7 +220,7 @@ function HasParentJunction(obj, association) {
                         }
                     ]};
                 //initialize base model
-                baseModel = new DataModel(cfg.current.models[adapter]);
+                baseModel = new DataModel(conf.models[adapter]);
                 baseModel.context = self.parent.context;
             }
             return baseModel;

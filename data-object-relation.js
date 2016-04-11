@@ -91,11 +91,12 @@ function DataObjectRelation(obj, name)
             //return this query
                 return q;
             if (typeof self.mapping != 'object')
-                throw new Error('Data relation mapping cannot be empty when defining the underlying query of a data object relation.')
+                throw new Error('Data relation mapping cannot be empty when defining the underlying query of a data object relation.');
+            var conf = self.parent.context.getConfiguration();
             //get model (the child model of relation mapping)
-            var model = new DataModel(cfg.current.model(self.mapping.childModel));
+            var model = new DataModel(conf.model(self.mapping.childModel));
             //get related model (the parent model of relation mapping)
-            var relatedModel = new DataModel(cfg.current.model(self.mapping.parentModel));
+            var relatedModel = new DataModel(conf.model(self.mapping.parentModel));
             //get related model's adapter
             var relatedAdapter = relatedModel.viewAdapter;
             //query related adapter
@@ -120,7 +121,8 @@ function DataObjectRelation(obj, name)
             if (m!=null)
             //return this query
                 return m;
-            m = new DataModel(cfg.current.model(self.mapping.parentModel));
+            var conf = self.parent.context.getConfiguration();
+            m = new DataModel(conf.model(self.mapping.parentModel));
             return m;
         }, configurable:false, enumerable:false
     });
