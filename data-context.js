@@ -69,46 +69,60 @@ function DefaultDataContext()
      * @private
      */
     var db_= null;
-    this.__finalize__ = function() {
+    /**
+     * @private
+     */
+    this.finalize_ = function() {
         if (db_)
             db_.close();
         db_=null;
     };
     var self = this;
-    Object.defineProperty(this, 'db', {
-        get : function() {
-            if (db_)
-                return db_;
-            //otherwise load database options from configuration
-            var adapter = self.getConfiguration().adapters.find(function(x) {
-                return x["default"];
-            });
-            if (typeof adapter ==='undefined' || adapter==null) {
-                er = new Error('The default data adapter is missing.'); er.code = 'EADAPTER';
-                throw er;
-            }
-            /**
-             * @type {{createInstance:Function}|*}
-             */
-            var adapterType = self.getConfiguration().adapterTypes[adapter.invariantName];
-            //validate data adapter type
-            var er;
-            if (typeof adapterType === 'undefined' || adapterType == null) {
-                er = new Error('Invalid adapter type.'); er.code = 'EADAPTER';
-                throw er;
-            }
-            if (typeof adapterType.createInstance !== 'function') {
-                er= new Error('Invalid adapter type. Adapter initialization method is missing.'); er.code = 'EADAPTER';
-                throw er;
-            }
-            //otherwise load adapter
-            db_ = adapterType.createInstance(adapter.options);
+
+    self.getDb = function() {
+        if (db_)
             return db_;
+        //otherwise load database options from configuration
+        var adapter = self.getConfiguration().adapters.find(function(x) {
+            return x["default"];
+        });
+        if (typeof adapter ==='undefined' || adapter==null) {
+            er = new Error('The default data adapter is missing.'); er.code = 'EADAPTER';
+            throw er;
+        }
+        /**
+         * @type {{createInstance:Function}|*}
+         */
+        var adapterType = self.getConfiguration().adapterTypes[adapter.invariantName];
+        //validate data adapter type
+        var er;
+        if (typeof adapterType === 'undefined' || adapterType == null) {
+            er = new Error('Invalid adapter type.'); er.code = 'EADAPTER';
+            throw er;
+        }
+        if (typeof adapterType.createInstance !== 'function') {
+            er= new Error('Invalid adapter type. Adapter initialization method is missing.'); er.code = 'EADAPTER';
+            throw er;
+        }
+        //otherwise load adapter
+        db_ = adapterType.createInstance(adapter.options);
+        return db_;
+    };
+
+    self.setDb = function(value) {
+        db_ = value;
+    };
+
+    delete self.db;
+
+    Object.defineProperty(self, 'db', {
+        get: function() {
+            return self.getDb();
         },
-        set : function(value) {
-            db_ = value;
+        set: function(value) {
+            self.setDb(value);
         },
-        configurable : false,
+        configurable: true,
         enumerable:false });
 }
 
@@ -147,7 +161,7 @@ DefaultDataContext.prototype.model = function(name) {
  */
 DefaultDataContext.prototype.finalize = function(cb) {
     cb = cb || function () {};
-    this.__finalize__();
+    this.finalize_();
     cb.call(this);
 };
 
@@ -171,7 +185,7 @@ function NamedDataContext(name)
     /**
      * @private
      */
-    this.__finalize__ = function() {
+    this.finalize_ = function() {
         try {
             if (db_)
                 db_.close();
@@ -185,39 +199,37 @@ function NamedDataContext(name)
     //set the name specified
     var self = this, name_ = name;
 
-    Object.defineProperty(this, 'db', {
-        get : function() {
-            if (db_)
-                return db_;
-            //otherwise load database options from configuration
-            var adapter = self.getConfiguration().adapters.find(function(x) {
-                return x.name == name_;
-            });
-            var er;
-            if (typeof adapter ==='undefined' || adapter==null) {
-                er = new Error('The specified data adapter is missing.'); er.code = 'EADAPTER';
-                throw er;
-            }
-            //get data adapter type
-            var adapterType = self.getConfiguration().adapterTypes[adapter.invariantName];
-            //validate data adapter type
-            if (typeof adapterType === 'undefined' || adapterType == null) {
-                er = new Error('Invalid adapter type.'); er.code = 'EADAPTER';
-                throw er;
-            }
-            if (typeof adapterType.createInstance !== 'function') {
-                er= new Error('Invalid adapter type. Adapter initialization method is missing.'); er.code = 'EADAPTER';
-                throw er;
-            }
-            //otherwise load adapter
-            db_ = adapterType.createInstance(adapter.options);
+    self.getDb = function() {
+        if (db_)
             return db_;
-        },
-        set : function(value) {
-            db_ = value;
-        },
-        configurable : false,
-        enumerable:false });
+        //otherwise load database options from configuration
+        var adapter = self.getConfiguration().adapters.find(function(x) {
+            return x.name == name_;
+        });
+        var er;
+        if (typeof adapter ==='undefined' || adapter==null) {
+            er = new Error('The specified data adapter is missing.'); er.code = 'EADAPTER';
+            throw er;
+        }
+        //get data adapter type
+        var adapterType = self.getConfiguration().adapterTypes[adapter.invariantName];
+        //validate data adapter type
+        if (typeof adapterType === 'undefined' || adapterType == null) {
+            er = new Error('Invalid adapter type.'); er.code = 'EADAPTER';
+            throw er;
+        }
+        if (typeof adapterType.createInstance !== 'function') {
+            er= new Error('Invalid adapter type. Adapter initialization method is missing.'); er.code = 'EADAPTER';
+            throw er;
+        }
+        //otherwise load adapter
+        db_ = adapterType.createInstance(adapter.options);
+        return db_;
+    };
+
+    self.setDb = function(value) {
+        db_ = value;
+    };
 
     /**
      * Gets an instance of DataConfiguration class which is associated with this data context
@@ -225,7 +237,19 @@ function NamedDataContext(name)
      */
     this.getConfiguration = function() {
         return cfg.getNamedConfiguration(name_);
-    }
+    };
+
+    delete self.db;
+
+    Object.defineProperty(self, 'db', {
+        get : function() {
+            return self.getDb();
+        },
+        set : function(value) {
+            self.setDb(value);
+        },
+        configurable : true,
+        enumerable:false });
 
 }
 util.inherits(NamedDataContext, types.DataContext);
@@ -252,7 +276,7 @@ NamedDataContext.prototype.model = function(name) {
 
 NamedDataContext.prototype.finalize = function(cb) {
     cb = cb || function () {};
-    this.__finalize__();
+    this.finalize_();
     cb.call(this);
 };
 

@@ -387,7 +387,7 @@ function DataContext() {
         get : function() {
             return null;
         },
-        configurable : false,
+        configurable : true,
         enumerable:false });
 }
 
