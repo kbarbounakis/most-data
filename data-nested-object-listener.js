@@ -65,9 +65,10 @@ function beforeSave_(attr, event, callback) {
             .silent()
             .first().then(function( result) {
                 if (dataCommon.isNullOrUndefined(result)) { return callback(new Error('Invalid object state.')); }
+            var nestedKey = nestedModel.getPrimaryKey();
                 if (dataCommon.isNullOrUndefined(result[name])) {
-                    //first of all delete address id from target
-                    delete nestedObj[nestedModel.getPrimaryKey()];
+                    //first of all delete nested object id (for insert)
+                    delete nestedObj[nestedKey];
                     //save data
                     nestedModel.silent().save(nestedObj).then(function() {
                         return callback();
@@ -76,6 +77,8 @@ function beforeSave_(attr, event, callback) {
                     });
                 }
                 else {
+                    //set nested object id (for update)
+                    nestedObj[nestedKey] = result[name][nestedKey];
                     nestedModel.silent().save(nestedObj).then(function() {
                         return callback();
                     }).catch(function(err) {
@@ -202,10 +205,8 @@ DataNestedObjectListener.prototype.beforeSave = function (event, callback) {
         //if there are no attribute defined as nested do nothing
         if (nested.length == 0) { return callback(); }
         async.eachSeries(nested, function(attr, cb) {
-            dataCommon.debug("NESTED: Saving nested object. " + JSON.stringify(attr));
             return beforeSave_(attr, event, cb);
         }, function(err) {
-            dataCommon.debug("NESTED: Commit nested object.");
             return callback(err);
         });
     }
@@ -252,7 +253,7 @@ function beforeRemoveMany_(attr, event, callback) {
             junction.clear(function(err) {
                 if (err) { return callback(err); }
                 //and afterwards remove nested objects
-                nestedModel.remove(result, function(err) {
+                nestedModel.silent().remove(result, function(err) {
                     if (err) { return callback(); }
                 });
             });
