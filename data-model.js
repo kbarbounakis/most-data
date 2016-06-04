@@ -2208,6 +2208,32 @@ DataModel.prototype.dataviews = function(name) {
 };
 
 /**
+ * Gets an instance of DataModelView class which represents a model view with the given name.
+ * @param {string} name - A string that represents the name of the view.
+ * @returns {DataModelView|undefined}
+ *@example
+ var view = context.model('Person').getDataView('summary');
+ *
+ */
+DataModel.prototype.getDataView = function(name) {
+    var self = this;
+    var re = new RegExp('^' + name.replace('$','\$') + '$', 'ig');
+    var view = self.views.filter(function(x) { return re.test(x.name);})[0];
+    if (dataCommon.isNullOrUndefined(view))
+    {
+        return util._extend(new DataModelView(self), {
+            "name":"default",
+            "title":"Default View",
+            "fields": self.attributes.map(function(x) {
+                return { "name":x.name }
+            })
+        });
+    }
+    return util._extend(new DataModelView(self), view);
+};
+
+
+/**
  * @param {DataField|*} field
  * @param {DataAssociationMapping|*} mapping
  * @private
