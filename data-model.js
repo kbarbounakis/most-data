@@ -657,17 +657,17 @@ DataModel.prototype.filter = function(params, callback) {
                     groupBy = params.$groupby || params.$group,
                     expand = params.$expand,
                     top = params.$top || params.$take;
-                //set $select
+                //select fields
                 if (typeof select === 'string') {
-                    arr = select.split(',');
-                    if (arr.length>0)
-                        q.select(arr);
+                    q.select.apply(q, select.split(',').map(function(x) {
+                        return x.replace(/^\s+|\s+$/g, '');
+                    }));
                 }
-                //set $group
-                var arr, fields, item, field;
+                //apply group by fields
                 if (typeof groupBy === 'string') {
-                    if (groupBy.length>0)
-                        q.groupBy(groupBy.split(','));
+                    q.groupBy.apply(q, groupBy.split(',').map(function(x) {
+                        return x.replace(/^\s+|\s+$/g, '');
+                    }));
                 }
                 //set $skip
                 q.skip(skip);
@@ -675,36 +675,24 @@ DataModel.prototype.filter = function(params, callback) {
                     q.query.take(top);
                 //set $orderby
                 if (orderBy) {
-                    arr = orderBy.split(',');
-                    for (var i = 0; i < arr.length; i++) {
-                        item = string(arr[i]).trim().toString();
-                        var name = null, direction = 'asc';
-                        if (/ asc$/i.test(item)) {
-                            name=item.substr(0,item.length-4);
+                    orderBy.split(',').map(function(x) {
+                        return x.replace(/^\s+|\s+$/g, '');
+                    }).forEach(function(x) {
+                        if (/\s+desc$/i.test(x)) {
+                            q.orderByDescending(x.replace(/\s+desc$/i, ''));
                         }
-                        else if (/ desc$/i.test(item)) {
-                            direction = 'desc';
-                            name=item.substr(0,item.length-5);
+                        else if (/\s+asc/i.test(x)) {
+                            q.orderBy(x.replace(/\s+asc/i, ''));
                         }
-                        else if (!/\s/.test(item)) {
-                            name = item;
+                        else {
+                            q.orderBy(x);
                         }
-                        if (name) {
-                            field = self.field(name);
-                            if (direction=='desc')
-                                q.orderByDescending(name);
-                            else
-                                q.orderBy(name);
-                        }
-                    }
+                    });
                 }
                 if (expand) {
-                    if (expand.length>0) {
-                        expand.split(',').map(function(x) { return x.replace(/\s/g,''); }).forEach(function(x) {
-                            if (x.length)
-                                q.expand(x.replace(/\s/g,''));
-                        });
-                    }
+                    q.expand.apply(q, expand.split(',').map(function(x) {
+                        return x.replace(/^\s+|\s+$/g, '');
+                    }));
                 }
                 //return
                 callback(null, q);
