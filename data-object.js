@@ -160,6 +160,14 @@ function DataObject(type, obj)
             callback(null, (state==2));
         });
     });
+    /**
+     * Gets the identifier of this DataObject instance.
+     * @returns {*}
+     */
+    this.getId = function () {
+        return this.$$id;
+    };
+    
 }
 util.inherits(DataObject, types.EventEmitter2);
 
@@ -293,6 +301,7 @@ DataObject.prototype.getModel = function() {
 DataObject.prototype.idOf = function() {
     return this.$$id;
 };
+
 /**
  * @param name
  * @returns {DataObject}
