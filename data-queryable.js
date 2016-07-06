@@ -574,8 +574,8 @@ DataQueryable.prototype.search = function(text) {
     var re = /("(.*?)")|(\w+)/g;
     var match;
     while(match = re.exec(text)) {
-        if (match[1]) {
-            terms.push(match[1]);
+        if (match[2]) {
+            terms.push(match[2]);
         }
         else {
             terms.push(match[0]);
