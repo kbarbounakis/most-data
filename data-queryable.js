@@ -1027,6 +1027,11 @@ DataQueryable.prototype.select = function(attr) {
         arg = (arguments.length>1) ? Array.prototype.slice.call(arguments): attr;
 
     if (typeof arg === 'string') {
+        if (arg==="*") {
+            //delete select
+            delete self.query.$select;
+            return this;
+        }
         //validate field or model view
         var field = self.model.field(arg);
         if (field) {

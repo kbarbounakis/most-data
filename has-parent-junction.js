@@ -30,15 +30,13 @@
  */
 
 /**
- * @type {{inherits:Function,_extend:Function,isArray:Function}}
  * @ignore
  */
 var util = require('util'),
     async = require('async'),
     qry = require('most-query'),
     dataCommon = require('./data-common'),
-    types = require('./types'),
-    cfg = require('./data-configuration'),
+    DataAssociationMapping = require('./types').DataAssociationMapping,
     DataQueryable = require('./data-queryable').DataQueryable;
 
 /**
@@ -133,13 +131,16 @@ var util = require('util'),
  * @property {DataAssociationMapping} mapping - Gets or sets the mapping definition of this data object association.
  */
 function HasParentJunction(obj, association) {
+    var self = this;
     /**
      * @type {DataObject}
      * @private
      */
     var parent_ = obj,
-        self = this,
-        model,
+        /**
+         * @type {DataModel}
+         */
+        model_,
         DataModel = require('./data-model').DataModel;
     /**
      * Gets or sets the parent data object
@@ -151,25 +152,22 @@ function HasParentJunction(obj, association) {
         parent_ = value;
     }, configurable: false, enumerable: false});
 
+    //get association mapping
     if (typeof association === 'string') {
-        //infer mapping from field name
-        //set relation mapping
-        if (self.parent!=null) {
-            model = self.parent.getModel();
-            if (model!=null)
-                self.mapping = model.inferMapping(association);
+        if (parent_) {
+            model_ = parent_.getModel();
+            if (model_!=null)
+                self.mapping = model_.inferMapping(association);
         }
     }
     else if (typeof association === 'object' && association !=null) {
         //get the specified mapping
-        if (association instanceof types.DataAssociationMapping)
+        if (association instanceof DataAssociationMapping)
             self.mapping = association;
         else
-            self.mapping = util._extend(new types.DataAssociationMapping(), association);
+            self.mapping = util._extend(new DataAssociationMapping(), association);
     }
 
-    //get related model
-    model=self.parent.getModel();
     var relatedModel = this.parent.context.model(self.mapping.parentModel);
     //call super class constructor
     HasParentJunction.super_.call(this, relatedModel);
@@ -208,7 +206,7 @@ function HasParentJunction(obj, association) {
             var adapter = self.mapping.associationAdapter;
             baseModel = self.parent.context.model(adapter);
             if (dataCommon.isNullOrUndefined(baseModel)) {
-                conf.models[adapter] = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
+                conf.models[adapter] = { name:adapter, title: adapter, sealed:true, hidden:true, type:"hidden", source:adapter, view:adapter, version:'1.0', fields:[
                     { name: "id", type:"Counter", primary: true },
                     { name: 'parentId', nullable:false, type:parentField.type },
                     { name: 'valueId', nullable:false, type:childField.type } ],
@@ -226,9 +224,15 @@ function HasParentJunction(obj, association) {
             return baseModel;
         },configurable:false, enumerable:false
     });
+    /**
+     * Gets an instance of DataModel class which represents the data adapter of this association
+     * @returns {DataModel}
+     */
+    this.getBaseModel = function() {
+        return this.baseModel;
+    }
 
 }
-
 util.inherits(HasParentJunction, DataQueryable);
 
 /**

@@ -33,9 +33,8 @@
  * @ignore
  */
 var util = require('util'),
-    async = require('async'),
     qry = require('most-query'),
-    types = require('./types'),
+    DataAssociationMapping = require('./types').DataAssociationMapping,
     DataQueryable = require('./data-queryable').DataQueryable;
 /**
  * @classdesc Represents a foreign key association between two models.
@@ -115,10 +114,10 @@ function HasOneAssociation(obj, association)
     }
     else if (typeof association === 'object' && association !=null) {
         //get the specified mapping
-        if (association instanceof types.DataAssociationMapping)
+        if (association instanceof DataAssociationMapping)
             self.mapping = association;
         else
-            self.mapping = util._extend(new types.DataAssociationMapping(), association);
+            self.mapping = util._extend(new DataAssociationMapping(), association);
     }
 
     var q = null;

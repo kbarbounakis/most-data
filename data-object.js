@@ -285,8 +285,7 @@ DataObject.prototype.getType = function() {
 };
 /**
  * Gets the associated data model
- * @returns {DataModel|undefined}
- * @deprecated Use DataObject.$$model instead
+ * @returns {DataModel|*}
  */
 DataObject.prototype.getModel = function() {
     if (this.context)

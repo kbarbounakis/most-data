@@ -34,7 +34,6 @@
  * @ignore
  */
 var util = require('util'),
-    async = require('async'),
     qry = require('most-query'),
     types = require('./types'),
     DataQueryable = require('./data-queryable').DataQueryable;

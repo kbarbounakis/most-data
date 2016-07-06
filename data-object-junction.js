@@ -37,7 +37,6 @@ var util = require('util'),
     qry = require('most-query'),
     dataCommon = require('./data-common'),
     types = require('./types'),
-    cfg = require('./data-configuration'),
     DataQueryable = require('./data-queryable').DataQueryable;
 
 /**
@@ -204,15 +203,15 @@ function DataObjectJunction(obj, association) {
             var adapter = self.mapping.associationAdapter;
             baseModel = self.parent.context.model(adapter);
             if (dataCommon.isNullOrUndefined(baseModel)) {
-                conf.models[self.mapping.associationAdapter] = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
+                conf.models[self.mapping.associationAdapter] = { name:adapter, title: adapter, source:adapter, type:"hidden", hidden:true, sealed:true, view:adapter, version:'1.0', fields:[
                     { name: "id", type:"Counter", primary: true },
-                    { name: DataObjectJunction.STR_OBJECT_FIELD, nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
-                    { name: DataObjectJunction.STR_VALUE_FIELD, nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
+                    { name: "parentId", nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
+                    { name: "valueId", nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
                     constraints: [
                         {
                             description: "The relation between two objects must be unique.",
                             type:"unique",
-                            fields: [ DataObjectJunction.STR_OBJECT_FIELD, DataObjectJunction.STR_VALUE_FIELD ]
+                            fields: [ "parentId", "valueId" ]
                         }
                     ]};
                 //initialize base model
@@ -246,15 +245,15 @@ DataObjectJunction.prototype.getRelationModel = function()
     var adapter = self.mapping.associationAdapter;
     var relationModel = self.parent.context.model(adapter);
     if (dataCommon.isNullOrUndefined(relationModel)) {
-        var tempModel = { name:adapter, title: adapter, source:adapter, view:adapter, version:'1.0', fields:[
+        var tempModel = { name:adapter, title: adapter, sealed:true, type:"hidden", hidden:true, source:adapter, view:adapter, version:'1.0', fields:[
             { name: "id", type:"Counter", primary: true },
-            { name: DataObjectJunction.STR_OBJECT_FIELD, nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
-            { name: DataObjectJunction.STR_VALUE_FIELD, nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
+            { name: "parentId", nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
+            { name: "valueId", nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
             constraints: [
                 {
                     description: "The relation between two objects must be unique.",
                     type:"unique",
-                    fields: [ DataObjectJunction.STR_OBJECT_FIELD, DataObjectJunction.STR_VALUE_FIELD ]
+                    fields: [ "parentId", "valueId" ]
                 }
             ]};
         relationModel = new DataModel(tempModel);
