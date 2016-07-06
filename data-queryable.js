@@ -2229,6 +2229,14 @@ function afterExecute_(result, callback) {
                     field = self.model.attributes.find(function(x) { return x.type==expand });
                 if (field) {
                     mapping = self.model.inferMapping(field.name);
+                    if (expands.find(function(x) {
+                            return (x.parentField === mapping.parentField) &&
+                                (x.parentModel === mapping.parentModel) &&
+                                (x.childField === mapping.childField) &&
+                                (x.childModel === mapping.childModel)
+                        })) {
+                        return cb();
+                    }
                     if (mapping) { mapping.refersTo = mapping.refersTo || field.name; }
                 }
             }
