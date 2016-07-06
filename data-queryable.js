@@ -552,6 +552,69 @@ DataQueryable.prototype.where = function(attr) {
     return this;
 };
 
+/**
+ * Initializes a full-text search expression
+ * @param {string} text - A string which represents the text we want to search for
+ * @returns {DataQueryable}
+ * @example
+ context.model('Person')
+ .search('Peter')
+ .select('description')
+ .take(25).list().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ */
+DataQueryable.prototype.search = function(text) {
+    var self = this;
+    var options = { multiword:true };
+    var terms = [];
+    if (typeof text !== 'string') { return self; }
+    var re = /("(.*?)")|(\w+)/g;
+    var match;
+    while(match = re.exec(text)) {
+        if (match[1]) {
+            terms.push(match[1]);
+        }
+        else {
+            terms.push(match[0]);
+        }
+    }
+    if (terms.length==0) {
+        return self;
+    }
+    self.prepare();
+    var stringTypes = [ "Text", "URL", "Note" ];
+    self.model.attributes.forEach(function(x) {
+        if (x.many) { return; }
+        var mapping = self.model.inferMapping(x.name);
+        if (mapping) {
+            if ((mapping.associationType === 'association') && (mapping.childModel===self.model.name)) {
+                var parentModel = self.model.context.model(mapping.parentModel);
+                if (parentModel) {
+                    parentModel.attributes.forEach(function(z) {
+                        if (stringTypes.indexOf(z.type)>=0) {
+                            terms.forEach(function (w) {
+                                if (!/^\s+$/.test(w))
+                                    self.or(x.name + '/' + z.name).contains(w);
+                            });
+                        }
+                    });
+                }
+            }
+        }
+        if (stringTypes.indexOf(x.type)>=0) {
+            terms.forEach(function (y) {
+                if (!/^\s+$/.test(y))
+                    self.or(x.name).contains(y);
+            });
+        }
+    });
+    self.prepare();
+    return self;
+};
+
 DataQueryable.prototype.join = function(model)
 {
     var self = this;

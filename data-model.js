@@ -540,6 +540,17 @@ DataModel.prototype.where = function(attr) {
     var result = new DataQueryable(this);
     return result.where(attr);
 };
+
+/**
+ * Initializes a full-text search statement and returns an instance of DataQueryable class.
+ * @param {String} text - A string that represents the text to search for
+ * @returns DataQueryable
+ */
+DataModel.prototype.search = function(text) {
+    var result = new DataQueryable(this);
+    return result.search(text);
+};
+
 /**
  * Returns a DataQueryable instance of the current model
  * @returns {DataQueryable}
