@@ -1704,6 +1704,10 @@ DataQueryable.prototype.getItems = function() {
     var self = this, d = Q.defer();
     process.nextTick(function() {
         delete self.query.$inlinecount;
+        if ((parseInt(self.query.$take) || 0) < 0) {
+            delete self.query.$take;
+            delete self.query.$skip;
+        }
         if (!self.query.hasFields()) {
             self.select();
         }
@@ -2112,8 +2116,16 @@ DataQueryable.prototype.postExecute = function(result, callback) {
                         //add expandable models
                         if (field) {
                             var mapping = self.model.inferMapping(field.name);
-                            if (mapping)
-                                self.expand(mapping);
+                            if (mapping) {
+                                self.$expand = self.$expand || { };
+                                var expand1 = self.$expand.find(function(x) {
+                                    return x.name === field.name;
+                                });
+                                if (typeof expand1 === 'undefined') {
+                                    self.expand(mapping);
+                                }
+                            }
+
                         }
                     });
                 }
@@ -2214,19 +2226,47 @@ function afterExecute_(result, callback) {
     if (self.$expand) {
         //get distinct values
         var expands = self.$expand.distinct(function(x) { return x; });
-        async.eachSeries(expands,function(expand, cb) {
+        async.eachSeries(expands, function(expand, cb) {
             /**
              * get mapping
              * @type {DataAssociationMapping|*}
              */
-            var mapping = null;
+            var mapping = null, options = { };
             if (expand instanceof types.DataAssociationMapping) {
                 mapping = expand;
+                if (typeof expand.select !== 'undefined' && expand.select != null) {
+                    if (typeof expand.select === 'string')
+                        options["$select"] = expand.select;
+                    else if (util.isArray(expand.select))
+                        options["$select"] = expand.select.join(",");
+                }
+                //get expand options
+                if (typeof expand.options !== 'undefined' && expand.options != null) {
+                    util._extend(options, expand.options);
+                }
             }
             else {
-                field = self.model.field(expand);
+                //get mapping from expand attribute
+                var expandAttr;
+                if (typeof expand === 'string') {
+                    //get expand attribute as string
+                    expandAttr = expand;
+                }
+                else if ((typeof expand === 'object') && expand.hasOwnProperty('name')) {
+                    //get expand attribute from Object.name property
+                    expandAttr = expand.name;
+                    //get expand options
+                    if (typeof expand.options !== 'undefined' && expand.options != null) {
+                        options = expand.options;
+                    }
+                }
+                else {
+                    //invalid expand parameter
+                    return callback(new Error("Invalid expand option. Expected string or a named object."));
+                }
+                field = self.model.field(expandAttr);
                 if (typeof field === 'undefined')
-                    field = self.model.attributes.find(function(x) { return x.type==expand });
+                    field = self.model.attributes.find(function(x) { return x.type==expandAttr });
                 if (field) {
                     mapping = self.model.inferMapping(field.name);
                     if (expands.find(function(x) {
@@ -2239,6 +2279,14 @@ function afterExecute_(result, callback) {
                     }
                     if (mapping) { mapping.refersTo = mapping.refersTo || field.name; }
                 }
+            }
+            //set default $top option to -1 (backward compatibility issue)
+            if (!options.hasOwnProperty("$top")) {
+                options["$top"] = -1;
+            }
+            //set default $levels option to 1 (backward compatibility issue)
+            if (!options.hasOwnProperty("$levels")) {
+                options["$levels"] = 1;
             }
             if (mapping) {
                 var associatedModel, values, keyField, arr, junction;
@@ -2264,15 +2312,18 @@ function afterExecute_(result, callback) {
                             field = associatedModel.field(mapping.childField);
                             parentField = mapping.refersTo;
                             //search for view named summary
-                            var qChilds = associatedModel.where(field.name).in(values).flatten().silent();
-                            if (mapping.select) {
-                                qChilds.select(mapping.select);
-                            }
-                            qChilds.all(function(err, childs) {
+                            associatedModel.filter(options, function(err, expandQ) {
                                 if (err) {
                                     return cb(err);
                                 }
-                                else {
+                                expandQ.prepare();
+                                //append base where statement for this operation
+                                expandQ.where(field.name).in(values);
+                                if ((parseInt(options["$levels"]) || 0)<=1) {
+                                    expandQ.flatten();
+                                }
+                                //final execute query
+                                return expandQ.getItems().then(function(childs) {
                                     var key=null,
                                         attr = (field.property || field.name),
                                         selector = function(x) {
@@ -2289,9 +2340,12 @@ function afterExecute_(result, callback) {
                                         key =result[mapping.parentField];
                                         result[parentField] = childs.filter(selector);
                                     }
-                                    return cb(null);
-                                }
+                                    return cb();
+                                }).catch(function(err) {
+                                    return cb(err);
+                                });
                             });
+
                         }
                     }
                     else if (mapping.childModel==self.model.name && mapping.associationType=='junction') {
@@ -2310,30 +2364,40 @@ function afterExecute_(result, callback) {
                             //get parent model
                             var parentModel = self.model.context.model(mapping.parentModel);
                             //query parent with parent key values
-                            var q = parentModel.where(mapping.parentField).in(values).flatten().silent();
-                            //if selectable fields are defined
-                            if (mapping.select)
-                            //select these fields
-                                q.select(mapping.select);
-                            //and finally query parent
-                            q.all(function(err, parents) {
-                                if (err) { return cb(err); }
-                                //if result contains only one item
-                                if (arr.length == 1) {
-                                    arr[0][field.name] = parents;
-                                    return cb();
+                            parentModel.filter(options, function(err, expandQ) {
+                                if (err) {
+                                    return cb(err);
                                 }
-                                //otherwise loop result array
-                                arr.forEach(function(x) {
-                                    //get child (key value)
-                                    var valueId = x[mapping.childField];
-                                    //get parent(s)
-                                    var p = junctions.filter(function(y) { return (y.valueId==valueId); }).map(function(r) { return r['parentId']; });
-                                    //filter data and set property value (a filtered array of parent objects)
-                                    x[field.name] = parents.filter(function(z) { return p.indexOf(z[mapping.parentField])>=0; });
+                                expandQ.prepare();
+                                //append base where statement for this operation
+                                expandQ.where(mapping.parentField).in(values);
+                                if ((parseInt(options["$levels"]) || 0)<=1) {
+                                    expandQ.flatten();
+                                }
+                                //set silent (?)
+                                expandQ.silent();
+                                //and finally query parent
+                                expandQ.getItems().then(function(parents){
+                                    //if result contains only one item
+                                    if (arr.length == 1) {
+                                        arr[0][field.name] = parents;
+                                        return cb();
+                                    }
+                                    //otherwise loop result array
+                                    arr.forEach(function(x) {
+                                        //get child (key value)
+                                        var valueId = x[mapping.childField];
+                                        //get parent(s)
+                                        var p = junctions.filter(function(y) { return (y.valueId==valueId); }).map(function(r) { return r['parentId']; });
+                                        //filter data and set property value (a filtered array of parent objects)
+                                        x[field.name] = parents.filter(function(z) { return p.indexOf(z[mapping.parentField])>=0; });
+                                    });
+                                    return cb();
+                                }).catch(function(err) {
+                                    return cb(err);
                                 });
-                                return cb();
                             });
+
                         });
                     }
                     else if (mapping.parentModel==self.model.name && mapping.associationType=='junction') {
@@ -2351,30 +2415,39 @@ function afterExecute_(result, callback) {
                             values = junctions.map(function(x) { return x['valueId'] });
                             //get child model
                             var childModel = self.model.context.model(mapping.childModel);
-                            //query parent with parent key values
-                            var q = childModel.where(mapping.childField).in(values).silent().flatten();
-                            //if selectable fields are defined
-                            if (mapping.select)
-                            //select these fields
-                                q.select(mapping.select);
-                            //and finally query childs
-                            q.all(function(err, childs) {
-                                if (err) { return cb(err); }
-                                //if result contains only one item
-                                if (arr.length == 1) {
-                                    arr[0][field.name] = childs;
-                                    return cb();
+
+                            childModel.filter(options, function(err, expandQ) {
+                                if (err) {
+                                    return cb(err);
                                 }
-                                //otherwise loop result array
-                                arr.forEach(function(x) {
-                                    //get parent (key value)
-                                    var parentId = x[mapping.parentField];
-                                    //get parent(s)
-                                    var p = junctions.filter(function(y) { return (y.parentId==parentId); }).map(function(r) { return r['valueId']; });
-                                    //filter data and set property value (a filtered array of parent objects)
-                                    x[field.name] = childs.filter(function(z) { return p.indexOf(z[mapping.childField])>=0; });
+                                expandQ.prepare();
+                                //append where statement for this operation
+                                expandQ.where(mapping.childField).in(values);
+                                if ((parseInt(options["$levels"]) || 0)<=1) {
+                                    expandQ.flatten();
+                                }
+                                //set silent (?)
+                                expandQ.silent();
+                                //and finally query childs
+                                expandQ.getItems().then(function(childs) {
+                                    //if result contains only one item
+                                    if (arr.length == 1) {
+                                        arr[0][field.name] = childs;
+                                        return cb();
+                                    }
+                                    //otherwise loop result array
+                                    arr.forEach(function(x) {
+                                        //get parent (key value)
+                                        var parentId = x[mapping.parentField];
+                                        //get parent(s)
+                                        var p = junctions.filter(function(y) { return (y.parentId==parentId); }).map(function(r) { return r['valueId']; });
+                                        //filter data and set property value (a filtered array of parent objects)
+                                        x[field.name] = childs.filter(function(z) { return p.indexOf(z[mapping.childField])>=0; });
+                                    });
+                                    return cb();
+                                }).catch(function(err) {
+                                    return cb(err);
                                 });
-                                return cb();
                             });
                         });
                     }
@@ -2400,11 +2473,20 @@ function afterExecute_(result, callback) {
                         }
                         else {
                             var childField = self.model.field(mapping.childField);
-                            associatedModel.where(mapping.parentField).in(values).flatten().silent().select(mapping.select).all(function(err, parents) {
+
+                            associatedModel.filter(options, function(err, expandQ) {
                                 if (err) {
                                     return cb(err);
                                 }
-                                else {
+                                expandQ.prepare();
+                                //append where statement for this operation
+                                expandQ.where(mapping.parentField).in(values);
+                                if ((parseInt(options["$levels"]) || 0)<=1) {
+                                    expandQ.flatten();
+                                }
+                                //set silent (?)
+                                expandQ.silent();
+                                expandQ.getItems().then(function(parents) {
                                     var key=null,
                                         selector = function(x) {
                                             return x[mapping.parentField]==key;
@@ -2424,14 +2506,16 @@ function afterExecute_(result, callback) {
                                     else {
                                         key = result[keyField];
                                         if (childField.property && childField.property!==childField.name) {
-                                            x[childField.property] = parents.filter(selector)[0];
-                                            delete x[childField.name];
+                                            result[childField.property] = parents.filter(selector)[0];
+                                            delete result[childField.name];
                                         }
                                         else
                                             result[childField.name] = parents.filter(selector)[0];
                                     }
-                                    return cb(null);
-                                }
+                                    return cb();
+                                }).catch(function(err) {
+                                    return cb(err);
+                                });
                             });
                         }
                     }
@@ -2664,7 +2748,18 @@ DataQueryable.prototype.expand = function(attr) {
             self.$expand=[];
         if (util.isArray(arg)) {
 
-            arg.forEach(function(x) { self.$expand.push(x); });
+            arg.forEach(function(x) {
+                if (typeof x === 'undefined' || x == null) {
+                    return;
+                }
+                if ((typeof x === 'string')
+                    || (typeof x === 'object' && x.hasOwnProperty('name'))) {
+                    self.$expand.push(x);
+                }
+                else {
+                    throw new Error("Expand option may be a string or a named object.")
+                }
+            });
         }
         else {
             self.$expand.push(arg);

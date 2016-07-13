@@ -701,9 +701,12 @@ DataModel.prototype.filter = function(params, callback) {
                     });
                 }
                 if (expand) {
-                    q.expand.apply(q, expand.split(',').map(function(x) {
-                        return x.replace(/^\s+|\s+$/g, '');
-                    }));
+
+                    var resolver = require("./data-expand-resolver");
+                    var matches = resolver.testExpandExpression(expand);
+                    if (matches && matches.length>0) {
+                        q.expand.apply(q, matches);
+                    }
                 }
                 //return
                 callback(null, q);
@@ -2199,7 +2202,7 @@ DataModel.prototype.fieldOf = function(attr, alias) {
  */
 DataModel.prototype.dataviews = function(name) {
     var self = this;
-    var re = new RegExp('^' + name.replace('$','\$') + '$', 'ig');
+    var re = new RegExp('^' + name.replace('*','\\*').replace('$','\\$') + '$', 'ig');
     var view = self.views.filter(function(x) { return re.test(x.name);})[0];
     if (dataCommon.isNullOrUndefined(view))
         return;
