@@ -2117,7 +2117,7 @@ DataQueryable.prototype.postExecute = function(result, callback) {
                         if (field) {
                             var mapping = self.model.inferMapping(field.name);
                             if (mapping) {
-                                self.$expand = self.$expand || { };
+                                self.$expand = self.$expand || [ ];
                                 var expand1 = self.$expand.find(function(x) {
                                     return x.name === field.name;
                                 });
