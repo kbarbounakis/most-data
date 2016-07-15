@@ -562,7 +562,7 @@ DataModel.prototype.asQueryable = function() {
 
 /**
  * Applies open data filter, ordering, grouping and paging params and returns a data queryable object
- * @param {String|{$filter:string=, $skip:number=, $top:number=, $take:number=, $order:string=, $inlinecount:string=, $expand:string=,$select:string=, $orderby:string=, $group:string=, $groupby:string=}} params - A string that represents an open data filter or an object with open data parameters
+ * @param {String|{$filter:string=, $skip:number=, $levels:number=, $top:number=, $take:number=, $order:string=, $inlinecount:string=, $expand:string=,$select:string=, $orderby:string=, $group:string=, $groupby:string=}} params - A string that represents an open data filter or an object with open data parameters
  * @param {function(Error=,DataQueryable=)} callback -  A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain an instance of DataQueryable class.
  * @example
  context.model('Order').filter(context.params, function(err,q) {
@@ -641,6 +641,14 @@ DataModel.prototype.filter = function(params, callback) {
             DataFilterResolver.prototype.resolveMethod.call(self, name, args, cb);
     };
     var filter;
+
+    if ((params instanceof DataQueryable) && (self.name === params.model.name)) {
+        var q = new DataQueryable(self);
+        util._extend(q, params);
+        util._extend(q.query, params.query);
+        return callback(null, q);
+    }
+
     if (typeof params === 'string') {
         filter = params;
     }
@@ -667,6 +675,7 @@ DataModel.prototype.filter = function(params, callback) {
                     orderBy = params.$orderby || params.$order,
                     groupBy = params.$groupby || params.$group,
                     expand = params.$expand,
+                    levels = parseInt(params.$levels),
                     top = params.$top || params.$take;
                 //select fields
                 if (typeof select === 'string') {
@@ -679,6 +688,10 @@ DataModel.prototype.filter = function(params, callback) {
                     q.groupBy.apply(q, groupBy.split(',').map(function(x) {
                         return x.replace(/^\s+|\s+$/g, '');
                     }));
+                }
+                if ((typeof levels === 'number') && !isNaN(levels)) {
+                    //set expand levels
+                    q.levels(levels);
                 }
                 //set $skip
                 q.skip(skip);
@@ -2450,12 +2463,31 @@ DataModel.prototype.inferMapping = function(name) {
     }
 };
 
+
+
 /**
- * Gets or sets an object that represents the user of the current data context.
- * @property {string|undefined}
- * @name process#NODE_ENV
- * @memberof process
+ * Sets the number of levels of the expandable attributes.
+ * The default value is 1 which means that any expandable attribute will be flat (without any other nested attribute).
+ * If the value is greater than 1 then the nested objects may contain other nested objects and so on.
+ * @param {Number=} value - A number which represents the number of levels which are going to be used in expandable attributes.
+ * @returns {DataQueryable}
+ * @example
+ //get orders, expand customer and get customer's nested objects if any.
+ context.model('Order')
+ .levels(2)
+ .orderByDescending('dateCreated)
+ .expand('customer')
+ .getItems().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
  */
+
+DataModel.prototype.levels = function(value) {
+    var result = new DataQueryable(this);
+    return result.levels(value);
+};
 
 if (typeof exports !== 'undefined') {
     module.exports = {

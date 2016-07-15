@@ -486,6 +486,8 @@ DataQueryable.prototype.clone = function() {
     result.$view = this.$view;
     //set silent property
     result.$silent = this.$silent;
+    //set silent property
+    result.$levels = this.$levels;
     //set flatten property
     result.$flatten = this.$flatten;
     //set expand property
@@ -2084,7 +2086,8 @@ DataQueryable.prototype.postExecute = function(result, callback) {
     self.migrate(function(err) {
         if (err) { callback(err); return; }
         var e = { model:self.model, query:self.query, type:'select' };
-        if (!self.$flatten) {
+        var flatten = self.$flatten || (self.getLevels()==0);
+        if (!flatten) {
             //get expandable fields
             var expandables = self.model.attributes.filter(function(x) { return x.expandable; });
             //get selected fields
@@ -2280,14 +2283,22 @@ function afterExecute_(result, callback) {
                     if (mapping) { mapping.refersTo = mapping.refersTo || field.name; }
                 }
             }
-            //set default $top option to -1 (backward compatibility issue)
-            if (!options.hasOwnProperty("$top")) {
-                options["$top"] = -1;
+            if (options instanceof DataQueryable) {
+                // do nothing
             }
-            //set default $levels option to 1 (backward compatibility issue)
-            if (!options.hasOwnProperty("$levels")) {
-                options["$levels"] = 1;
+            else {
+                //set default $top option to -1 (backward compatibility issue)
+                if (!options.hasOwnProperty("$top")) {
+                    options["$top"] = -1;
+                }
+                //set default $levels option to 1 (backward compatibility issue)
+                if (!options.hasOwnProperty("$levels")) {
+                    if (typeof self.$levels === 'number') {
+                        options["$levels"] = self.getLevels() - 1;
+                    }
+                }
             }
+
             if (mapping) {
                 var associatedModel, values, keyField, arr, junction;
                 if (mapping.associationType=='association' || mapping.associationType=='junction') {
@@ -2319,9 +2330,6 @@ function afterExecute_(result, callback) {
                                 expandQ.prepare();
                                 //append base where statement for this operation
                                 expandQ.where(field.name).in(values);
-                                if ((parseInt(options["$levels"]) || 0)<=1) {
-                                    expandQ.flatten();
-                                }
                                 //final execute query
                                 return expandQ.getItems().then(function(childs) {
                                     var key=null,
@@ -2371,9 +2379,6 @@ function afterExecute_(result, callback) {
                                 expandQ.prepare();
                                 //append base where statement for this operation
                                 expandQ.where(mapping.parentField).in(values);
-                                if ((parseInt(options["$levels"]) || 0)<=1) {
-                                    expandQ.flatten();
-                                }
                                 //set silent (?)
                                 expandQ.silent();
                                 //and finally query parent
@@ -2423,9 +2428,6 @@ function afterExecute_(result, callback) {
                                 expandQ.prepare();
                                 //append where statement for this operation
                                 expandQ.where(mapping.childField).in(values);
-                                if ((parseInt(options["$levels"]) || 0)<=1) {
-                                    expandQ.flatten();
-                                }
                                 //set silent (?)
                                 expandQ.silent();
                                 //and finally query childs
@@ -2481,9 +2483,6 @@ function afterExecute_(result, callback) {
                                 expandQ.prepare();
                                 //append where statement for this operation
                                 expandQ.where(mapping.parentField).in(values);
-                                if ((parseInt(options["$levels"]) || 0)<=1) {
-                                    expandQ.flatten();
-                                }
                                 //set silent (?)
                                 expandQ.silent();
                                 expandQ.getItems().then(function(parents) {
@@ -2619,6 +2618,7 @@ DataQueryable.prototype.silent = function(value) {
 DataQueryable.prototype.toMD5 = function() {
     var q = { query:this.query };
     if (typeof this.$expand !== 'undefined') { q.$expand =this.$expand; }
+    if (typeof this.$levels!== 'undefined') { q.$levels =this.$levels; }
     if (typeof this.$flatten!== 'undefined') { q.$flatten =this.$flatten; }
     if (typeof this.$silent!== 'undefined') { q.$silent =this.$silent; }
     if (typeof this.$asArray!== 'undefined') { q.$asArray =this.$asArray; }
@@ -2681,7 +2681,7 @@ DataQueryable.prototype.cache = function(value) {
 
 /**
  * Sets an expandable field or collection of fields. An expandable field produces nested objects based on the association between two models.
- * @param {...string} attr - A param array of strings which represents the field or the array of fields that are going to be expanded.
+ * @param {...string|*} attr - A param array of strings which represents the field or the array of fields that are going to be expanded.
  * If attr is missing then all the previously defined expandable fields will be removed.
  * @returns {DataQueryable}
  * @example
@@ -2799,6 +2799,9 @@ DataQueryable.prototype.flatten = function(value) {
     }
     else {
         delete this.$flatten;
+    }
+    if (this.$flatten) {
+        this.$levels = 0;
     }
     return this;
 };
@@ -3180,6 +3183,82 @@ DataQueryable.prototype.value = function(callback) {
     else {
         return valueInternal.call(this, callback);
     }
+};
+
+
+/**
+ * Sets the number of levels of the expandable attributes.
+ * The default value is 1 which means that any expandable attribute will be flat (without any other nested attribute).
+ * If the value is greater than 1 then the nested objects may contain other nested objects and so on.
+ * @param {Number=} value - A number which represents the number of levels which are going to be used in expandable attributes.
+ * @returns {DataQueryable}
+ * @example
+ //get orders, expand customer and get customer's nested objects if any.
+ context.model('Order')
+ .orderByDescending('dateCreated)
+ .expand('customer')
+ .levels(2)
+ .getItems().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ */
+DataQueryable.prototype.levels = function(value) {
+    /**
+     * @type {number}
+     * @private
+     */
+    this.$levels = 1;
+    if (typeof value === 'undefined') {
+        this.$levels = 1;
+    }
+    else if (typeof value === 'number') {
+        this.$levels = parseInt(value);
+    }
+    //set flatten property (backward compatibility issue)
+    this.$flatten = (this.$levels<1);
+    return this;
+};
+
+/**
+ * Gets the number of levels of the expandable objects
+ * @returns {number}
+ */
+DataQueryable.prototype.getLevels = function() {
+    if (typeof this.$levels === 'number') {
+        return this.$levels;
+    }
+    return 1;
+};
+
+/**
+ * Converts a DataQueryable instance to an object which is going to be used as parameter in DataQueryable.expand() method
+ *  @param {String} attr - A string which represents the attribute of a model which is going to be expanded with the options specified in this instance of DataQueryable.
+ *
+ *  @example
+ //get customer and customer orders with options (e.g. select specific attributes and sort orders by order date)
+ context.model("Person")
+ .search("Daisy")
+ .expand(context.model("Order").select("id", "customer","orderStatus", "orderDate", "orderedItem").levels(2).orderByDescending("orderDate").take(10).toExpand("orders"))
+ .take(3)
+ .getItems()
+ .then(function (result) {
+        console.log(JSON.stringify(result));
+        done();
+    }).catch(function (err) {
+    done(err);
+});
+ *
+ */
+DataQueryable.prototype.toExpand = function(attr) {
+    if ((typeof attr === 'string') && (attr.length>0)) {
+        return {
+            name: attr,
+            options: this
+        }
+    }
+    throw new Error("Invalid parameter. Expected not empty string.")
 };
 
 if (typeof exports !== 'undefined')
