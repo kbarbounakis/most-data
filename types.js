@@ -1031,6 +1031,7 @@ function DataAssociationMapping(obj) {
  * @property {string} description - Gets or sets a short description for this field.
  * @property {string} help - Gets or sets a short help for this field.
  * @property {string} appearance - Gets or sets the appearance template of this field, if any.
+ * @property {*} validation - Gets or sets data validation attributes.
  * @property {*} options - Gets or sets the available options for this field.
  * @property {boolean} virtual - Gets or sets a boolean that indicates whether this fields is a view only field or not.
  */
