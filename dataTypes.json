@@ -123,19 +123,21 @@
     "Duration": {
         "ancestors": [
             "DataType",
-            "Number"
+            "Text"
         ],
-        "comment": "",
+        "comment": "A string which represents a duration of time (e.g. P1Y1M10D, P10D, -P0Y1M10D2H15M30S etc)",
         "id": "Duration",
         "label": "Duration",
-        "properties": {},
-        "specific_properties": {},
+        "properties": {
+          "pattern":"^([-])?P([0-9]+Y)?([0-9]+M)?([0-9]+D)?([0-9]+H)?([0-9]+M)?([0-9]+S)?$"
+        },
         "subtypes": [],
         "supertypes": [
-            "Number"
+            "Text"
         ],
-        "url": "urn:most:schemas:Duration",
-        "type": "number"
+        "url": "http://www.w3.org/TR/xmlschema-2/#duration",
+        "type": "string",
+        "sqltype":"Text"
     },
     "Number": {
         "ancestors": [
@@ -178,17 +180,18 @@
         "ancestors": [
             "DataType"
         ],
-        "comment": "",
+        "comment": "A string which represents an instant of time that recurs every day (e.g. 13:20:45)",
         "id": "Time",
         "label": "Time",
-        "properties": {},
-        "specific_properties": {},
-        "subtypes": [],
+        "properties": {
+          "pattern":"^([01]?\\d|2[0-3])\\:([0-5][0-9])\\:([0-5][0-9])?\\.?(\\d+)?([-+][0-1][0-9]\\.[0-5][0-9])?$"
+        },
         "supertypes": [
             "DataType"
         ],
-        "url": "http://schema.org/Time",
-        "type": "Date"
+        "url": "https://www.w3.org/TR/xmlschema-2/#time",
+        "type": "Date",
+        "sqlType":"Time"
     },
     "URL": {
         "ancestors": [
@@ -215,7 +218,10 @@
         "comment": "",
         "id": "Language",
         "label": "Language",
-        "properties": {},
+        "properties": {
+          "pattern":"^([a-zA-Z]{2}|[iI]-[a-zA-Z]+|[xX]-[a-zA-Z]{1,8})(-[a-zA-Z]{1,8})*$",
+          "values":{ "af":"Afrikaans", "ar-ae":"Arabic (U.A.E.)", "ar-bh":"Arabic (Kingdom of Bahrain)", "ar-dz":"Arabic (Algeria)", "ar-eg":"Arabic (Egypt)", "ar-iq":"Arabic (Iraq)", "ar-jo":"Arabic (Jordan)", "ar-kw":"Arabic (Kuwait)", "ar-lb":"Arabic (Lebanon)", "ar-ly":"Arabic (Libya)", "ar-ma":"Arabic (Morocco)", "ar-om":"Arabic (Oman)", "ar-qa":"Arabic (Qatar)", "ar-sa":"Arabic (Saudi Arabia)", "ar-sy":"Arabic (Syria)", "ar-tn":"Arabic (Tunisia)", "ar-ye":"Arabic (Yemen)", "ar":"Arabic", "as":"Assamese", "az":"Azerbaijani", "be":"Belarusian", "bg":"Bulgarian", "bn":"Bangla", "ca":"Catalan", "cs":"Czech", "da":"Danish", "de-at":"German (Austria)", "de-ch":"German (Switzerland)", "de-li":"German (Liechtenstein)", "de-lu":"German (Luxembourg)", "de":"German (Germany)", "el":"Greek", "en-au":"English (Australia)", "en-bz":"English (Belize)", "en-ca":"English (Canada)", "en-gb":"English (United Kingdom)", "en-ie":"English (Ireland)", "en-jm":"English (Jamaica)", "en-nz":"English (New Zealand)", "en-ph":"English (Philippines)", "en-tt":"English (Trinidad)", "en-us":"English (United States)", "en-za":"English (South Africa)", "en-zw":"English (Zimbabwe)", "en":"English", "es-ar":"Spanish (Argentina)", "es-bo":"Spanish (Bolivia)", "es-cl":"Spanish (Chile)", "es-co":"Spanish (Colombia)", "es-cr":"Spanish (Costa Rica)", "es-do":"Spanish (Dominican Republic)", "es-ec":"Spanish (Ecuador)", "es-gt":"Spanish (Guatemala)", "es-hn":"Spanish (Honduras)", "es-mx":"Spanish (Mexico)", "es-ni":"Spanish (Nicaragua)", "es-pa":"Spanish (Panama)", "es-pe":"Spanish (Peru)", "es-pr":"Spanish (Puerto Rico)", "es-py":"Spanish (Paraguay)", "es-sv":"Spanish (El Salvador)", "es-us":"Spanish (United States)", "es-uy":"Spanish (Uruguay)", "es-ve":"Spanish (Venezuela)", "es":"Spanish", "et":"Estonian", "eu":"Basque (Basque)", "fa":"Persian", "fi":"Finnish", "fo":"Faeroese", "fr-be":"French (Belgium)", "fr-ca":"French (Canada)", "fr-ch":"French (Switzerland)", "fr-lu":"French (Luxembourg)", "fr-mc":"French (Monaco)", "fr":"French (France)", "gd":"Scottish Gaelic", "gl":"Galician", "gu":"Gujarati", "he":"Hebrew", "hi":"Hindi", "hr":"Croatian", "hu":"Hungarian", "hy":"Armenian", "id":"Indonesian", "is":"Icelandic", "it-ch":"Italian (Switzerland)", "it":"Italian (Italy)", "ja":"Japanese", "ka":"Georgian", "kk":"Kazakh", "kn":"Kannada", "ko":"Korean", "kok":"Konkani", "kz":"Kyrgyz", "lt":"Lithuanian", "lv":"Latvian", "mk":"Macedonian Slavic", "ml":"Malayalam", "mn":"Mongolian (Cyrillic)", "mr":"Marathi", "ms":"Malay", "mt":"Maltese", "nb-no":"Norwegian (Bokmal)", "ne":"Nepali (India)", "nl-be":"Dutch (Belgium)", "nl":"Dutch (Netherlands)", "nn-no":"Norwegian (Nynorsk)", "no":"Norwegian (Bokmal)", "or":"Odia", "pa":"Punjabi", "pl":"Polish", "pt-br":"Portuguese (Brazil)", "pt":"Portuguese (Portugal)", "rm":"Rhaeto-Romanic", "ro-md":"Romanian (Moldova)", "ro":"Romanian", "ru-md":"Russian (Moldova)", "ru":"Russian", "sa":"Sanskrit", "sb":"Sorbian", "sk":"Slovak", "sl":"Slovenian", "sq":"Albanian", "sr":"Serbian", "sv-fi":"Swedish (Finland)", "sv":"Swedish", "sw":"Swahili", "sx":"Sutu", "syr":"Syriac", "ta":"Tamil", "te":"Telugu", "th":"Thai", "tn":"Tswana", "tr":"Turkish", "ts":"Tsonga", "tt":"Tatar", "uk":"Ukrainian", "ur":"Urdu", "uz":"Uzbek", "vi":"Vietnamese", "xh":"Xhosa", "yi":"Yiddish", "zh-cn":"Chinese (China)", "zh-hk":"Chinese (Hong Kong SAR)", "zh-mo":"Chinese (Macao SAR)", "zh-sg":"Chinese (Singapore)", "zh-tw":"Chinese (Taiwan)", "zh":"Chinese", "zu":"Zulu" }
+        },
         "specific_properties": {},
         "subtypes": [],
         "supertypes": [
@@ -262,5 +268,153 @@
       ],
       "type": "string",
       "sqlType":"Text"
-    }
+    },
+    "NegativeInteger": {
+        "ancestors": [
+            "DataType",
+            "Number"
+        ],
+        "comment": "An integer containing only negative values (..,-2,-1)",
+        "id": "NegativeInteger",
+        "label": "NegativeInteger",
+        "properties": {
+          "pattern":"^[-][0-9]*\\.?[0-9]*$",
+          "min":-2147483648,
+          "max":-1
+        },
+        "supertypes": [
+            "Integer"
+        ],
+        "url": "http://www.w3.org/TR/xmlschema-2/#negativeInteger",
+        "type": "int",
+        "sqlType":"Integer"
+    },
+  "NonNegativeInteger": {
+    "ancestors": [
+      "DataType",
+      "Number"
+    ],
+    "comment": "An integer containing only non-negative values (0,1,2,..)",
+    "id": "NonNegativeInteger",
+    "label": "NonNegativeInteger",
+    "properties": {
+      "pattern":"^[+]?[0-9]*\\.?[0-9]*$",
+      "min":0,
+      "max":2147483647
+    },
+    "supertypes": [
+      "Integer"
+    ],
+    "url": "http://www.w3.org/TR/xmlschema-2/#nonNegativeInteger",
+    "type": "int",
+    "sqlType":"Integer"
+  },
+  "NonPositiveInteger": {
+    "ancestors": [
+      "DataType",
+      "Number"
+    ],
+    "comment": "An integer containing only non-positive values (..,-2,-1,0)",
+    "id": "NonPositiveInteger",
+    "label": "NonPositiveInteger",
+    "properties": {
+      "pattern":"^[-][0-9]*\\.?[0-9]*$",
+      "min":-2147483648,
+      "max":0
+    },
+    "supertypes": [
+      "Integer"
+    ],
+    "url": "http://www.w3.org/TR/xmlschema-2/#nonPositiveInteger",
+    "type": "int",
+    "sqlType":"Integer"
+  },
+  "PositiveInteger": {
+    "ancestors": [
+      "DataType",
+      "Number"
+    ],
+    "comment": "An integer containing only positive values (1,2,..)",
+    "id": "PositiveInteger",
+    "label": "PositiveInteger",
+    "properties": {
+      "pattern":"^[+]?[1-9][0-9]*$",
+      "min":1,
+      "max":2147483647
+    },
+    "supertypes": [
+      "Integer"
+    ],
+    "url": "http://www.w3.org/TR/xmlschema-2/#positiveInteger",
+    "type": "int",
+    "sqlType":"Integer"
+  },
+  "Email": {
+    "ancestors": [
+      "DataType",
+      "Text"
+    ],
+    "comment": "A string which represents an email address (e.g. user@example.com)",
+    "id": "Email",
+    "label": "Email",
+    "properties": {
+      "pattern":"^[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}$"
+    },
+    "supertypes": [
+      "Text"
+    ],
+    "type": "string",
+    "sqlType":"Text"
+  },
+  "AbsoluteURI": {
+    "ancestors": [
+      "DataType",
+      "Text"
+    ],
+    "comment": "A string which represents an absolute URI address (e.g. https://www.example.com/help?article=1001)",
+    "id": "AbsoluteURI",
+    "label": "AbsoluteURI",
+    "properties": {
+      "pattern":"^((https?|ftps?):\\/\\/)([\\da-z.-]+)\\.([a-z.]{2,6})([\\/\\w .-]*)*\\/?$"
+    },
+    "supertypes": [
+      "Text"
+    ],
+    "type": "string",
+    "sqlType":"Text"
+  },
+  "RelativeURI": {
+    "ancestors": [
+      "DataType",
+      "Text"
+    ],
+    "comment": "A string which represents a relative URI address (e.g. /help?article=1001)",
+    "id": "RelativeURI",
+    "label": "RelativeURI",
+    "properties": {
+      "pattern":"^(\\/)([\\da-z.-]+)\\.([a-z.]{2,6})([\\/\\w .-]*)*\\/?$"
+    },
+    "supertypes": [
+      "Text"
+    ],
+    "type": "string",
+    "sqlType":"Text"
+  },
+  "IP": {
+    "ancestors": [
+      "DataType",
+      "Text"
+    ],
+    "comment": "A string which represents a valid IPv4 address (e.g. 127.0.0.1)",
+    "id": "IP",
+    "label": "IP",
+    "properties": {
+      "pattern":"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$"
+    },
+    "supertypes": [
+      "Text"
+    ],
+    "type": "string",
+    "sqlType":"Text"
+  }
 }
