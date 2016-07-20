@@ -52,6 +52,7 @@ var string = require('string'),
     DataField = types.DataField,
     DataModelView = require('./data-model-view').DataModelView,
     DataFilterResolver = require('./data-filter-resolver').DataFilterResolver,
+    validators = require("./data-validator");
     Q = require("q");
 
 /**
@@ -2483,6 +2484,148 @@ DataModel.prototype.inferMapping = function(name) {
         done(err);
     });
  */
+
+/**
+ *
+ * @param {*} obj
+ * @param {number} state
+ * @param {Function} callback
+ * @private
+ */
+function validate_(obj, state, callback) {
+    /**
+     * @type {DataModel|*}
+     */
+    var self = this;
+    if (typeof obj === 'undefined' || obj == null) {
+        return callback();
+    }
+    //get object copy (based on the defined state)
+    var objCopy = self.cast(obj, state);
+    async.eachSeries(self.attributes, function(attr, cb) {
+        var validator, validationResult;
+        if (objCopy.hasOwnProperty(attr.name)) {
+            var value = objCopy[attr.name];
+            if (typeof value !== 'undefined' && value != null) {
+                if (attr.validation) {
+                    if (attr.validation.type) {
+                        var validatorModule;
+                        try {
+                            validatorModule = require(attr.validation.type);
+                        }
+                        catch (e) {
+                            dataCommon.debug(util.format("Data validator module (%s) cannot be loaded", attr.validation.type));
+                            dataCommon.debug(e);
+                            return cb(e);
+                        }
+                        if (typeof validatorModule.createInstance !== 'function') {
+                            dataCommon.debug(util.format("Data validator module (%s) does not export createInstance() method.", attr.validation.type));
+                            return cb(new Error("Invalid data validator type."));
+                        }
+                        validator = validatorModule.createInstance(attr);
+                        validator.setContext(self.context);
+                        if (typeof validator.validateSync === 'function') {
+                            validationResult = validator.validateSync(value);
+                            if (validationResult) {
+                                return cb(new types.DataException(validationResult.code || "EVALIDATE",validationResult.message, "", self.name, attr.name));
+                            }
+                            else {
+                                return cb();
+                            }
+                        }
+                        else if (typeof validator.validate === 'function') {
+                            return validator.validate(value, function(err) {
+                               if (err) {
+                                   return cb(new types.DataException(validationResult.code || "EVALIDATE",validationResult.message, "", self.name, attr.name));
+                               }
+                            });
+                        }
+                        else {
+                            dataCommon.debug(util.format("Data validator (%s) does not have either validate() or validateSync() methods.", attr.validation.type));
+                            return cb(new Error("Invalid data validator type."));
+                        }
+                    }
+                    else {
+                        if (typeof attr.validation === 'string') {
+                            validator = new validators.DataTypeValidator(attr.validation);
+                        }
+                        else {
+                            //convert validation data to pseudo type declaration
+                            validator = new validators.DataTypeValidator({
+                                properties:attr.validation
+                            });
+                        }
+
+                        validator.setContext(self.context);
+                        validationResult = validator.validateSync(value);
+                        if (validationResult) {
+                            return cb(new types.DataException(validationResult.code,validationResult.message, "", self.name, attr.name));
+                        }
+                        else {
+                            return cb();
+                        }
+                    }
+                }
+                else {
+                    validator = new validators.DataTypeValidator(attr.type);
+                    validator.setContext(self.context);
+                    validationResult = validator.validateSync(value);
+                    if (validationResult) {
+                        return cb(new types.DataException(validationResult.code,validationResult.message, "", self.name, attr.name));
+                    }
+                    else {
+                        return cb();
+                    }
+                }
+            }
+        }
+        return cb();
+    }, function(err) {
+        if (err) {
+            return callback(err);
+        }
+        return callback();
+    });
+}
+/**
+ * Validates the given object against validation rules which are defined either by the data type or the definition of each attribute
+ * @param {*} obj
+ * @param {Function=} callback
+ * @returns {Promise<>|*}
+ */
+DataModel.prototype.validateForUpdate = function(obj, callback) {
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        validate_.call(this, obj, 2, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise;
+    }
+    else {
+        return validate_.call(this, obj, callback);
+    }
+};
+
+/**
+ * Validates the given object against validation rules which are defined either by the data type or the definition of each attribute
+ * @param {*} obj
+ * @param {Function=} callback
+ * @returns {Promise<>|*}
+ */
+DataModel.prototype.validateForInsert = function(obj, callback) {
+    if (typeof callback !== 'function') {
+        var d = Q.defer();
+        validate_.call(this, obj, 1, function(err, result) {
+            if (err) { return d.reject(err); }
+            d.resolve(result);
+        });
+        return d.promise;
+    }
+    else {
+        return validate_.call(this, obj, callback);
+    }
+};
 
 DataModel.prototype.levels = function(value) {
     var result = new DataQueryable(this);

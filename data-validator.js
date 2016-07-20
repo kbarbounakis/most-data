@@ -30,247 +30,332 @@
  */
 
 /**
- * @type {*}
- * @private
+ * @ignore
  */
-var DataValidators_ = {
-    integer: function(val) {
-        if (!/^[+-]?[0-9]*$/ig.test(val)) {
+var util = require("util"),
+    conf = require("./data-configuration");
+
+/**
+ * @class
+ * @constructor
+ */
+function DataValidator() {
+    var context_;
+    this.setContext = function(context) {
+        context_ = context;
+    };
+    /**
+     * @returns {DataContext|*}
+     */
+    this.getContext = function() {
+        return context_;
+    };
+}
+
+function zeroPad_(number, length) {
+    number = number || 0;
+    var res = number.toString();
+    while (res.length < length) {
+        res = '0' + res;
+    }
+    return res;
+}
+
+/**
+ * @class
+ * @param {string} pattern
+ * @augments {DataValidator}
+ * @constructor
+ */
+function PatternValidator(pattern) {
+    this.validateSync = function(val) {
+        if (typeof val === 'undefined' || val == null) {
+            return;
+        }
+        var valueTo = val;
+        if (val instanceof Date) {
+            var year   = val.getFullYear();
+            var month  = zeroPad_(val.getMonth() + 1, 2);
+            var day    = zeroPad_(val.getDate(), 2);
+            var hour   = zeroPad_(val.getHours(), 2);
+            var minute = zeroPad_(val.getMinutes(), 2);
+            var second = zeroPad_(val.getSeconds(), 2);
+            var millisecond = zeroPad_(val.getMilliseconds(), 3);
+            //format timezone
+            var offset = (new Date()).getTimezoneOffset(),
+                timezone = (offset>=0 ? '+' : '') + zeroPad_(Math.floor(offset/60),2) + ':' + zeroPad_(offset%60,2);
+            valueTo = year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + '.' + millisecond + timezone;
+        }
+        var re = new RegExp(pattern, "ig");
+        if  (!re.test(valueTo)) {
             return {
-                code:"EINT",
-                message:"The value should be a valid integer."
+                code:"EPATTERN",
+                "message":"The value seems to be invalid."
             }
         }
-    },
-    negativeInteger: function(val) {
-        if (!/^[-][1-9][0-9]*$/ig.test(val)) {
-            return {
-                code:"ENEG",
-                message:"The value should be a valid negative integer."
+    };
+    PatternValidator.super_.call(this);
+}
+util.inherits(PatternValidator, DataValidator);
+
+/**
+ * @class
+ * @param {number} length
+ * @augments {DataValidator}
+ * @constructor
+ */
+function MinLengthValidator(length) {
+    this.validateSync = function(val) {
+        if (typeof val === 'undefined' || val == null) {
+            return;
+        }
+        if (val.hasOwnProperty('length')) {
+            if (val.length<length) {
+
+                var innerMessage = null, message = util.format("The value is too short. It should have %s characters or more.", length);
+                if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+                    innerMessage = message;
+                    message = util.format(this.getContext().translate("The value is too short. It should have %s characters or more."), length);
+                }
+
+                return {
+                    code:"EMINLEN",
+                    minLength:length,
+                    message:message,
+                    innerMessage:innerMessage
+                }
+
             }
         }
-    },
-    nonNegativeInteger: function(val) {
-        if (!/^[+]?[0-9]*$/ig.test(val)) {
-            return {
-                code:"ENONNEG",
-                message:"The value should be a valid non negative integer."
-            }
+    };
+    MinLengthValidator.super_.call(this);
+}
+util.inherits(MinLengthValidator, DataValidator);
+/**
+ * @class
+ * @param {number} length
+ * @augments {DataValidator}
+ * @constructor
+ */
+function MaxLengthValidator(length) {
+
+    this.validateSync = function(val) {
+        if (typeof val === 'undefined' || val == null) {
+            return;
         }
-    },
-    nonPositiveInteger:function(val) {
-        if (!/^[-][0-9]*$/ig.test(val)) {
-            return {
-                code:"ENONPOS",
-                message:"The value should be a valid non positive integer."
-            }
+
+        var innerMessage = null, message = util.format("The value is too long. It should have %s characters or fewer.", length);
+        if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+            innerMessage = message;
+            message = util.format(this.getContext().translate("The value is too long. It should have %s characters or fewer."), length);
         }
-    },
-    positiveInteger:function(val) {
-        if (!/^[+]?[1-9][0-9]*$/ig.test(val)) {
-            return {
-                code:"EPOS",
-                message:"The value should be a valid positive integer."
-            }
-        }
-    },
-    number:function(val) {
-        if (!/^[-+]?[0-9]*\.?[0-9]*$/ig.test(val)) {
-            return {
-                code:"ENUMBER",
-                message:"The value should be a valid number."
-            }
-        }
-    },
-    negativeNumber:function(val) {
-        if (!/^[-][0-9]*\.?[0-9]*$/ig.test(val)) {
-            return {
-                code:"ENEG",
-                message:"The value should be a valid negative number."
-            }
-        }
-    },
-    nonNegativeNumber:function(val) {
-        if (!/^[+]?[0-9]*\.?[0-9]*$/ig.test(val)) {
-            return {
-                code:"ENONNEG",
-                message:"The value should be a valid non negative number."
-            }
-        }
-    },
-    nonPositiveNumber:function(val) {
-        if (!/^[-][0-9]*\.?[0-9]*$/ig.test(val)) {
-            return {
-                code:"ENONPOS",
-                message:"The value should be a valid non positive number."
-            }
-        }
-    },
-    email:function(val) {
-        if (!/^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/ig.test(val)) {
-            return {
-                code:"EEMAIL",
-                message:"The value should be a valid email address."
-            }
-        }
-    },
-    url:function(val) {
-        if (!/^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/ig.test(val)) {
-            return {
-                code:"EURL",
-                message:"The value should be a valid URL."
-            }
-        }
-    },
-    absoluteUrl:function(val) {
-        if (!/^(https?:\/\/)([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/ig.test(val)) {
-            return {
-                code:"EABSURL",
-                message:"The value should be a valid URL."
-            }
-        }
-    },
-    relativeUrl:function(val) {
-        if (!/^(\/)([\da-z.-]+)\.([a-z.]{2,6})([\/\w .-]*)*\/?$/ig.test(val)) {
-            return {
-                code:"ERELURL",
-                message:"The value should be a valid relative URL."
-            }
-        }
-    },
-    ip:function(val) {
-        if (!/^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/ig.test(val)) {
-            return {
-                code:"EADDRESS",
-                message:"The value should be a valid IP address."
-            }
-        }
-    },
-    minLength: function(val, min) {
-        if (typeof min !== 'number') { return; }
-          if (typeof val === 'string') {
-              if (val.length<parseInt(min)) {
-                  return {
-                      code:"EMINLEN",
-                      minLength:min,
-                      message:"The value is too short. It should have %s characters or more."
-                  }
-              }
-          }
-    },
-    maxLength: function(val, max) {
-        if (typeof max !== 'number') { return; }
-        if (typeof val === 'string') {
-            if (val.length>parseInt(max)) {
+
+        if (val.hasOwnProperty('length')) {
+            if (val.length>length) {
                 return {
                     code:"EMAXLEN",
-                    maxLength:max,
-                    message:"The value is too long. It should have %s characters or fewer."
+                    maxLength:length,
+                    message: message,
+                    innerMessage:innerMessage
                 }
             }
         }
-    },
-    minValue: function(val, min) {
-        if (/^[-+]?[0-9]*\.?[0-9]*$/ig.test(val)) {
-            if (parseFloat(val)<parseFloat(min)) {
-                return {
-                    code:"EMINVAL",
-                    minValue:min,
-                    message:"The value should be greater than or equal to %s."
+    };
+    MaxLengthValidator.super_.call(this);
+}
+util.inherits(MaxLengthValidator, DataValidator);
+/**
+ * @class
+ * @param {number|Date|*} min
+ * @augments {DataValidator}
+ * @constructor
+ */
+function MinValueValidator(min) {
+    this.validateSync = function(val) {
+        if (typeof val === 'undefined' || val == null) {
+            return;
+        }
+        if (val<min) {
+
+            var innerMessage = null, message = util.format("The value should be greater than or equal to %s.", min);
+            if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+                innerMessage = message;
+                message = util.format(this.getContext().translate("The value should be greater than or equal to %s."), min);
+            }
+
+            return {
+                code:"EMINVAL",
+                minValue:min,
+                message:message,
+                innerMessage:innerMessage
+            }
+        }
+    };
+    MinValueValidator.super_.call(this);
+}
+util.inherits(MinValueValidator, DataValidator);
+/**
+ * @class
+ * @param {number|Date|*} max
+ * @augments {DataValidator}
+ * @constructor
+ */
+function MaxValueValidator(max) {
+    this.validateSync = function(val) {
+        if (typeof val === 'undefined' || val == null) {
+            return;
+        }
+        if (val>max) {
+
+            var innerMessage = null, message = util.format("The value should be lower or equal to %s.", max);
+            if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+                innerMessage = message;
+                message = util.format(this.getContext().translate("The value should be lower or equal to %s."), max);
+            }
+
+            return {
+                code:"EMAXVAL",
+                maxValue:max,
+                message:message,
+                innerMessage:innerMessage
+            }
+        }
+    };
+    MaxValueValidator.super_.call(this);
+}
+util.inherits(MaxValueValidator, DataValidator);
+/**
+ * @class
+ * @param {number|Date|*} min
+ * @param {number|Date|*} max
+ * @augments {DataValidator}
+ * @constructor
+ */
+function RangeValidator(min,max) {
+    this.validateSync = function(val) {
+        if (typeof val === 'undefined' || val == null) {
+            return;
+        }
+        if (typeof min !== 'undefined' && min != null) {
+            var minValidator = new MinValueValidator(min);
+            var minValidation = minValidator.validateSync(val);
+            if (minValidation) {
+                if (typeof max !== 'undefined' && max !=null) {
+
+                    var innerMessage = null, message = util.format("The value should be between %s to %s.", min, max);
+                    if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+                        innerMessage = message;
+                        message = util.format(this.getContext().translate("The value should be between %s to %s."), min, max);
+                    }
+
+                    return {
+                        code:"ERANGE",
+                        minValue:min,
+                        maxValue:max,
+                        message:message,
+                        innerMessage:innerMessage
+                    }
+                }
+                else {
+                    return minValidation;
                 }
             }
         }
-        else if (val instanceof Date) {
-            if (val<min) {
-                return {
-                    code:"EMINVAL",
-                    minValue:min,
-                    message:"The value should be greater than or equal to %s."
+        if (typeof max !== 'undefined' && max != null) {
+            var maxValidator = new MaxValueValidator(max);
+            var maxValidation = maxValidator.validateSync(val);
+            if (maxValidation) {
+                if (typeof min !== 'undefined' && min !=null) {
+                    return {
+                        code:"ERANGE",
+                        minValue:min,
+                        maxValue:max,
+                        message:"The value should be between %s to %s."
+                    }
+                }
+                else {
+                    return maxValidation;
                 }
             }
         }
-    },
-    maxValue: function(val, max) {
-        if (/^[-+]?[0-9]*\.?[0-9]*$/ig.test(val)) {
-            if (parseFloat(val)>parseFloat(max)) {
-                return {
-                    code:"EMAXVAL",
-                    maxValue:max,
-                    message:"The value should be lower or equal to %s."
+    };
+    RangeValidator.super_.call(this);
+}
+util.inherits(RangeValidator, DataValidator);
+/**
+ * @class
+ * @param {string|*} type
+ * @augments {DataValidator}
+ * @constructor
+ */
+function DataTypeValidator(type) {
+    /**
+     * @type {{name:string,properties:{pattern:string,patternMessage:string,min:*,max:*,minLength:number,maxLength:number},label:string,supertypes:Array,type:string}|*}
+     */
+    var dataType;
+    if (typeof type === 'string')
+        dataType = conf.current.dataTypes[type];
+    else
+        dataType = type;
+
+    this.validateSync = function(val) {
+        if (typeof dataType === 'undefined') {
+            return;
+        }
+        var properties = dataType.properties;
+        if (typeof properties !== 'undefined') {
+            var validator, validationResult;
+            //validate pattern if any
+            if (properties.pattern) {
+                validator = new PatternValidator(properties.pattern);
+                validationResult = validator.validateSync(val);
+                if (validationResult) {
+                    if (properties.patternMessage) {
+                        validationResult.message = properties.patternMessage;
+                    }
+                    return validationResult;
                 }
             }
-        }
-        else if (val instanceof Date) {
-            if (val>max) {
-                return {
-                    code:"EMAXVAL",
-                    maxValue:max,
-                    message:"The value should be lower or equal to %s."
+            if (properties.hasOwnProperty('min') && properties.hasOwnProperty('max')) {
+                validator = new RangeValidator(properties.min, properties.max);
+                validationResult = validator.validateSync(val);
+                if (validationResult) {
+                    return validationResult;
                 }
             }
-        }
-    },
-    range: function(val, min, max) {
-        if (/^[-+]?[0-9]*\.?[0-9]*$/ig.test(val)) {
-            var minValidation = null, maxValidation = null;
-            if (typeof min !== 'undefined' && min != null) {
-                minValidation = DataValidators_.minValue(val, min);
-            }
-            if (typeof min !== 'undefined' && min != null) {
-                maxValidation = DataValidators_.maxValue(val, max);
-            }
-            if (minValidation || maxValidation) {
-                return {
-                    code:"ERANGE",
-                    minValue:min,
-                    maxValue:max,
-                    message:"The value should be lower or equal to %s."
+            else if (properties.hasOwnProperty('min')) {
+                validator = new MinValueValidator(properties.min);
+                validationResult = validator.validateSync(val);
+                if (validationResult) {
+                    return validationResult;
                 }
             }
-        }
-    },
-    pattern:function(val, pattern) {
-        if (typeof pattern === 'string') {
-            var re = new RegExp(pattern, "ig");
-            if  (re.test(val)) {
-                return {
-                    code:"EREGEXP",
-                    "message":"The value seems to be invalid."
+            else if (properties.hasOwnProperty('max')) {
+                validator = new MaxValueValidator(properties.max);
+                validationResult = validator.validateSync(val);
+                if (validationResult) {
+                    return validationResult;
+                }
+            }
+            if (properties.hasOwnProperty('minLength')) {
+                validator = new MinLengthValidator(properties.minLength);
+                validationResult = validator.validateSync(val);
+                if (validationResult) {
+                    return validationResult;
+                }
+            }
+            if (properties.hasOwnProperty('maxLength')) {
+                validator = new MinLengthValidator(properties.maxLength);
+                validationResult = validator.validateSync(val);
+                if (validationResult) {
+                    return validationResult;
                 }
             }
         }
     }
-};
-
-/**
- *
- * @param {*} opts
- * @constructor
- */
-function DataValidator(opts) {
-    this.options = opts;
-    /**
-     * Gets or sets a validation in validators collection.
-     * @param {string} name - A string which represents the name of the validator
-     * @param {Function=} fn - The validation method which is going to be added in validators collection
-     * @returns {DataValidator|*}
-     */
-    this.validator = function(name, fn) {
-        if (typeof fn === 'undefined') {
-            return DataValidators_[name];
-        }
-        DataValidators_[name] = fn;
-        return this;
-    };
+    DataTypeValidator.super_.call(this);
 }
-/**
- * Validates the given value against the specified validation options.
- * @param {*} val
- */
-DataValidator.prototype.validate = function(val) {
-    //
-};
-
+util.inherits(DataTypeValidator, DataValidator);
 /**
  * @classdesc Represents an event listener for validating field values. This listener is automatically  registered in all data models.
  * @constructor
@@ -284,14 +369,37 @@ function DataValidatorListener() {
  * @param {DataEventArgs|*} event - An object that represents the event arguments passed to this operation.
  * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
-DataValidatorListener.prototype.afterSave = function(event, callback) {
-    return callback();
+DataValidatorListener.prototype.beforeSave = function(event, callback) {
+    if (event.state === 4) { return callback(); }
+    if (event.state === 1) {
+        return event.model.validateForInsert(event.target).then(function() {
+            return callback();
+        }).catch(function(err) {
+            return callback(err);
+        });
+    }
+    else if  (event.state === 2) {
+        return event.model.validateForUpdate(event.target).then(function() {
+            return callback();
+        }).catch(function(err) {
+            return callback(err);
+        });
+    }
+    else {
+        return callback();
+    }
 };
 
 if (typeof exports !== 'undefined')
 {
     module.exports = {
-        DataValidator:DataValidator,
+        PatternValidator:PatternValidator,
+        MaxValueValidator:MaxValueValidator,
+        MinValueValidator:MinValueValidator,
+        MaxLengthValidator:MaxLengthValidator,
+        MinLengthValidator:MinLengthValidator,
+        RangeValidator:RangeValidator,
+        DataTypeValidator:DataTypeValidator,
         DataValidatorListener:DataValidatorListener
     };
 }
