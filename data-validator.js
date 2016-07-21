@@ -244,47 +244,33 @@ function RangeValidator(min,max) {
         if (typeof val === 'undefined' || val == null) {
             return;
         }
+        var minValidator, maxValidator, minValidation, maxValidation;
         if (typeof min !== 'undefined' && min != null) {
-            var minValidator = new MinValueValidator(min);
-            var minValidation = minValidator.validateSync(val);
-            if (minValidation) {
-                if (typeof max !== 'undefined' && max !=null) {
-
-                    var innerMessage = null, message = util.format("The value should be between %s to %s.", min, max);
-                    if (this.getContext() && (typeof this.getContext().translate === 'function')) {
-                        innerMessage = message;
-                        message = util.format(this.getContext().translate("The value should be between %s to %s."), min, max);
-                    }
-
-                    return {
-                        code:"ERANGE",
-                        minValue:min,
-                        maxValue:max,
-                        message:message,
-                        innerMessage:innerMessage
-                    }
-                }
-                else {
-                    return minValidation;
-                }
-            }
+            minValidator = new MinValueValidator(min);
+            minValidation = minValidator.validateSync(val);
         }
         if (typeof max !== 'undefined' && max != null) {
-            var maxValidator = new MaxValueValidator(max);
-            var maxValidation = maxValidator.validateSync(val);
-            if (maxValidation) {
-                if (typeof min !== 'undefined' && min !=null) {
-                    return {
-                        code:"ERANGE",
-                        minValue:min,
-                        maxValue:max,
-                        message:"The value should be between %s to %s."
-                    }
-                }
-                else {
-                    return maxValidation;
-                }
+            maxValidator = new MaxValueValidator(max);
+            maxValidation = maxValidator.validateSync(val);
+        }
+        if (minValidator && maxValidator && (minValidation || maxValidation)) {
+            var innerMessage = null, message = util.format("The value should be between %s to %s.", max);
+            if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+                innerMessage = message;
+                message = util.format(this.getContext().translate("The value should be between %s to %s."), max);
             }
+            return {
+                code:"ERANGE",
+                maxValue:max,
+                message:message,
+                innerMessage:innerMessage
+            }
+        }
+        else if (minValidation) {
+            return minValidation;
+        }
+        else if (maxValidation) {
+            return maxValidation;
         }
     };
     RangeValidator.super_.call(this);
