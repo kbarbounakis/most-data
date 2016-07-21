@@ -175,8 +175,8 @@
         "properties": {
           "pattern":"^[-][0-9]*$",
           "patternMessage":"The value should be an integer lower than zero.",
-          "min":-2147483648,
-          "max":-1
+          "minValue":-2147483648,
+          "maxValue":-1
         },
         "supertypes": [
             "Integer"
@@ -205,8 +205,8 @@
     "properties": {
       "pattern":"^[+]?[0-9]*$",
       "patternMessage":"The value should be an integer greater or equal to zero.",
-      "min":0,
-      "max":2147483647
+      "minValue":0,
+      "maxValue":2147483647
     },
     "supertypes": [
       "Integer"
@@ -235,8 +235,8 @@
     "properties": {
       "pattern":"^[-][0-9]*$",
       "patternMessage":"The value should be an integer lower or equal to zero.",
-      "min":-2147483648,
-      "max":0
+      "minValue":-2147483648,
+      "maxValue":0
     },
     "supertypes": [
       "Integer"
@@ -251,7 +251,7 @@
     "properties": {
       "pattern":"^[-][0-9]*\\.?[0-9]*$",
       "patternMessage":"The value should be a number lower or equal to zero.",
-      "min":0
+      "minValue":0
     },
     "supertypes": [
       "Number"
@@ -266,8 +266,8 @@
     "properties": {
       "pattern":"^[+]?[1-9][0-9]*$",
       "patternMessage":"The value should be an integer greater than zero.",
-      "min":1,
-      "max":2147483647
+      "minValue":1,
+      "maxValue":2147483647
     },
     "supertypes": [
       "Integer"

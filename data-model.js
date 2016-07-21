@@ -44,6 +44,7 @@ var string = require('string'),
     dataCache = require('./data-cache'),
     dataCommon = require('./data-common'),
     dataListeners = require('./data-listeners'),
+    validators = require('./data-validator'),
     dataAssociations = require('./data-associations'),
     DataNestedObjectListener = require("./data-nested-object-listener").DataNestedObjectListener,
     DataQueryable = require('./data-queryable').DataQueryable,
@@ -1519,6 +1520,7 @@ function saveBaseObject_(obj, callback) {
  function saveSingleObject_(obj, callback) {
     var self = this,
         NotNullConstraintListener = dataListeners.NotNullConstraintListener,
+        DataValidatorListener = validators.DataValidatorListener,
         UniqueContraintListener = dataListeners.UniqueContraintListener;
     callback = callback || function() {};
     if (obj==null) {
@@ -1547,6 +1549,8 @@ function saveBaseObject_(obj, callback) {
     self.once('after.save', DataObjectAssociationListener.prototype.afterSave);
     //register unique constraint listener at the end of listeners collection (before emit)
     self.once('before.save', UniqueContraintListener.prototype.beforeSave);
+    //register data validators at the end of listeners collection (before emit)
+    self.once('before.save', DataValidatorListener.prototype.beforeSave);
     //register not null listener at the end of listeners collection (before emit)
     self.once('before.save', NotNullConstraintListener.prototype.beforeSave);
     //execute before update events
@@ -2508,10 +2512,10 @@ function validate_(obj, state, callback) {
             var value = objCopy[attr.name];
             if (typeof value !== 'undefined' && value != null) {
                 if (attr.validation) {
-                    if (attr.validation.type) {
+                    if (attr.validation['validator']) {
                         var validatorModule;
                         try {
-                            validatorModule = require(attr.validation.type);
+                            validatorModule = require(attr.validation['validator']);
                         }
                         catch (e) {
                             dataCommon.debug(util.format("Data validator module (%s) cannot be loaded", attr.validation.type));
@@ -2527,7 +2531,7 @@ function validate_(obj, state, callback) {
                         if (typeof validator.validateSync === 'function') {
                             validationResult = validator.validateSync(value);
                             if (validationResult) {
-                                return cb(new types.DataException(validationResult.code || "EVALIDATE",validationResult.message, "", self.name, attr.name));
+                                return cb(new types.DataException(validationResult.code || "EVALIDATE",validationResult.message, validationResult.innerMessage, self.name, attr.name));
                             }
                             else {
                                 return cb();
@@ -2536,7 +2540,7 @@ function validate_(obj, state, callback) {
                         else if (typeof validator.validate === 'function') {
                             return validator.validate(value, function(err) {
                                if (err) {
-                                   return cb(new types.DataException(validationResult.code || "EVALIDATE",validationResult.message, "", self.name, attr.name));
+                                   return cb(new types.DataException(validationResult.code || "EVALIDATE",validationResult.message, validationResult.innerMessage, self.name, attr.name));
                                }
                             });
                         }
@@ -2546,8 +2550,8 @@ function validate_(obj, state, callback) {
                         }
                     }
                     else {
-                        if (typeof attr.validation === 'string') {
-                            validator = new validators.DataTypeValidator(attr.validation);
+                        if (typeof attr.validation.type === 'string') {
+                            validator = new validators.DataTypeValidator(attr.validation.type);
                         }
                         else {
                             //convert validation data to pseudo type declaration
@@ -2559,7 +2563,7 @@ function validate_(obj, state, callback) {
                         validator.setContext(self.context);
                         validationResult = validator.validateSync(value);
                         if (validationResult) {
-                            return cb(new types.DataException(validationResult.code,validationResult.message, "", self.name, attr.name));
+                            return cb(new types.DataException(validationResult.code,validationResult.message, validationResult.innerMessage, self.name, attr.name));
                         }
                         else {
                             return cb();
@@ -2571,11 +2575,35 @@ function validate_(obj, state, callback) {
                     validator.setContext(self.context);
                     validationResult = validator.validateSync(value);
                     if (validationResult) {
-                        return cb(new types.DataException(validationResult.code,validationResult.message, "", self.name, attr.name));
+                        return cb(new types.DataException(validationResult.code,validationResult.message, validationResult.innerMessage, self.name, attr.name));
                     }
                     else {
                         return cb();
                     }
+                }
+            }
+            if (attr.hasOwnProperty('nullable') && !attr.nullable) {
+                validator = new validators.RequiredValidator();
+                validator.setContext(self.context);
+                validationResult = validator.validateSync(null);
+                if (validationResult) {
+                    return cb(new types.DataException(validationResult.code,validationResult.message, validationResult.innerMessage, self.name, attr.name));
+                }
+                else {
+                    return cb();
+                }
+            }
+        }
+        else {
+            if (attr.hasOwnProperty('nullable') && !attr.nullable && (state==1) && (!attr.primary)) {
+                validator = new validators.RequiredValidator();
+                validator.setContext(self.context);
+                validationResult = validator.validateSync(null);
+                if (validationResult) {
+                    return cb(new types.DataException(validationResult.code,validationResult.message, validationResult.innerMessage, self.name, attr.name));
+                }
+                else {
+                    return cb();
                 }
             }
         }

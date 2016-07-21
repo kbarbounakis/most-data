@@ -88,9 +88,17 @@ function PatternValidator(pattern) {
         }
         var re = new RegExp(pattern, "ig");
         if  (!re.test(valueTo)) {
+
+            var innerMessage = null, message = "The value seems to be invalid.";
+            if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+                innerMessage = message;
+                message = this.getContext().translate("The value seems to be invalid.");
+            }
+
             return {
                 code:"EPATTERN",
-                "message":"The value seems to be invalid."
+                "message":message,
+                "innerMessage":innerMessage
             }
         }
     };
@@ -290,7 +298,7 @@ util.inherits(RangeValidator, DataValidator);
  */
 function DataTypeValidator(type) {
     /**
-     * @type {{name:string,properties:{pattern:string,patternMessage:string,min:*,max:*,minLength:number,maxLength:number},label:string,supertypes:Array,type:string}|*}
+     * @type {{name:string,properties:{pattern:string,patternMessage:string,minValue:*,maxValue:*,minLength:number,maxLength:number},label:string,supertypes:Array,type:string}|*}
      */
     var dataType;
     if (typeof type === 'string')
@@ -308,30 +316,39 @@ function DataTypeValidator(type) {
             //validate pattern if any
             if (properties.pattern) {
                 validator = new PatternValidator(properties.pattern);
+                validator.setContext(this.getContext());
                 validationResult = validator.validateSync(val);
                 if (validationResult) {
                     if (properties.patternMessage) {
+
                         validationResult.message = properties.patternMessage;
+                        if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+                            validationResult.innerMessage = validationResult.message;
+                            validationResult.message = this.getContext().translate(properties.patternMessage);
+                        }
                     }
                     return validationResult;
                 }
             }
-            if (properties.hasOwnProperty('min') && properties.hasOwnProperty('max')) {
-                validator = new RangeValidator(properties.min, properties.max);
+            if (properties.hasOwnProperty('minValue') && properties.hasOwnProperty('maxValue')) {
+                validator = new RangeValidator(properties.minValue, properties.maxValue);
+                validator.setContext(this.getContext());
                 validationResult = validator.validateSync(val);
                 if (validationResult) {
                     return validationResult;
                 }
             }
-            else if (properties.hasOwnProperty('min')) {
-                validator = new MinValueValidator(properties.min);
+            else if (properties.hasOwnProperty('minValue')) {
+                validator = new MinValueValidator(properties.minValue);
+                validator.setContext(this.getContext());
                 validationResult = validator.validateSync(val);
                 if (validationResult) {
                     return validationResult;
                 }
             }
-            else if (properties.hasOwnProperty('max')) {
-                validator = new MaxValueValidator(properties.max);
+            else if (properties.hasOwnProperty('maxValue')) {
+                validator = new MaxValueValidator(properties.maxValue);
+                validator.setContext(this.getContext());
                 validationResult = validator.validateSync(val);
                 if (validationResult) {
                     return validationResult;
@@ -339,20 +356,22 @@ function DataTypeValidator(type) {
             }
             if (properties.hasOwnProperty('minLength')) {
                 validator = new MinLengthValidator(properties.minLength);
+                validator.setContext(this.getContext());
                 validationResult = validator.validateSync(val);
                 if (validationResult) {
                     return validationResult;
                 }
             }
             if (properties.hasOwnProperty('maxLength')) {
-                validator = new MinLengthValidator(properties.maxLength);
+                validator = new MaxLengthValidator(properties.maxLength);
+                validator.setContext(this.getContext());
                 validationResult = validator.validateSync(val);
                 if (validationResult) {
                     return validationResult;
                 }
             }
         }
-    }
+    };
     DataTypeValidator.super_.call(this);
 }
 util.inherits(DataTypeValidator, DataValidator);
@@ -390,6 +409,40 @@ DataValidatorListener.prototype.beforeSave = function(event, callback) {
     }
 };
 
+/**
+ * @class
+ * @augments {DataValidator}
+ * @constructor
+ */
+function RequiredValidator() {
+    this.validateSync = function(val) {
+        var invalid = false;
+        if (typeof val === 'undefined' || val == null) {
+            invalid=true;
+        }
+        else if ((typeof val === 'number') && isNaN(val)) {
+            invalid=true;
+        }
+        if (invalid) {
+
+            var innerMessage = null, message = "A value is required.";
+            if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+                innerMessage = message;
+                message = this.getContext().translate("A value is required.");
+            }
+
+            return {
+                code:"ENULL",
+                message:message,
+                innerMessage:innerMessage
+            }
+
+        }
+    };
+    RequiredValidator.super_.call(this);
+}
+util.inherits(RequiredValidator, DataValidator);
+
 if (typeof exports !== 'undefined')
 {
     module.exports = {
@@ -399,6 +452,7 @@ if (typeof exports !== 'undefined')
         MaxLengthValidator:MaxLengthValidator,
         MinLengthValidator:MinLengthValidator,
         RangeValidator:RangeValidator,
+        RequiredValidator:RequiredValidator,
         DataTypeValidator:DataTypeValidator,
         DataValidatorListener:DataValidatorListener
     };
