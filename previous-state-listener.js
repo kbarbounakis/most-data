@@ -28,14 +28,15 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-var dataCommon = require("./data-common");
 
 /**
+ * @ignore
  * Occurs before creating or updating a data object and validates not nullable fields.
  * @param {DataEventArgs|*} event - An object that represents the event arguments passed to this operation.
  * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 exports.beforeSave = function(event, callback) {
+    var dataCommon = require("./data-common");
     if (event.state==1) { return callback(); }
     var key = event.model.primaryKey;
     if (dataCommon.isNullOrUndefined(event.target[key])) {

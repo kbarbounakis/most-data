@@ -2619,7 +2619,7 @@ function validate_(obj, state, callback) {
  * Validates the given object against validation rules which are defined either by the data type or the definition of each attribute
  * @param {*} obj
  * @param {Function=} callback
- * @returns {Promise<>|*}
+ * @returns {Promise|*}
  */
 DataModel.prototype.validateForUpdate = function(obj, callback) {
     if (typeof callback !== 'function') {
@@ -2639,7 +2639,7 @@ DataModel.prototype.validateForUpdate = function(obj, callback) {
  * Validates the given object against validation rules which are defined either by the data type or the definition of each attribute
  * @param {*} obj
  * @param {Function=} callback
- * @returns {Promise<>|*}
+ * @returns {Promise|*}
  */
 DataModel.prototype.validateForInsert = function(obj, callback) {
     if (typeof callback !== 'function') {

@@ -68,43 +68,49 @@ function zeroPad_(number, length) {
  * @constructor
  */
 function PatternValidator(pattern) {
-    this.validateSync = function(val) {
-        if (typeof val === 'undefined' || val == null) {
-            return;
-        }
-        var valueTo = val;
-        if (val instanceof Date) {
-            var year   = val.getFullYear();
-            var month  = zeroPad_(val.getMonth() + 1, 2);
-            var day    = zeroPad_(val.getDate(), 2);
-            var hour   = zeroPad_(val.getHours(), 2);
-            var minute = zeroPad_(val.getMinutes(), 2);
-            var second = zeroPad_(val.getSeconds(), 2);
-            var millisecond = zeroPad_(val.getMilliseconds(), 3);
-            //format timezone
-            var offset = (new Date()).getTimezoneOffset(),
-                timezone = (offset>=0 ? '+' : '') + zeroPad_(Math.floor(offset/60),2) + ':' + zeroPad_(offset%60,2);
-            valueTo = year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + '.' + millisecond + timezone;
-        }
-        var re = new RegExp(pattern, "ig");
-        if  (!re.test(valueTo)) {
-
-            var innerMessage = null, message = "The value seems to be invalid.";
-            if (this.getContext() && (typeof this.getContext().translate === 'function')) {
-                innerMessage = message;
-                message = this.getContext().translate("The value seems to be invalid.");
-            }
-
-            return {
-                code:"EPATTERN",
-                "message":message,
-                "innerMessage":innerMessage
-            }
-        }
-    };
+    this.pattern = pattern;
     PatternValidator.super_.call(this);
 }
 util.inherits(PatternValidator, DataValidator);
+/**
+ * Validates the given value and returns a validation result or undefined if the specified value is invalid
+ * @param val
+ * @returns {{code: string, message: string, innerMessage: *}|undefined}
+ */
+PatternValidator.prototype.validateSync = function(val) {
+    if (typeof val === 'undefined' || val == null) {
+        return;
+    }
+    var valueTo = val;
+    if (val instanceof Date) {
+        var year   = val.getFullYear();
+        var month  = zeroPad_(val.getMonth() + 1, 2);
+        var day    = zeroPad_(val.getDate(), 2);
+        var hour   = zeroPad_(val.getHours(), 2);
+        var minute = zeroPad_(val.getMinutes(), 2);
+        var second = zeroPad_(val.getSeconds(), 2);
+        var millisecond = zeroPad_(val.getMilliseconds(), 3);
+        //format timezone
+        var offset = (new Date()).getTimezoneOffset(),
+            timezone = (offset>=0 ? '+' : '') + zeroPad_(Math.floor(offset/60),2) + ':' + zeroPad_(offset%60,2);
+        valueTo = year + '-' + month + '-' + day + ' ' + hour + ':' + minute + ':' + second + '.' + millisecond + timezone;
+    }
+    var re = new RegExp(this.pattern, "ig");
+    if  (!re.test(valueTo)) {
+
+        var innerMessage = null, message = "The value seems to be invalid.";
+        if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+            innerMessage = message;
+            message = this.getContext().translate("The value seems to be invalid.");
+        }
+
+        return {
+            code:"EPATTERN",
+            "message":message,
+            "innerMessage":innerMessage
+        }
+    }
+};
 
 /**
  * @class
@@ -113,32 +119,36 @@ util.inherits(PatternValidator, DataValidator);
  * @constructor
  */
 function MinLengthValidator(length) {
-    this.validateSync = function(val) {
-        if (typeof val === 'undefined' || val == null) {
-            return;
-        }
-        if (val.hasOwnProperty('length')) {
-            if (val.length<length) {
-
-                var innerMessage = null, message = util.format("The value is too short. It should have %s characters or more.", length);
-                if (this.getContext() && (typeof this.getContext().translate === 'function')) {
-                    innerMessage = message;
-                    message = util.format(this.getContext().translate("The value is too short. It should have %s characters or more."), length);
-                }
-
-                return {
-                    code:"EMINLEN",
-                    minLength:length,
-                    message:message,
-                    innerMessage:innerMessage
-                }
-
-            }
-        }
-    };
+    this.minLength = length;
     MinLengthValidator.super_.call(this);
 }
+
 util.inherits(MinLengthValidator, DataValidator);
+
+MinLengthValidator.prototype.validateSync = function(val) {
+    if (typeof val === 'undefined' || val == null) {
+        return;
+    }
+    if (val.hasOwnProperty('length')) {
+        if (val.length<this.minLength) {
+
+            var innerMessage = null, message = util.format("The value is too short. It should have %s characters or more.", this.minLength);
+            if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+                innerMessage = message;
+                message = util.format(this.getContext().translate("The value is too short. It should have %s characters or more."), this.minLength);
+            }
+
+            return {
+                code:"EMINLEN",
+                minLength:this.minLength,
+                message:message,
+                innerMessage:innerMessage
+            }
+
+        }
+    }
+};
+
 /**
  * @class
  * @param {number} length
@@ -146,32 +156,34 @@ util.inherits(MinLengthValidator, DataValidator);
  * @constructor
  */
 function MaxLengthValidator(length) {
-
-    this.validateSync = function(val) {
-        if (typeof val === 'undefined' || val == null) {
-            return;
-        }
-
-        var innerMessage = null, message = util.format("The value is too long. It should have %s characters or fewer.", length);
-        if (this.getContext() && (typeof this.getContext().translate === 'function')) {
-            innerMessage = message;
-            message = util.format(this.getContext().translate("The value is too long. It should have %s characters or fewer."), length);
-        }
-
-        if (val.hasOwnProperty('length')) {
-            if (val.length>length) {
-                return {
-                    code:"EMAXLEN",
-                    maxLength:length,
-                    message: message,
-                    innerMessage:innerMessage
-                }
-            }
-        }
-    };
+    this.length = length;
     MaxLengthValidator.super_.call(this);
 }
 util.inherits(MaxLengthValidator, DataValidator);
+
+MaxLengthValidator.prototype.validateSync = function(val) {
+    if (typeof val === 'undefined' || val == null) {
+        return;
+    }
+
+    var innerMessage = null, message = util.format("The value is too long. It should have %s characters or fewer.", this.length);
+    if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+        innerMessage = message;
+        message = util.format(this.getContext().translate("The value is too long. It should have %s characters or fewer."), this.length);
+    }
+
+    if (val.hasOwnProperty('length')) {
+        if (val.length>this.length) {
+            return {
+                code:"EMAXLEN",
+                maxLength:this.length,
+                message: message,
+                innerMessage:innerMessage
+            }
+        }
+    }
+};
+
 /**
  * @class
  * @param {number|Date|*} min
@@ -179,29 +191,32 @@ util.inherits(MaxLengthValidator, DataValidator);
  * @constructor
  */
 function MinValueValidator(min) {
-    this.validateSync = function(val) {
-        if (typeof val === 'undefined' || val == null) {
-            return;
-        }
-        if (val<min) {
-
-            var innerMessage = null, message = util.format("The value should be greater than or equal to %s.", min);
-            if (this.getContext() && (typeof this.getContext().translate === 'function')) {
-                innerMessage = message;
-                message = util.format(this.getContext().translate("The value should be greater than or equal to %s."), min);
-            }
-
-            return {
-                code:"EMINVAL",
-                minValue:min,
-                message:message,
-                innerMessage:innerMessage
-            }
-        }
-    };
+    this.minValue = min;
     MinValueValidator.super_.call(this);
 }
+
 util.inherits(MinValueValidator, DataValidator);
+
+MinValueValidator.prototype.validateSync = function(val) {
+    if (typeof val === 'undefined' || val == null) {
+        return;
+    }
+    if (val<this.minValue) {
+
+        var innerMessage = null, message = util.format("The value should be greater than or equal to %s.", this.minValue);
+        if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+            innerMessage = message;
+            message = util.format(this.getContext().translate("The value should be greater than or equal to %s."), this.minValue);
+        }
+
+        return {
+            code:"EMINVAL",
+            minValue:this.minValue,
+            message:message,
+            innerMessage:innerMessage
+        }
+    }
+};
 /**
  * @class
  * @param {number|Date|*} max
@@ -209,29 +224,32 @@ util.inherits(MinValueValidator, DataValidator);
  * @constructor
  */
 function MaxValueValidator(max) {
-    this.validateSync = function(val) {
-        if (typeof val === 'undefined' || val == null) {
-            return;
-        }
-        if (val>max) {
-
-            var innerMessage = null, message = util.format("The value should be lower or equal to %s.", max);
-            if (this.getContext() && (typeof this.getContext().translate === 'function')) {
-                innerMessage = message;
-                message = util.format(this.getContext().translate("The value should be lower or equal to %s."), max);
-            }
-
-            return {
-                code:"EMAXVAL",
-                maxValue:max,
-                message:message,
-                innerMessage:innerMessage
-            }
-        }
-    };
+    this.maxValue = max;
     MaxValueValidator.super_.call(this);
 }
+
 util.inherits(MaxValueValidator, DataValidator);
+
+MaxValueValidator.prototype.validateSync = function(val) {
+    if (typeof val === 'undefined' || val == null) {
+        return;
+    }
+    if (val>this.maxValue) {
+
+        var innerMessage = null, message = util.format("The value should be lower or equal to %s.", this.maxValue);
+        if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+            innerMessage = message;
+            message = util.format(this.getContext().translate("The value should be lower or equal to %s."), this.maxValue);
+        }
+
+        return {
+            code:"EMAXVAL",
+            maxValue:this.maxValue,
+            message:message,
+            innerMessage:innerMessage
+        }
+    }
+};
 /**
  * @class
  * @param {number|Date|*} min
@@ -240,42 +258,46 @@ util.inherits(MaxValueValidator, DataValidator);
  * @constructor
  */
 function RangeValidator(min,max) {
-    this.validateSync = function(val) {
-        if (typeof val === 'undefined' || val == null) {
-            return;
-        }
-        var minValidator, maxValidator, minValidation, maxValidation;
-        if (typeof min !== 'undefined' && min != null) {
-            minValidator = new MinValueValidator(min);
-            minValidation = minValidator.validateSync(val);
-        }
-        if (typeof max !== 'undefined' && max != null) {
-            maxValidator = new MaxValueValidator(max);
-            maxValidation = maxValidator.validateSync(val);
-        }
-        if (minValidator && maxValidator && (minValidation || maxValidation)) {
-            var innerMessage = null, message = util.format("The value should be between %s to %s.", max);
-            if (this.getContext() && (typeof this.getContext().translate === 'function')) {
-                innerMessage = message;
-                message = util.format(this.getContext().translate("The value should be between %s to %s."), max);
-            }
-            return {
-                code:"ERANGE",
-                maxValue:max,
-                message:message,
-                innerMessage:innerMessage
-            }
-        }
-        else if (minValidation) {
-            return minValidation;
-        }
-        else if (maxValidation) {
-            return maxValidation;
-        }
-    };
+    this.minValue = min;
+    this.maxValue = max;
     RangeValidator.super_.call(this);
 }
+
 util.inherits(RangeValidator, DataValidator);
+
+RangeValidator.prototype.validateSync = function(val) {
+    if (typeof val === 'undefined' || val == null) {
+        return;
+    }
+    var minValidator, maxValidator, minValidation, maxValidation;
+    if (typeof min !== 'undefined' && this.minValue != null) {
+        minValidator = new MinValueValidator(this.minValue);
+        minValidation = minValidator.validateSync(val);
+    }
+    if (typeof max !== 'undefined' && this.maxValue != null) {
+        maxValidator = new MaxValueValidator(this.maxValue);
+        maxValidation = maxValidator.validateSync(val);
+    }
+    if (minValidator && maxValidator && (minValidation || maxValidation)) {
+        var innerMessage = null, message = util.format("The value should be between %s to %s.", this.minValue, this.maxValue);
+        if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+            innerMessage = message;
+            message = util.format(this.getContext().translate("The value should be between %s to %s."), this.minValue, this.maxValue);
+        }
+        return {
+            code:"ERANGE",
+            maxValue:max,
+            message:message,
+            innerMessage:innerMessage
+        }
+    }
+    else if (minValidation) {
+        return minValidation;
+    }
+    else if (maxValidation) {
+        return maxValidation;
+    }
+};
 /**
  * @class
  * @param {string|*} type
@@ -283,84 +305,84 @@ util.inherits(RangeValidator, DataValidator);
  * @constructor
  */
 function DataTypeValidator(type) {
-    /**
-     * @type {{name:string,properties:{pattern:string,patternMessage:string,minValue:*,maxValue:*,minLength:number,maxLength:number},label:string,supertypes:Array,type:string}|*}
-     */
-    var dataType;
     if (typeof type === 'string')
-        dataType = conf.current.dataTypes[type];
+        /**
+         * @type {{name:string,properties:{pattern:string,patternMessage:string,minValue:*,maxValue:*,minLength:number,maxLength:number},label:string,supertypes:Array,type:string}|*}
+         */
+        this.dataType = conf.current.dataTypes[type];
     else
-        dataType = type;
-
-    this.validateSync = function(val) {
-        if (typeof dataType === 'undefined') {
-            return;
-        }
-        var properties = dataType.properties;
-        if (typeof properties !== 'undefined') {
-            var validator, validationResult;
-            //validate pattern if any
-            if (properties.pattern) {
-                validator = new PatternValidator(properties.pattern);
-                validator.setContext(this.getContext());
-                validationResult = validator.validateSync(val);
-                if (validationResult) {
-                    if (properties.patternMessage) {
-
-                        validationResult.message = properties.patternMessage;
-                        if (this.getContext() && (typeof this.getContext().translate === 'function')) {
-                            validationResult.innerMessage = validationResult.message;
-                            validationResult.message = this.getContext().translate(properties.patternMessage);
-                        }
-                    }
-                    return validationResult;
-                }
-            }
-            if (properties.hasOwnProperty('minValue') && properties.hasOwnProperty('maxValue')) {
-                validator = new RangeValidator(properties.minValue, properties.maxValue);
-                validator.setContext(this.getContext());
-                validationResult = validator.validateSync(val);
-                if (validationResult) {
-                    return validationResult;
-                }
-            }
-            else if (properties.hasOwnProperty('minValue')) {
-                validator = new MinValueValidator(properties.minValue);
-                validator.setContext(this.getContext());
-                validationResult = validator.validateSync(val);
-                if (validationResult) {
-                    return validationResult;
-                }
-            }
-            else if (properties.hasOwnProperty('maxValue')) {
-                validator = new MaxValueValidator(properties.maxValue);
-                validator.setContext(this.getContext());
-                validationResult = validator.validateSync(val);
-                if (validationResult) {
-                    return validationResult;
-                }
-            }
-            if (properties.hasOwnProperty('minLength')) {
-                validator = new MinLengthValidator(properties.minLength);
-                validator.setContext(this.getContext());
-                validationResult = validator.validateSync(val);
-                if (validationResult) {
-                    return validationResult;
-                }
-            }
-            if (properties.hasOwnProperty('maxLength')) {
-                validator = new MaxLengthValidator(properties.maxLength);
-                validator.setContext(this.getContext());
-                validationResult = validator.validateSync(val);
-                if (validationResult) {
-                    return validationResult;
-                }
-            }
-        }
-    };
+        this.dataType = type;
     DataTypeValidator.super_.call(this);
 }
+
 util.inherits(DataTypeValidator, DataValidator);
+
+DataTypeValidator.prototype.validateSync = function(val) {
+    if (typeof this.dataType === 'undefined') {
+        return;
+    }
+    var properties = this.dataType.properties;
+    if (typeof properties !== 'undefined') {
+        var validator, validationResult;
+        //validate pattern if any
+        if (properties.pattern) {
+            validator = new PatternValidator(properties.pattern);
+            validator.setContext(this.getContext());
+            validationResult = validator.validateSync(val);
+            if (validationResult) {
+                if (properties.patternMessage) {
+
+                    validationResult.message = properties.patternMessage;
+                    if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+                        validationResult.innerMessage = validationResult.message;
+                        validationResult.message = this.getContext().translate(properties.patternMessage);
+                    }
+                }
+                return validationResult;
+            }
+        }
+        if (properties.hasOwnProperty('minValue') && properties.hasOwnProperty('maxValue')) {
+            validator = new RangeValidator(properties.minValue, properties.maxValue);
+            validator.setContext(this.getContext());
+            validationResult = validator.validateSync(val);
+            if (validationResult) {
+                return validationResult;
+            }
+        }
+        else if (properties.hasOwnProperty('minValue')) {
+            validator = new MinValueValidator(properties.minValue);
+            validator.setContext(this.getContext());
+            validationResult = validator.validateSync(val);
+            if (validationResult) {
+                return validationResult;
+            }
+        }
+        else if (properties.hasOwnProperty('maxValue')) {
+            validator = new MaxValueValidator(properties.maxValue);
+            validator.setContext(this.getContext());
+            validationResult = validator.validateSync(val);
+            if (validationResult) {
+                return validationResult;
+            }
+        }
+        if (properties.hasOwnProperty('minLength')) {
+            validator = new MinLengthValidator(properties.minLength);
+            validator.setContext(this.getContext());
+            validationResult = validator.validateSync(val);
+            if (validationResult) {
+                return validationResult;
+            }
+        }
+        if (properties.hasOwnProperty('maxLength')) {
+            validator = new MaxLengthValidator(properties.maxLength);
+            validator.setContext(this.getContext());
+            validationResult = validator.validateSync(val);
+            if (validationResult) {
+                return validationResult;
+            }
+        }
+    }
+};
 /**
  * @classdesc Represents an event listener for validating field values. This listener is automatically  registered in all data models.
  * @constructor
@@ -401,33 +423,34 @@ DataValidatorListener.prototype.beforeSave = function(event, callback) {
  * @constructor
  */
 function RequiredValidator() {
-    this.validateSync = function(val) {
-        var invalid = false;
-        if (typeof val === 'undefined' || val == null) {
-            invalid=true;
-        }
-        else if ((typeof val === 'number') && isNaN(val)) {
-            invalid=true;
-        }
-        if (invalid) {
-
-            var innerMessage = null, message = "A value is required.";
-            if (this.getContext() && (typeof this.getContext().translate === 'function')) {
-                innerMessage = message;
-                message = this.getContext().translate("A value is required.");
-            }
-
-            return {
-                code:"ENULL",
-                message:message,
-                innerMessage:innerMessage
-            }
-
-        }
-    };
     RequiredValidator.super_.call(this);
 }
 util.inherits(RequiredValidator, DataValidator);
+
+RequiredValidator.prototype.validateSync = function(val) {
+    var invalid = false;
+    if (typeof val === 'undefined' || val == null) {
+        invalid=true;
+    }
+    else if ((typeof val === 'number') && isNaN(val)) {
+        invalid=true;
+    }
+    if (invalid) {
+
+        var innerMessage = null, message = "A value is required.";
+        if (this.getContext() && (typeof this.getContext().translate === 'function')) {
+            innerMessage = message;
+            message = this.getContext().translate("A value is required.");
+        }
+
+        return {
+            code:"ENULL",
+            message:message,
+            innerMessage:innerMessage
+        }
+
+    }
+};
 
 if (typeof exports !== 'undefined')
 {
