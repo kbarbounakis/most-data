@@ -89,6 +89,29 @@ function DataConfiguration() {
                     dataCommon.log('Data: Application data types are empty. The default data types will be loaded instead.');
                     dataTypes = require('./dataTypes.json');
                 }
+                else {
+                    //append default data types which are not defined in application data types
+                    var defaultDataTypes = require('./dataTypes.json');
+                    //enumerate default data types and replace or append application specific data types
+                    for (var key in defaultDataTypes) {
+                        if (dataTypes.hasOwnProperty(key)) {
+                            if (dataTypes[key].version) {
+                                if (dataTypes[key].version <= defaultDataTypes[key].version) {
+                                    //replace data type due to lower version
+                                    dataTypes[key] = defaultDataTypes[key];
+                                }
+                            }
+                            else {
+                                //replace data type due to invalid version
+                                dataTypes[key] = defaultDataTypes[key];
+                            }
+                        }
+                        else {
+                            //append data type
+                            dataTypes[key] = defaultDataTypes[key];
+                        }
+                    }
+                }
             }
             catch(e) {
                 if (e.code === 'MODULE_NOT_FOUND') {

@@ -9,7 +9,8 @@
         "properties": {},
         "url": "https://www.w3.org/TR/xmlschema-2/#boolean",
         "type": "boolean",
-        "sqltype":"Boolean"
+        "sqltype":"Boolean",
+        "version":"1.0"
     },
     "Date": {
         "comment": "Represents a date only value.",
@@ -19,7 +20,8 @@
         },
         "url": "https://www.w3.org/TR/xmlschema-2/#date",
         "type": "Date",
-        "sqltype":"Date"
+        "sqltype":"Date",
+      "version":"1.0"
     },
     "DateTime": {
         "comment": "Represents a date and time value.",
@@ -29,7 +31,8 @@
         "pattern":"^(\\d{4})(?:-?W(\\d+)(?:-?(\\d+)D?)?|(?:-(\\d+))?-(\\d+))(?:[T ](\\d+):(\\d+)(?::(\\d+)(?:\\.(\\d+))?)?)?(?:Z(-?\\d*))?([+-](\\d+):(\\d+))?$"
       },
         "type": "Date",
-        "sqltype":"DateTime"
+        "sqltype":"DateTime",
+      "version":"1.0"
     },
     "Float": {
         "comment": "Float data type is a single-precision 32-bit floating point.",
@@ -39,7 +42,8 @@
       },
         "url": "https://www.w3.org/TR/xmlschema-2/#float",
         "type": "number",
-        "sqltype":"DateTime"
+        "sqltype":"DateTime",
+      "version":"1.0"
     },
     "Integer": {
         "comment": "Integer data type is a 32-bit signed two's complement integer.",
@@ -49,7 +53,8 @@
       },
         "url": "https://www.w3.org/TR/xmlschema-2/#integer",
         "type": "number",
-        "sqltype":"Integer"
+        "sqltype":"Integer",
+      "version":"1.0"
     },
     "Counter": {
         "comment": "An integer which is generated automatically.",
@@ -60,7 +65,8 @@
       "properties": {},
         "url": "https://www.w3.org/TR/xmlschema-2/#integer",
         "type": "number",
-        "sqltype":"Counter"
+        "sqltype":"Counter",
+      "version":"1.0"
     },
     "Duration": {
         "comment": "A string which represents a duration of time (e.g. P1Y1M10D, P10D, -P0Y1M10D2H15M30S etc)",
@@ -74,7 +80,8 @@
         ],
         "url": "http://www.w3.org/TR/xmlschema-2/#duration",
         "type": "string",
-        "sqltype":"Text"
+        "sqltype":"Text",
+      "version":"1.0"
     },
     "Number": {
         "comment": "A general number.",
@@ -87,7 +94,8 @@
       },
         "url": "https://www.w3.org/TR/xmlschema-2/#float",
         "type": "number",
-      "sqltype":"Number"
+      "sqltype":"Number",
+      "version":"1.0"
     },
     "Text": {
 
@@ -95,7 +103,8 @@
         "label": "Text",
         "url": "https://www.w3.org/TR/xmlschema-2/#string",
         "type": "string",
-        "sqltype":"Text"
+        "sqltype":"Text",
+      "version":"1.0"
     },
     "Time": {
         "comment": "A string which represents an instant of time that recurs every day (e.g. 13:20:45)",
@@ -108,7 +117,8 @@
         ],
         "url": "https://www.w3.org/TR/xmlschema-2/#time",
         "type": "Duration",
-        "sqltype":"Time"
+        "sqltype":"Time",
+      "version":"1.0"
     },
     "URL": {
         "comment": "A reference to a web resource that specifies its location on a computer network and a mechanism for retrieving it.",
@@ -117,7 +127,9 @@
             "Text"
         ],
         "url": "http://schema.org/URL",
-        "type": "string"
+        "type": "string",
+      "sqltype":"Text",
+      "version":"1.0"
     },
      "Language": {
         "comment": "Represents natural language identifiers",
@@ -131,7 +143,8 @@
         ],
         "url": "https://www.w3.org/TR/xmlschema-2/#language",
         "type": "string",
-         "sqltype":"Text"
+         "sqltype":"Text",
+       "version":"1.0"
     },
     "Model": {
         "comment": "A string which represents the name of a data model.",
@@ -143,7 +156,8 @@
             "Text"
         ],
         "type": "string",
-        "sqltype":"Text"
+        "sqltype":"Text",
+      "version":"1.0"
     },
   "Guid": {
     "comment": "A string which represents the name of a data model.",
@@ -155,7 +169,8 @@
       "Text"
     ],
     "type": "string",
-    "sqltype":"Text"
+    "sqltype":"Text",
+    "version":"1.0"
   },
     "ObjectURI": {
       "comment": "A string which represents a relative object URI e.g. /User/100 or /Order/12345 where the first segment represents a model associated an object and the second an object identifier like object ID.",
@@ -167,7 +182,8 @@
         "Text"
       ],
       "type": "string",
-      "sqltype":"Text"
+      "sqltype":"Text",
+      "version":"1.0"
     },
     "NegativeInteger": {
         "comment": "An integer containing only negative values (..,-2,-1)",
@@ -183,7 +199,8 @@
         ],
         "url": "http://www.w3.org/TR/xmlschema-2/#negativeInteger",
         "type": "int",
-        "sqltype":"Integer"
+        "sqltype":"Integer",
+      "version":"1.0"
     },
   "NegativeNumber": {
     "comment": "A number containing only negative values (..,-2,-1)",
@@ -197,7 +214,8 @@
     ],
     "url": "http://www.w3.org/TR/xmlschema-2/#negativeNumber",
     "type": "number",
-    "sqltype":"Number"
+    "sqltype":"Number",
+    "version":"1.0"
   },
   "NonNegativeInteger": {
     "comment": "An integer containing only non-negative values (0,1,2,..)",
@@ -213,7 +231,8 @@
     ],
     "url": "http://www.w3.org/TR/xmlschema-2/#nonNegativeInteger",
     "type": "int",
-    "sqltype":"Integer"
+    "sqltype":"Integer",
+    "version":"1.0"
   },
   "NonNegativeNumber": {
     "comment": "An integer containing only non-negative values (0,1,2,..)",
@@ -227,7 +246,8 @@
     ],
     "url": "http://www.w3.org/TR/xmlschema-2/#nonNegativeNumber",
     "type": "number",
-    "sqltype":"Number"
+    "sqltype":"Number",
+    "version":"1.0"
   },
   "NonPositiveInteger": {
     "comment": "An integer containing only non-positive values (..,-2,-1,0)",
@@ -243,7 +263,8 @@
     ],
     "url": "http://www.w3.org/TR/xmlschema-2/#nonPositiveInteger",
     "type": "int",
-    "sqltype":"Integer"
+    "sqltype":"Integer",
+    "version":"1.0"
   },
   "NonPositiveNumber": {
     "comment": "A number containing only non-positive values (..,-2,-1,0)",
@@ -258,7 +279,8 @@
     ],
     "url": "http://www.w3.org/TR/xmlschema-2/#nonPositiveNumber",
     "type": "number",
-    "sqltype":"Number"
+    "sqltype":"Number",
+    "version":"1.0"
   },
   "PositiveInteger": {
     "comment": "An integer containing only positive values (1,2,..)",
@@ -274,7 +296,8 @@
     ],
     "url": "http://www.w3.org/TR/xmlschema-2/#positiveInteger",
     "type": "int",
-    "sqltype":"Integer"
+    "sqltype":"Integer",
+    "version":"1.0"
   },
   "PositiveNumber": {
     "comment": "A number containing only positive values (0.1,+1,2,..)",
@@ -288,7 +311,8 @@
     ],
     "url": "http://www.w3.org/TR/xmlschema-2/#positiveNumber",
     "type": "number",
-    "sqltype":"Number"
+    "sqltype":"Number",
+    "version":"1.0"
   },
   "Email": {
     "comment": "A string which represents an email address (e.g. user@example.com)",
@@ -301,7 +325,8 @@
       "Text"
     ],
     "type": "string",
-    "sqltype":"Text"
+    "sqltype":"Text",
+    "version":"1.0"
   },
   "AbsoluteURI": {
     "comment": "A string which represents an absolute URI address (e.g. https://www.example.com/help?article=1001)",
@@ -314,7 +339,8 @@
       "Text"
     ],
     "type": "string",
-    "sqltype":"Text"
+    "sqltype":"Text",
+    "version":"1.0"
   },
   "RelativeURI": {
     "comment": "A string which represents a relative URI address (e.g. /help?article=1001)",
@@ -327,7 +353,8 @@
       "Text"
     ],
     "type": "string",
-    "sqltype":"Text"
+    "sqltype":"Text",
+    "version":"1.0"
   },
   "IP": {
     "comment": "A string which represents a valid IPv4 address (e.g. 127.0.0.1)",
@@ -340,6 +367,7 @@
       "Text"
     ],
     "type": "string",
-    "sqltype":"Text"
+    "sqltype":"Text",
+    "version":"1.0"
   }
 }
