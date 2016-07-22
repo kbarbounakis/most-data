@@ -115,6 +115,7 @@ PatternValidator.prototype.validateSync = function(val) {
 /**
  * @class
  * @param {number} length
+ * @property {number} minLength
  * @augments {DataValidator}
  * @constructor
  */
@@ -153,10 +154,11 @@ MinLengthValidator.prototype.validateSync = function(val) {
  * @class
  * @param {number} length
  * @augments {DataValidator}
+ * @property {number} maxLength
  * @constructor
  */
 function MaxLengthValidator(length) {
-    this.length = length;
+    this.maxLength = length;
     MaxLengthValidator.super_.call(this);
 }
 util.inherits(MaxLengthValidator, DataValidator);
@@ -166,17 +168,17 @@ MaxLengthValidator.prototype.validateSync = function(val) {
         return;
     }
 
-    var innerMessage = null, message = util.format("The value is too long. It should have %s characters or fewer.", this.length);
+    var innerMessage = null, message = util.format("The value is too long. It should have %s characters or fewer.", this.maxLength);
     if (this.getContext() && (typeof this.getContext().translate === 'function')) {
         innerMessage = message;
-        message = util.format(this.getContext().translate("The value is too long. It should have %s characters or fewer."), this.length);
+        message = util.format(this.getContext().translate("The value is too long. It should have %s characters or fewer."), this.maxLength);
     }
 
     if (val.hasOwnProperty('length')) {
-        if (val.length>this.length) {
+        if (val.length>this.maxLength) {
             return {
                 code:"EMAXLEN",
-                maxLength:this.length,
+                maxLength:this.maxLength,
                 message: message,
                 innerMessage:innerMessage
             }
@@ -188,6 +190,7 @@ MaxLengthValidator.prototype.validateSync = function(val) {
  * @class
  * @param {number|Date|*} min
  * @augments {DataValidator}
+ * @property {*} minValue
  * @constructor
  */
 function MinValueValidator(min) {
@@ -221,6 +224,7 @@ MinValueValidator.prototype.validateSync = function(val) {
  * @class
  * @param {number|Date|*} max
  * @augments {DataValidator}
+ * @property {*} minValue
  * @constructor
  */
 function MaxValueValidator(max) {
@@ -255,6 +259,8 @@ MaxValueValidator.prototype.validateSync = function(val) {
  * @param {number|Date|*} min
  * @param {number|Date|*} max
  * @augments {DataValidator}
+ * @property {*} minValue
+ * @property {*} maxValue
  * @constructor
  */
 function RangeValidator(min,max) {
@@ -302,6 +308,7 @@ RangeValidator.prototype.validateSync = function(val) {
  * @class
  * @param {string|*} type
  * @augments {DataValidator}
+ * @property {*} dataType
  * @constructor
  */
 function DataTypeValidator(type) {
