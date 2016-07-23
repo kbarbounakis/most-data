@@ -160,7 +160,7 @@
       "version":"1.0"
     },
   "Guid": {
-    "comment": "A string which represents the name of a data model.",
+    "comment": "A string which represents a global unique identifier (e.g. 21EC2020-3AEA-4069-A2DD-08002B30309D).",
     "label": "Model",
     "properties": {
       "pattern": "^(\\{{0,1}([0-9a-fA-F]){8}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){4}-([0-9a-fA-F]){12}\\}{0,1})$"
@@ -235,7 +235,7 @@
     "version":"1.0"
   },
   "NonNegativeNumber": {
-    "comment": "An integer containing only non-negative values (0,1,2,..)",
+    "comment": "A number containing only non-negative values (0,1,2,..)",
     "label": "NonNegativeNumber",
     "properties": {
       "pattern":"^[+]?[0-9]*\\.?[0-9]*$",
@@ -357,7 +357,7 @@
     "version":"1.0"
   },
   "IP": {
-    "comment": "A string which represents a valid IPv4 address (e.g. 127.0.0.1)",
+    "comment": "A string which represents an IPv4 address (e.g. 127.0.0.1)",
     "label": "IP",
     "properties": {
       "pattern":"^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$",

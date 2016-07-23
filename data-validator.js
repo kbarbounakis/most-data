@@ -276,11 +276,11 @@ RangeValidator.prototype.validateSync = function(val) {
         return;
     }
     var minValidator, maxValidator, minValidation, maxValidation;
-    if (typeof min !== 'undefined' && this.minValue != null) {
+    if (typeof this.minValue !== 'undefined' && this.minValue != null) {
         minValidator = new MinValueValidator(this.minValue);
         minValidation = minValidator.validateSync(val);
     }
-    if (typeof max !== 'undefined' && this.maxValue != null) {
+    if (typeof this.maxValue !== 'undefined' && this.maxValue != null) {
         maxValidator = new MaxValueValidator(this.maxValue);
         maxValidation = maxValidator.validateSync(val);
     }
@@ -292,7 +292,7 @@ RangeValidator.prototype.validateSync = function(val) {
         }
         return {
             code:"ERANGE",
-            maxValue:max,
+            maxValue:this.maxValue,
             message:message,
             innerMessage:innerMessage
         }
@@ -391,7 +391,171 @@ DataTypeValidator.prototype.validateSync = function(val) {
     }
 };
 /**
- * @classdesc Represents an event listener for validating field values. This listener is automatically  registered in all data models.
+ * @class
+ * @classdesc DataValidatorListener is one of the default listeners of MOST data models. Validates data objects against validation rules defined in model attributes.
+ * <h4>Validation Rules</h4>
+ * <p>Each attribute may have a set of validation rules. These rules may validate data against:
+ * <ul>
+ * <li>a maximum value</li>
+ * <li>a minimum value</li>
+ * <li>a maximum length of characters</li>
+ * <li>a minimum length of characters</li>
+ * <li>a value range</li>
+ * <li>a regular expression</li>
+ * <li>a custom validator</li>
+ * </ul>
+ * </p>
+ <h6>Use default validation rules</h6>
+ <p>
+In the following example price attribute has a validation which allows values between 0 to 1000:
+<pre class="prettyprint"><code>
+{
+    "name": "price",
+    "title": "Price",
+    "description": "The price of the product.",
+    "type": "Number",
+    "nullable":false,
+    "validation": {
+        "minValue":0,
+        "maxValue":1000
+    }
+}
+        </code></pre>
+ </p>
+ <p>
+ The following code snippet tries to save an object with a negative value in price:
+ <pre class="prettyprint"><code>
+ var obj = {
+                "price": -23.45,
+                "model": "FS2400",
+                "name": "USB 3.0 Adapter"
+            };
+ context.model("Product").save(obj).then(function() {
+               return done();
+           }).catch(function(err) {
+               return done(err);
+           });
+ </code></pre>
+ </p>
+ <p>
+ and the result is:
+ </p>
+ <pre class="prettyprint"><code>
+ {
+     "code": "ERANGE",
+     "model": "Product",
+     "field": "price",
+     "message": "The value should be between 0 to 1000."
+ }
+ </code></pre>
+ <h6>Use data type validation</h6>
+ <p>
+A validation may be performed by using a pre-defined data type:
+ <pre class="prettyprint"><code>
+ {
+     "name": "price",
+     "title": "Price",
+     "description": "The price of the product.",
+     "type": "Number",
+     "nullable":false,
+     "validation": {
+        "type":"NonNegativeNumber"
+     }
+ }
+ </code></pre>
+ <p>An operation tries to save a product with a negative price:</p>
+ <pre class="prettyprint"><code>
+ var obj = {
+                "price": -23.45,
+                "model": "FS2400",
+                "name": "USB 3.0 Adapter"
+            };
+ context.model("Product").save(obj).then(function() {
+               return done();
+           }).catch(function(err) {
+               return done(err);
+           });
+ </code></pre>
+ <p>and the result is:</p>
+ <pre class="prettyprint"><code>
+ {
+    "code": "EPATTERN",
+    "model": "Product",
+    "field": "price",
+    "message": "The value should be a number greater or equal to zero."
+}
+ </code></pre>
+ <p>The following list contains a set of pre-defined data types which may be used for data type validation:</p>
+ <table class="table-flat">
+ <thead><tr><th>Type</th><th>Description</th></tr></thead>
+ <tbody>
+ <tr><td>NegativeInteger</td><td>An integer containing only negative values (..,-2,-1)</td></tr>
+ <tr><td>NegativeNumber</td><td>A number containing only negative values (..,-2,-1)</td></tr>
+ <tr><td>NonNegativeInteger</td><td>An integer containing only non-negative values (0,1,2,..)</td></tr>
+ <tr><td>NonNegativeNumber</td><td>An number containing only non-negative values (0,1,2,..)</td></tr>
+ <tr><td>NonPositiveInteger</td><td>An integer containing only non-positive values (..,-2,-1,0)</td></tr>
+ <tr><td>NonPositiveNumber</td><td>A number containing only non-positive values (..,-2,-1,0)</td></tr>
+ <tr><td>PositiveInteger</td><td>An integer containing only positive values (1,2,..)</td></tr>
+ <tr><td>PositiveNumber</td><td>A number containing only positive values (0.1,+1,2,..)</td></tr>
+ <tr><td>Float</td><td>Float data type is a single-precision floating point.</td></tr>
+ <tr><td>Email</td><td>A string which represents an email address (e.g. user@example.com)</td></tr>
+ <tr><td>Guid</td><td>A string which represents a global unique identifier (e.g. 21EC2020-3AEA-4069-A2DD-08002B30309D).</td></tr>
+ <tr><td>AbsoluteURI</td><td>A string which represents an absolute URI address (e.g. https://www.example.com/help?article=1001)</td></tr>
+ <tr><td>RelativeURI</td><td>A string which represents a relative URI address (e.g. /help?article=1001)</td></tr>
+ <tr><td>Time</td><td>A string which represents an instant of time that recurs every day (e.g. 13:20:45)</td></tr>
+ <tr><td>Date</td><td>Represents a date value.</td></tr>
+ <tr><td>DateTime</td><td>Represents a date and time value.</td></tr>
+ <tr><td>Duration</td><td>A string which represents a duration of time (e.g. P1Y1M10D, P10D, -P0Y1M10D2H15M30S etc)</td></tr>
+ <tr><td>IP</td><td>A string which represents an IPv4 address (e.g. 127.0.0.1)</td></tr>
+ </tbody>
+ </table>
+ </p>
+ <h6>Use custom validator</h6>
+ Value validation may be performed by custom validator which is being registered as follows:
+ <pre class="prettyprint"><code>
+ {
+     "name": "price",
+     "title": "Price",
+     "description": "The price of the product.",
+     "type": "Number",
+     "nullable":false,
+     "validation": {
+        "custom":"validators/price-validator"
+     }
+ }
+ </code></pre>
+ <p>where price-validator is a module which exports a createInstance() method that returns an instance of a class which inherits DataValidator class.</p>
+ <pre class="prettyprint"><code>
+ //#validators/price-validator
+
+ var util = require("util"),
+ mostData = require("most-data");
+
+ function PriceValidator() {
+    PriceValidator.super_.call(this);
+}
+ util.inherits(mostData.validators.DataValidator, PriceValidator);
+ PriceValidator.validateSync = function(val) {
+    if (typeof val === 'number') {
+        if (val<=0) {
+            return {
+                code:"EPRICE",
+                "message":"A valid price must be always greater than zero."
+            };
+        }
+    }
+    else {
+        return {
+            code:"EPRICE",
+            "message":"A valid price must be always a number greater than zero."
+        };
+    }
+};
+ exports.createInstance = function() {
+    return new PriceValidator();
+};
+ </code></pre>
+ </p>
  * @constructor
  */
 function DataValidatorListener() {
@@ -399,7 +563,7 @@ function DataValidatorListener() {
 }
 
 /**
- * Occurs before creating or updating a data object and validates not nullable fields.
+ * Occurs before creating or updating a data object.
  * @param {DataEventArgs|*} event - An object that represents the event arguments passed to this operation.
  * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
@@ -463,6 +627,7 @@ if (typeof exports !== 'undefined')
 {
     module.exports = {
         PatternValidator:PatternValidator,
+        DataValidator:DataValidator,
         MaxValueValidator:MaxValueValidator,
         MinValueValidator:MinValueValidator,
         MaxLengthValidator:MaxLengthValidator,
