@@ -53,7 +53,6 @@ var string = require('string'),
     DataField = types.DataField,
     DataModelView = require('./data-model-view').DataModelView,
     DataFilterResolver = require('./data-filter-resolver').DataFilterResolver,
-    validators = require("./data-validator");
     Q = require("q");
 
 /**
