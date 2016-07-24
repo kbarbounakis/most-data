@@ -57,7 +57,8 @@ var string = require('string'),
     Q = require("q");
 
 /**
- * @class EmptyQueryExpression
+ * @ignore
+ * @class
  * @constructor
  * @augments QueryExpression
  */
@@ -2468,26 +2469,31 @@ DataModel.prototype.inferMapping = function(name) {
     }
 };
 
+function validateRequired_(attr, callback) {
+    var self = this;
+    var validator = new validators.RequiredValidator();
+    validator.setContext(self.context);
+    var validationResult = validator.validateSync(null);
+    if (validationResult) {
+        return callback(new types.DataException(validationResult.code,validationResult.message, validationResult.innerMessage, self.name, attr.name));
+    }
+    else {
+        return callback();
+    }
+}
 
-
-/**
- * Sets the number of levels of the expandable attributes.
- * The default value is 1 which means that any expandable attribute will be flat (without any other nested attribute).
- * If the value is greater than 1 then the nested objects may contain other nested objects and so on.
- * @param {Number=} value - A number which represents the number of levels which are going to be used in expandable attributes.
- * @returns {DataQueryable}
- * @example
- //get orders, expand customer and get customer's nested objects if any.
- context.model('Order')
- .levels(2)
- .orderByDescending('dateCreated)
- .expand('customer')
- .getItems().then(function(result) {
-        done(null, result);
-    }).catch(function(err) {
-        done(err);
-    });
- */
+function validateMaxLength_(attr, callback) {
+    var self = this;
+    var validator = new validators.MaxLengthValidator(attr.size);
+    validator.setContext(self.context);
+    var validationResult = validator.validateSync(null);
+    if (validationResult) {
+        return callback(new types.DataException(validationResult.code,validationResult.message, validationResult.innerMessage, self.name, attr.name));
+    }
+    else {
+        return callback();
+    }
+}
 
 /**
  *
@@ -2508,118 +2514,116 @@ function validate_(obj, state, callback) {
     var objCopy = self.cast(obj, state);
     async.eachSeries(self.attributes, function(attr, cb) {
         var validator, validationResult;
-        if (objCopy.hasOwnProperty(attr.name)) {
-            var value = objCopy[attr.name];
-            if (typeof value !== 'undefined' && value != null) {
-                if (attr.validation) {
-                    if (attr.validation['validator']) {
-                        var validatorModule;
-                        try {
-                            validatorModule = require(attr.validation['validator']);
-                        }
-                        catch (e) {
-                            dataCommon.debug(util.format("Data validator module (%s) cannot be loaded", attr.validation.type));
-                            dataCommon.debug(e);
-                            return cb(e);
-                        }
-                        if (typeof validatorModule.createInstance !== 'function') {
-                            dataCommon.debug(util.format("Data validator module (%s) does not export createInstance() method.", attr.validation.type));
-                            return cb(new Error("Invalid data validator type."));
-                        }
-                        validator = validatorModule.createInstance(attr);
-                        validator.setContext(self.context);
-                        if (typeof validator.validateSync === 'function') {
-                            validationResult = validator.validateSync(value);
-                            if (validationResult) {
-                                return cb(new types.DataException(validationResult.code || "EVALIDATE",validationResult.message, validationResult.innerMessage, self.name, attr.name));
-                            }
-                            else {
-                                return cb();
-                            }
-                        }
-                        else if (typeof validator.validate === 'function') {
-                            return validator.validate(value, function(err) {
-                               if (err) {
-                                   return cb(new types.DataException(validationResult.code || "EVALIDATE",validationResult.message, validationResult.innerMessage, self.name, attr.name));
-                               }
-                            });
-                        }
-                        else {
-                            dataCommon.debug(util.format("Data validator (%s) does not have either validate() or validateSync() methods.", attr.validation.type));
-                            return cb(new Error("Invalid data validator type."));
-                        }
-                    }
-                    else {
-                        if (typeof attr.validation.type === 'string') {
-                            validator = new validators.DataTypeValidator(attr.validation.type);
-                        }
-                        else {
-                            //convert validation data to pseudo type declaration
-                            validator = new validators.DataTypeValidator({
-                                properties:attr.validation
-                            });
-                        }
+        //get value
+        var value = objCopy[attr.name];
+        //build validators array
+        var arrValidators=[];
+        //-- RequiredValidator
+        if (attr.hasOwnProperty('nullable') && !attr.nullable)
+        {
+            if (state==1 && !attr.primary) {
+                arrValidators.push(new validators.RequiredValidator());
+            }
+            else if (state==2 && !attr.primary && objCopy.hasOwnProperty(attr.name)) {
+                arrValidators.push(new validators.RequiredValidator());
+            }
+        }
+        //-- MaxLengthValidator
+        if (attr.hasOwnProperty('size') && objCopy.hasOwnProperty(attr.name)) {
+            if (!(attr.validation && attr.validation.maxLength))
+                arrValidators.push(new validators.MaxLengthValidator(attr.size));
+        }
+        //-- CustomValidator
+        if (attr.validation && attr.validation['validator'] && objCopy.hasOwnProperty(attr.name)) {
+            var validatorModule;
+            try {
+                if (/^\./ig.test(attr.validation['validator'])) {
+                    var modulePath = path.resolve(process.cwd(), attr.validation['validator']);
+                    validatorModule = require(modulePath);
+                }
+                else {
+                    validatorModule = require(attr.validation['validator']);
+                }
+            }
+            catch (e) {
+                dataCommon.debug(util.format("Data validator module (%s) cannot be loaded", attr.validation.type));
+                dataCommon.debug(e);
+                return cb(e);
+            }
+            if (typeof validatorModule.createInstance !== 'function') {
+                dataCommon.debug(util.format("Data validator module (%s) does not export createInstance() method.", attr.validation.type));
+                return cb(new Error("Invalid data validator type."));
+            }
+            arrValidators.push(validatorModule.createInstance(attr));
+        }
+        //-- DataTypeValidator #1
+        if (attr.validation && objCopy.hasOwnProperty(attr.name)) {
+            if (typeof attr.validation.type === 'string') {
+                arrValidators.push(new validators.DataTypeValidator(attr.validation.type));
+            }
+            else {
+                //convert validation data to pseudo type declaration
+                var validationProperties = {
+                    properties:attr.validation
+                };
+                arrValidators.push(new validators.DataTypeValidator(validationProperties));
+            }
+        }
+        //-- DataTypeValidator #2
+        if (attr.type && objCopy.hasOwnProperty(attr.name)) {
+            arrValidators.push(new validators.DataTypeValidator(attr.type));
+        }
 
-                        validator.setContext(self.context);
-                        validationResult = validator.validateSync(value);
-                        if (validationResult) {
-                            return cb(new types.DataException(validationResult.code,validationResult.message, validationResult.innerMessage, self.name, attr.name));
-                        }
-                        else {
-                            return cb();
-                        }
-                    }
+        if (arrValidators.length == 0) {
+            return cb();
+        }
+        //do validation
+        async.eachSeries(arrValidators, function(validator, cb) {
+
+            //set context
+            if (typeof validator.setContext === 'function') {
+                validator.setContext(self.context);
+            }
+            //set target
+            validator.target = obj;
+            if (typeof validator.validateSync === 'function') {
+                validationResult = validator.validateSync(value);
+                if (validationResult) {
+                    return cb(new types.DataException(validationResult.code || "EVALIDATE",validationResult.message, validationResult.innerMessage, self.name, attr.name));
                 }
                 else {
-                    validator = new validators.DataTypeValidator(attr.type);
-                    validator.setContext(self.context);
-                    validationResult = validator.validateSync(value);
+                    return cb();
+                }
+            }
+            else if (typeof validator.validate === 'function') {
+                return validator.validate(value, function(err, validationResult) {
+                    if (err) {
+                        return cb(err);
+                    }
                     if (validationResult) {
-                        return cb(new types.DataException(validationResult.code,validationResult.message, validationResult.innerMessage, self.name, attr.name));
+                        return cb(new types.DataException(validationResult.code || "EVALIDATE",validationResult.message, validationResult.innerMessage, self.name, attr.name));
                     }
-                    else {
-                        return cb();
-                    }
-                }
-            }
-            if (attr.hasOwnProperty('nullable') && !attr.nullable) {
-                validator = new validators.RequiredValidator();
-                validator.setContext(self.context);
-                validationResult = validator.validateSync(null);
-                if (validationResult) {
-                    return cb(new types.DataException(validationResult.code,validationResult.message, validationResult.innerMessage, self.name, attr.name));
-                }
-                else {
                     return cb();
-                }
+                });
             }
-        }
-        else {
-            if (attr.hasOwnProperty('nullable') && !attr.nullable && (state==1) && (!attr.primary)) {
-                validator = new validators.RequiredValidator();
-                validator.setContext(self.context);
-                validationResult = validator.validateSync(null);
-                if (validationResult) {
-                    return cb(new types.DataException(validationResult.code,validationResult.message, validationResult.innerMessage, self.name, attr.name));
-                }
-                else {
-                    return cb();
-                }
+            else {
+                dataCommon.debug(util.format("Data validator (%s) does not have either validate() or validateSync() methods.", attr.validation.type));
+                return cb(new Error("Invalid data validator type."));
             }
-        }
-        return cb();
+        }, function(err) {
+            return cb(err);
+        });
+
     }, function(err) {
-        if (err) {
-            return callback(err);
-        }
-        return callback();
+        return callback(err);
     });
 }
 /**
  * Validates the given object against validation rules which are defined either by the data type or the definition of each attribute
- * @param {*} obj
- * @param {Function=} callback
- * @returns {Promise|*}
+ <p>Read more about data validation <a href="DataValidatorListener.html">here</a>.</p>
+ * @param {*} obj - The data object which is going to be validated
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @returns {Promise|*} - If callback parameter is missing then returns a Promise object.
  */
 DataModel.prototype.validateForUpdate = function(obj, callback) {
     if (typeof callback !== 'function') {
@@ -2637,9 +2641,11 @@ DataModel.prototype.validateForUpdate = function(obj, callback) {
 
 /**
  * Validates the given object against validation rules which are defined either by the data type or the definition of each attribute
- * @param {*} obj
- * @param {Function=} callback
- * @returns {Promise|*}
+ <p>Read more about data validation <a href="DataValidatorListener.html">here</a>.</p>
+ * @param {*} obj - The data object which is going to be validated
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @returns {Promise|*} - If callback parameter is missing then returns a Promise object.
+ <p>Read more about data validation <a href="DataValidationListener.html">here</a></p>
  */
 DataModel.prototype.validateForInsert = function(obj, callback) {
     if (typeof callback !== 'function') {
@@ -2655,6 +2661,24 @@ DataModel.prototype.validateForInsert = function(obj, callback) {
     }
 };
 
+/**
+ * Sets the number of levels of the expandable attributes.
+ * The default value is 1 which means that any expandable attribute will be flat (without any other nested attribute).
+ * If the value is greater than 1 then the nested objects may contain other nested objects and so on.
+ * @param {Number=} value - A number which represents the number of levels which are going to be used in expandable attributes.
+ * @returns {DataQueryable}
+ * @example
+ //get orders, expand customer and get customer's nested objects if any.
+ context.model('Order')
+ .levels(2)
+ .orderByDescending('dateCreated)
+ .expand('customer')
+ .getItems().then(function(result) {
+        done(null, result);
+    }).catch(function(err) {
+        done(err);
+    });
+ */
 DataModel.prototype.levels = function(value) {
     var result = new DataQueryable(this);
     return result.levels(value);

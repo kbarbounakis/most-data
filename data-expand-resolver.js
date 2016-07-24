@@ -85,6 +85,7 @@ function testSplitExpandExpr_(s) {
 }
 
 /**
+ * @ignore
  * @constructor
  */
 function DataExpandResolver() {

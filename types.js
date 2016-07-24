@@ -596,6 +596,7 @@ function AccessDeniedException(message, innerMessage) {
 util.inherits(AccessDeniedException, DataException);
 
 /**
+ * @ignore
  * @class
  * @param name
  * @constructor
@@ -853,6 +854,8 @@ function DataModelMigration() {
     this.model = null;
 }
 /**
+ * @ignore
+ * @deprecated
  * @class
  * @constructor
  */

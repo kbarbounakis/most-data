@@ -35,6 +35,7 @@ var Q = require('q'),
     functions = require('./functions');
 
 /**
+ * @ignore
  * @class
  * @abstract
  * @constructor
@@ -102,9 +103,6 @@ DataFilterResolver.prototype.user = DataFilterResolver.prototype.me;
 if (typeof exports !== 'undefined')
 {
     module.exports = {
-        /**
-         * @constructs DataFilterResolver
-         */
         DataFilterResolver:DataFilterResolver
     };
 }
