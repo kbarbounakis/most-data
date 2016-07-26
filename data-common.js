@@ -184,13 +184,12 @@ if (typeof Object.prototype.isNullOrUndefined === 'undefined')
     }
     if (!Object.prototype.isNullOrUndefined) { Object.prototype.isNullOrUndefined = isNullOrUndefined; }
 }
-/**
- * @private
- */
-var dataCommon = {
+
+var common = {
     /**
      *
      * @param {Error|string|{message:string,stack:string}|*} data
+     * @memberOf module:most.common
      */
     log:function(data) {
         if (data instanceof Error) {
@@ -206,6 +205,7 @@ var dataCommon = {
     /**
      *
      * @param {Error|string|{message:string,stack:string}|*} data
+     * @memberOf module:most.common
      */
     debug:function(data) {
         if (process.env.NODE_ENV==='development')
@@ -214,6 +214,7 @@ var dataCommon = {
     /**
      *
      * @param {String} data
+     * @memberOf module:most.common
      */
     dasherize:function(data) {
         if (typeof data === 'string')
@@ -225,6 +226,7 @@ var dataCommon = {
      * Checks if the specified object argument is undefined or null.
      * @param {*} obj
      * @returns {boolean}
+     * @memberOf module:most.common
      */
     isNullOrUndefined: function(obj) {
         return (typeof obj === 'undefined' || obj === null);
@@ -233,6 +235,7 @@ var dataCommon = {
      * Checks if the specified object argument is not undefined or null.
      * @param {*} obj
      * @returns {boolean}
+     * @memberOf module:most.common
      */
     isDefined: function(obj) {
         return (typeof obj !== 'undefined' && obj != null);
@@ -241,6 +244,7 @@ var dataCommon = {
      * Returns a random integer between a minimum and a maximum value
      * @param {number} min
      * @param {number} max
+     * @memberOf module:most.common
      */
     randomInt: function(min, max) {
         return Math.floor(Math.random()*max) + min;
@@ -250,6 +254,7 @@ var dataCommon = {
      * @param {Number} howMany - The length of the random sequence of characters
      * @param {string=} chars - A sequence of characters to be used in random sequence
      * @returns {string}
+     * @memberOf module:most.common
      */
     randomChars: function(howMany, chars) {
         /**
@@ -270,6 +275,7 @@ var dataCommon = {
      * Converts the given value to the equivalent MD5 formatted string.
      * @param {*} value
      * @returns {string|undefined}
+     * @memberOf module:most.common
      */
     md5 : function(value) {
         if (typeof value === 'undefined' || value == null) {
@@ -288,8 +294,8 @@ var dataCommon = {
         return md5.digest('hex');
     }
 };
-
-if (typeof exports !== 'undefined')
-{
-    module.exports = dataCommon;
-}
+/**
+ * @namespace common
+ * @memberOf module:most
+ */
+module.exports = common;

@@ -61,6 +61,7 @@ var util = require('util'),
  * @constructor
  * @augments DataContext
  * @property {DataAdapter} db - Gets a data adapter based on the current configuration settings.
+ * @memberOf module:most.classes
  */
 function DefaultDataContext()
 {
@@ -173,6 +174,7 @@ DefaultDataContext.prototype.finalize = function(cb) {
  * @constructor
  * @augments DataContext
  * @property {DataAdapter} db - Gets a data adapter based on the given adapter's name.
+ * @memberOf module:most.classes
  */
 function NamedDataContext(name)
 {

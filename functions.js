@@ -42,6 +42,7 @@ var types = require('./types'),
  * @param {DataModel|*=} model
  * @param {*=} target
  * @constructor
+ * @memberOf module:most.classes
 */
 function FunctionContext(context, model, target) {
     /**

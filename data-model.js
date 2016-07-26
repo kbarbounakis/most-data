@@ -214,6 +214,7 @@ function EmptyQueryExpression() {
  * @constructor
  * @augments EventEmitter2
  * @param {*=} obj An object instance that holds data model attributes. This parameter is optional.
+ * @memberOf module:most.classes
  */
 function DataModel(obj) {
 

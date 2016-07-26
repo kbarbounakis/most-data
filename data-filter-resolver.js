@@ -40,6 +40,7 @@ var Q = require('q'),
  * @abstract
  * @constructor
  * @augments DataModel
+ * @memberOf module:most.classes
  */
 function DataFilterResolver() {
     //

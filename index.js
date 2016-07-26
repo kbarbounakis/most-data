@@ -34,43 +34,26 @@
 var model = require('./data-model'),
     types = require('./types'),
     cfg = require('./data-configuration'),
-    perms = require('./data-permission'),
     validators = require('./data-validator'),
-    dataCache = require('./data-cache'),
-    dataCommon = require('./data-common'),
-    functions = require('./functions'),
-    DataQueryable = require('./data-queryable').DataQueryable,
-    DataExpandResolver = require('./data-expand-resolver').DataExpandResolver,
+    cache = require('./data-cache'),
+    common = require('./data-common'),
+    classes = require("./data-classes"),
     DefaultDataContext = require('./data-context').DefaultDataContext,
-    NamedDataContext = require('./data-context').NamedDataContext,
-    DataModel = model.DataModel,
-    DataFilterResolver = require('./data-filter-resolver').DataFilterResolver;
+    NamedDataContext = require('./data-context').NamedDataContext;
 
-/**
- * @private
- */
-var dat = {
+
+var most = {
     cfg: cfg,
-    common: dataCommon,
+    common: common,
     types: types,
-    cache:dataCache,
-    validators: validators,
-    classes: {
-        DataObject : require('./data-object'),
-        DefaultDataContext: DefaultDataContext,
-        NamedDataContext: NamedDataContext,
-        FunctionContext:functions.classes.FunctionContext,
-        DataQueryable: DataQueryable,
-        DataModel: DataModel,
-        DataFilterResolver: DataFilterResolver,
-        DataExpandResolver: DataExpandResolver,
-        DataPermissionEventListener:perms.DataPermissionEventListener,
-        DataPermissionEventArgs:perms.DataPermissionEventArgs
-    },
+    cache:cache,
+    validators:validators,
+    classes: classes,
     /**
      * Creates an instance of DataContext class which represents the default data context. If parameter [name] is specified, returns the named data context specified in application configuration.
      * @param {string=} name
      * @returns {DataContext}
+     * @memberOf module:most
      */
     createContext: function(name) {
         if (typeof name === 'undefined' || name == null)
@@ -78,8 +61,9 @@ var dat = {
         else
             return new NamedDataContext(name);
     },
-     /**
+    /**
      * @param {function(DataContext)} fn - A function fn(context) that is going to be invoked in current context
+     * @memberOf module:most
      */
     execute: function(fn)
     {
@@ -90,6 +74,7 @@ var dat = {
     /**
      * @param {string} userName
      * @param {function(DataContext)} fn - A function fn(context) that is going to be invoked in current context
+     * @memberOf module:most
      */
     executeAs: function(userName, fn)
     {
@@ -104,8 +89,7 @@ var dat = {
     DataObject : require('./data-object')
 };
 
-
-if (typeof exports !== 'undefined')
-{
-    module.exports = dat;
-}
+/**
+ * @module most
+ */
+module.exports = most;

@@ -436,6 +436,7 @@ DataAttributeResolver.prototype.resolveJunctionAttributeJoin = function(attr) {
  * @constructor
  * @param model {DataModel|*}
  * @augments DataContextEmitter
+ * @memberOf module:most.classes
  */
 function DataQueryable(model) {
     /**

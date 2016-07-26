@@ -39,6 +39,7 @@ var types = require('./types'), util = require('util');
  * @property {Number} ttl - An amount of time in seconds which is the default cached item lifetime.
  * @constructor
  * @augments EventEmitter2
+ * @memberOf module:most.cache
  */
 function DataCache() {
     this.initialized = false;
@@ -229,18 +230,23 @@ DataCache.prototype.get = function(key, callback) {
         }
     });
 };
-/**
- * @private
- */
-var dataCache = {
-    DataCache:DataCache
+
+var cache = {
+    DataCache:DataCache,
+    /**
+     * @returns {DataCache}
+     * @memberOf module:most.cache
+     */
+    getCurrent: function() {
+        return this.current;
+    }
 };
 /**
- * @type DataCache
+ * @type {DataCache|*}
  * @private
  */
 var currentDataCache;
-Object.defineProperty(dataCache, 'current', { get: function () {
+Object.defineProperty(cache, 'current', { get: function () {
     //first of all check if a global application exists
     if (typeof global !== 'undefined' || global!=null) {
         var app = global.application;
@@ -261,7 +267,8 @@ Object.defineProperty(dataCache, 'current', { get: function () {
     return currentDataCache;
 }, configurable: false, enumerable: false});
 
-if (typeof exports !== 'undefined')
-{
-    module.exports = dataCache;
-}
+/**
+ * @namespace cache
+ * @memberOf module:most
+ */
+module.exports = cache;

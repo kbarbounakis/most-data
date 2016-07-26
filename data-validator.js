@@ -39,6 +39,7 @@ var util = require("util"),
  * @class
  * @property {*} target - Gets or sets the target data object
  * @constructor
+ * @memberOf module:most.validators
  */
 function DataValidator() {
     var context_;
@@ -73,6 +74,7 @@ function zeroPad_(number, length) {
  * @property {string} message - Gets or sets a string which represents a custom validator message.
  * @augments {DataValidator}
  * @constructor
+ * @memberOf module:most.validators
  * @classdesc Validates a variable against the regular expression provided
  <p>PatternValidator is used by <a href="DataValidatorListener.html">DataValidatorListener</a> for validating data objects.</p>
  <p>
@@ -165,6 +167,7 @@ PatternValidator.prototype.validateSync = function(val) {
  * @property {string} message - Gets or sets a string which represents a custom validator message.
  * @augments {DataValidator}
  * @constructor
+ * @memberOf module:most.validators
  * @classdesc Validates a variable which has a length property (e.g. a string) against the minimum length provided
  <p>MinLengthValidator is used by <a href="DataValidatorListener.html">DataValidatorListener</a> for validating data objects.</p>
  <p>
@@ -248,6 +251,7 @@ MinLengthValidator.prototype.validateSync = function(val) {
  * @property {number} maxLength - Gets or sets an integer which represents the maximum length.
  * @property {string} message - Gets or sets a string which represents a custom validator message.
  * @constructor
+ * @memberOf module:most.validators
  * @classdesc Validates a variable which has a length property (e.g. a string) against the maximum length provided
  <p>MaxLengthValidator is used by <a href="DataValidatorListener.html">DataValidatorListener</a> for validating data objects.</p>
  <p>
@@ -339,6 +343,7 @@ MaxLengthValidator.prototype.validateSync = function(val) {
  * @property {*} minValue - Gets or sets a value which represents the minimum value.
  * @property {string} message - Gets or sets a string which represents a custom validator message.
  * @constructor
+ * @memberOf module:most.validators
  * @classdesc Validates a value against the minimum value provided
  <p>MinValueValidator is used by <a href="DataValidatorListener.html">DataValidatorListener</a> for validating data objects.</p>
  <p>
@@ -418,6 +423,7 @@ MinValueValidator.prototype.validateSync = function(val) {
  * @property {*} maxValue - Gets or sets a value which represents the maximum value.
  * @property {string} message - Gets or sets a string which represents a custom validator message.
  * @constructor
+ * @memberOf module:most.validators
  * @classdesc Validates a value against the maximum value provided
  <p>MaxValueValidator is used by <a href="DataValidatorListener.html">DataValidatorListener</a> for validating data objects.</p>
  <p>
@@ -500,6 +506,7 @@ MaxValueValidator.prototype.validateSync = function(val) {
  * @property {*} maxValue - Gets or sets a value which represents the maximum value
  * @property {string} message - Gets or sets a string which represents a custom validator message.
  * @constructor
+ * @memberOf module:most.validators
  * @classdesc Validates a value against a minimum and maximum value
  <p>RangeValidator is used by <a href="DataValidatorListener.html">DataValidatorListener</a> for validating data objects.</p>
  <p>
@@ -593,6 +600,7 @@ RangeValidator.prototype.validateSync = function(val) {
  * @augments {DataValidator}
  * @property {*} dataType - Gets or sets the data type which is going to be used for data validation
  * @constructor
+ * @memberOf module:most.validators
  * @classdesc Validates a value against a pre-defined data type
  <p>DataTypeValidator is used by <a href="DataValidatorListener.html">DataValidatorListener</a> for validating data objects.</p>
  <p>
@@ -971,6 +979,7 @@ context.model("Product").save(obj).then(function() {
  </code></pre>
  </p>
  * @constructor
+ * @memberOf module:most.validators
  */
 function DataValidatorListener() {
     //
@@ -1006,6 +1015,7 @@ DataValidatorListener.prototype.beforeSave = function(event, callback) {
  * @class
  * @augments {DataValidator}
  * @constructor
+ * @memberOf module:most.validators
  * @classdesc Validates a required attribute
  <p>RequiredValidator is used by <a href="DataValidatorListener.html">DataValidatorListener</a> for validating data objects.</p>
  <p>
@@ -1076,18 +1086,21 @@ RequiredValidator.prototype.validateSync = function(val) {
     }
 };
 
-if (typeof exports !== 'undefined')
-{
-    module.exports = {
-        PatternValidator:PatternValidator,
-        DataValidator:DataValidator,
-        MaxValueValidator:MaxValueValidator,
-        MinValueValidator:MinValueValidator,
-        MaxLengthValidator:MaxLengthValidator,
-        MinLengthValidator:MinLengthValidator,
-        RangeValidator:RangeValidator,
-        RequiredValidator:RequiredValidator,
-        DataTypeValidator:DataTypeValidator,
-        DataValidatorListener:DataValidatorListener
-    };
-}
+var validators = {
+    PatternValidator:PatternValidator,
+    DataValidator:DataValidator,
+    MaxValueValidator:MaxValueValidator,
+    MinValueValidator:MinValueValidator,
+    MaxLengthValidator:MaxLengthValidator,
+    MinLengthValidator:MinLengthValidator,
+    RangeValidator:RangeValidator,
+    RequiredValidator:RequiredValidator,
+    DataTypeValidator:DataTypeValidator,
+    DataValidatorListener:DataValidatorListener
+};
+/**
+ * @namespace
+ * @name validators
+ * @memberOf module:most
+ */
+module.exports = validators;

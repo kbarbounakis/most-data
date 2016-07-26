@@ -62,6 +62,7 @@ var STR_MISSING_CALLBACK_ARGUMENT = 'Missing argument. Callback function expecte
  * @property {DataModel} $$model - The data model which is associated with this object.
  * @property {*} $$id - Gets the identifier of this object based on the associated model's primary key
  * @property {*} selectors - An object that represents a collection of selectors associated with this data object e.g is(':new'), is(':valid'), is(':enabled') etc
+ * @memberOf module:most.classes
  */
 function DataObject(type, obj)
 {

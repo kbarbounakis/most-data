@@ -344,17 +344,17 @@ DataConfiguration.prototype.model = function(name)
  */
 var namedConfiguations_ = { };
 
-/**
- * @private
- */
-var cfg = {
+var cfg =
+{
     /**
-     * @type DataConfiguration
+     * @type {DataConfiguration}
+     * @memberOf module:most.cfg
      */
     current:undefined,
     /**
      * Creates a instance data configuration class
      * @returns {DataConfiguration}  Returns an instance of DataConfiguration class
+     * @memberOf module:most.cfg
      */
     createInstance: function() {
         return new DataConfiguration();
@@ -363,6 +363,7 @@ var cfg = {
      * Gets or creates a named configuration
      * @param {string} name
      * @returns {DataConfiguration}
+     * @memberOf module:most.cfg
      */
     getNamedConfiguration: function(name) {
         if (typeof name !== 'string') {
@@ -379,9 +380,6 @@ var cfg = {
         namedConfiguations_[name] = new DataConfiguration();
         return namedConfiguations_[name];
     },
-    /**
-     * @ignore
-     */
     classes: {
         DataConfiguration:DataConfiguration
     }
@@ -402,7 +400,8 @@ Object.defineProperty(cfg, 'current', {
     });
 
 
-if (typeof exports !== 'undefined')
-{
-    module.exports = cfg;
-}
+/**
+ * @namespace cfg
+ * @memberOf module:most
+ */
+module.exports = cfg;
