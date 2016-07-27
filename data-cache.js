@@ -39,7 +39,7 @@ var types = require('./types'), util = require('util');
  * @property {Number} ttl - An amount of time in seconds which is the default cached item lifetime.
  * @constructor
  * @augments EventEmitter2
- * @memberOf module:most.cache
+ * @memberOf module:most
  */
 function DataCache() {
     this.initialized = false;
@@ -234,7 +234,7 @@ DataCache.prototype.get = function(key, callback) {
 var cache = {
     DataCache:DataCache,
     /**
-     * @returns {DataCache}
+     * @returns DataCache
      * @memberOf module:most.cache
      */
     getCurrent: function() {

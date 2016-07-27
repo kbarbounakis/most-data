@@ -436,7 +436,6 @@ DataAttributeResolver.prototype.resolveJunctionAttributeJoin = function(attr) {
  * @constructor
  * @param model {DataModel|*}
  * @augments DataContextEmitter
- * @memberOf module:most.classes
  */
 function DataQueryable(model) {
     /**
@@ -479,7 +478,7 @@ function DataQueryable(model) {
 }
 /**
  * Clones the current DataQueryable instance.
- * @returns DataQueryable - The cloned object.
+ * @returns DataQuerable - The cloned object.
  */
 DataQueryable.prototype.clone = function() {
     var result = new DataQueryable(this.model);

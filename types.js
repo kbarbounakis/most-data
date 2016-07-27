@@ -33,6 +33,12 @@
  * @ignore
   */
 var events = require('events'), util = require('util'), async = require('async'), qry = require('most-query');
+
+/**
+ * @namespace types
+ * @memberOf module:most
+ */
+
 /**
  * @classdesc Represents an abstract data connector to a database
  * <p>
@@ -216,7 +222,6 @@ var events = require('events'), util = require('util'), async = require('async')
  </ul>
  * @class
  * @constructor
- * @memberOf module:most.types
  * @param {*} options - The database connection options
  * @abstract
  * @property {*} rawConnection - Gets or sets the native database connection
@@ -296,7 +301,6 @@ DataAdapter.prototype.createView = function(name, query, callback) {
  * @class
  * @augments EventEmitter
  * @constructor
- * @memberOf module:most.types
  */
 function EventEmitter2() {
     //
@@ -368,7 +372,6 @@ EventEmitter2.prototype.once = function(type, listener) {
  * @property {Number|*} state - Represents the operation state (Update, Insert, Delete).
  * @property {DataQueryable|*} emitter - Represents the event emitter, normally a DataQueryable object instance.
  * @property {*} query - Represents the underlying query expression. This property may be null.
- * @memberOf module:most.types
  */
 function DataEventArgs() {
     //
@@ -379,7 +382,6 @@ function DataEventArgs() {
  * @class
  * @augments EventEmitter2
  * @constructor
- * @memberOf module:most.types
  */
 function DataContext() {
     /**
@@ -426,8 +428,7 @@ util.inherits(DataContext, EventEmitter2);
  * @class
  * @constructor
  * @abstract
- * @memberOf module:most.types
- */
+  */
 function DataEventListener() {
     //
 }
@@ -507,7 +508,6 @@ var FloatRegex =/^[+-]?\d+(\.\d+)?$/g;
  * @property {string} innerMessage - The error inner message.
  * @property {number} status - A number that represents an error status. This error status may be used for throwing the approriate HTTP error.
  * @augments Error
- * @memberOf module:most.types
  */
 function DataException(code, message, innerMessage, model, field) {
     this.code  = code || 'EDATA';
@@ -534,8 +534,7 @@ util.inherits(DataException, Error);
  * @property {string} model - The target model name
  * @property {string} field - The target field name
  * @augments Error
- * @memberOf module:most.types
- */
+  */
 function NotNullException(message, innerMessage, model, field) {
     NotNullException.super_.call(this, 'ENULL', message || 'A value is required', innerMessage, model, field);
     this.status = 409;
@@ -554,7 +553,6 @@ util.inherits(NotNullException, DataException);
  * @property {number} status - A number that represents an error status. This error status may be used for throwing the approriate HTTP error. The default status is 404 (Conflict)
  * @property {string} model - The target model name
  * @augments Error
- * @memberOf module:most.types
  */
 function DataNotFoundException(message, innerMessage, model) {
     DataNotFoundException.super_.call(this, 'EFOUND', message || 'The requested data was not found.', innerMessage, model);
@@ -575,7 +573,6 @@ util.inherits(DataNotFoundException, DataException);
  * @property {string} model - The target model name
  * @property {string} constraint - The target constraint name
  * @augments Error
- * @memberOf module:most.types
  */
 function UniqueConstraintException(message, innerMessage, model, constraint) {
     UniqueConstraintException.super_.call(this, 'EUNQ', message || 'A unique constraint violated', innerMessage, model);
@@ -597,7 +594,6 @@ util.inherits(UniqueConstraintException, DataException);
  * @property {string} innerMessage - The error inner message.
  * @augments DataException
  * @constructor
- * @memberOf module:most.types
  */
 function AccessDeniedException(message, innerMessage) {
     AccessDeniedException.super_.call(this, 'EACCESS', ('Access Denied' || message) , innerMessage);
@@ -610,7 +606,6 @@ util.inherits(AccessDeniedException, DataException);
  * @class
  * @param name
  * @constructor
- * @memberOf module:most.types
  */
 function DataQueryableField(name) {
     if (typeof name !== 'string') {
@@ -827,7 +822,6 @@ if (typeof String.prototype.fieldOf === 'undefined')
  * @class
  * @constructor
  * @ignore
- * @memberOf module:most.types
  */
 function DataModelMigration() {
     /**
@@ -871,7 +865,6 @@ function DataModelMigration() {
  * @deprecated
  * @class
  * @constructor
- * @memberOf module:most.types
  */
 function DataModelBatch() {
     /**
@@ -1015,7 +1008,6 @@ DataModelBatch.prototype.prepare = function(obj) {
  * @property {boolean} oneToOne - Gets or sets a boolean value that indicates whether current relation is one-to-one relation. The default value is false.
  * @param {*=} obj - An object that contains relation mapping attributes
  * @constructor
- * @memberOf module:most.types
  */
 function DataAssociationMapping(obj) {
     this.cascade = 'none';
@@ -1052,8 +1044,7 @@ function DataAssociationMapping(obj) {
  * @property {{type:string,custom:string,minValue:*,maxValue:*,minLength:number,maxLength:number,pattern:string,patternMessage:string}|*} validation - Gets or sets data validation attributes.
  * @property {*} options - Gets or sets the available options for this field.
  * @property {boolean} virtual - Gets or sets a boolean that indicates whether this fields is a view only field or not.
- * @memberOf module:most.types
- */
+  */
 function DataField() {
     this.nullable = true;
     this.primary = false;
@@ -1069,7 +1060,6 @@ function DataField() {
  * @property {string} name - Gets or sets a short description for this listener
  * @property {string} type - Gets or sets a string which is the path of the module that exports this listener.
  * @property {boolean} disabled - Gets or sets a boolean value that indicates whether this listener is disabled or not. The default value is false.
- * @memberOf module:most.types
  * @description
  * <p>
  * A data model uses event listeners as triggers which are automatically executed after data operations.
@@ -1114,7 +1104,6 @@ function DataModelEventListener() {
 /**
  * An enumeration of tha available privilege types
  * @enum
- * @memberOf module:most.types
  */
 var PrivilegeType = {
     /**
@@ -1143,7 +1132,6 @@ var PrivilegeType = {
  * @classdesc Represents a privilege which is defined in a data model and it may be given in users and groups
  * @class
  * @constructor
- * @memberOf module:most.types
  * @property {PermissionMask} mask - Gets or sets the set of permissions which may be given with this privilege.
  * @property {PrivilegeType|string} type - Gets or sets the type of this privilege (global|parent|item|self).
  * @property {string} filter - Gets or sets a filter expression which is going to be used for self privileges.
@@ -1165,8 +1153,7 @@ function DataModelPrivilege() {
  * @property {number} skip - The number of skipped records
  * @property {Array} records - An array of objects which represents the query results.
  * @constructor
- * @memberOf module:most.types
- */
+  */
 function DataResultSet() {
     this.total = 0;
     this.skip = 0;
@@ -1177,7 +1164,6 @@ function DataResultSet() {
  * @abstract
  * @constructor
  * @ignore
- * @memberOf module:most.types
  */
 function DataContextEmitter() {
     //
@@ -1189,7 +1175,6 @@ DataContextEmitter.prototype.ensureContext = function() {
 /**
  * An enumeration of the available data object states
  * @enum {number}
- * @memberOf module:most.types
  */
 var DataObjectState = {
     /**
@@ -1209,7 +1194,6 @@ var DataObjectState = {
 /**
  * An enumeration of the available data caching types
  * @enum {string}
- * @memberOf module:most.types
  */
 var DataCachingType = {
     /**
@@ -1331,9 +1315,6 @@ var types =
     DataModelEventListener:DataModelEventListener,
     DataModelPrivilege:DataModelPrivilege
 };
-/**
- * @namespace types
- * @memberOf module:most
- */
+
 
 module.exports = types;

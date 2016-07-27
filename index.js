@@ -53,7 +53,7 @@ var most = {
      * Creates an instance of DataContext class which represents the default data context. If parameter [name] is specified, returns the named data context specified in application configuration.
      * @param {string=} name
      * @returns {DataContext}
-     * @memberOf module:most
+     * @memberOf most-data
      */
     createContext: function(name) {
         if (typeof name === 'undefined' || name == null)
@@ -63,7 +63,7 @@ var most = {
     },
     /**
      * @param {function(DataContext)} fn - A function fn(context) that is going to be invoked in current context
-     * @memberOf module:most
+     * @memberOf most-data
      */
     execute: function(fn)
     {
@@ -74,7 +74,7 @@ var most = {
     /**
      * @param {string} userName
      * @param {function(DataContext)} fn - A function fn(context) that is going to be invoked in current context
-     * @memberOf module:most
+     * @memberOf most-data
      */
     executeAs: function(userName, fn)
     {
@@ -82,14 +82,11 @@ var most = {
         var ctx = new DefaultDataContext();
         ctx.user = { name:userName, authenticationType:'Basic' };
         fn.call(null, ctx);
-    },
-    /**
-     * DataObject class constructor.
-     */
-    DataObject : require('./data-object')
+    }
 };
 
+most.DataObject = require('./data-object');
 /**
- * @module most
+ * @exports most
  */
 module.exports = most;

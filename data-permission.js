@@ -827,7 +827,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
 var perms = {
     DataPermissionEventArgs:DataPermissionEventArgs,
     DataPermissionEventListener:DataPermissionEventListener,
-    DataPermissionMask:DataPermissionMask
+    PermissionMask:PermissionMask
 };
 
 if (typeof exports !== 'undefined') {

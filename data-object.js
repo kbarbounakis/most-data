@@ -30,13 +30,11 @@
  */
 
 /**
- * @type {{inherits:Function,_extend:Function,isArray:Function,format:Function}}
  * @ignore
  */
 var util = require('util'),
     dataCommon = require('./data-common'),
     types = require('./types'),
-    cfg = require('./data-configuration'),
     DataObjectJunction = require('./data-object-junction').DataObjectJunction,
     DataObjectRelation = require('./data-object-relation').DataObjectRelation,
     HasManyAssociation = require('./has-many-association').HasManyAssociation,
@@ -50,9 +48,9 @@ var STR_MISSING_CALLBACK_ARGUMENT = 'Missing argument. Callback function expecte
     STR_MISSING_ARGUMENT_CODE = 'EARGM';
 
 /**
+ * @class
  * @classdesc Represents a data object associated with a data model.
  * DataObject class may be inherited by other classes that are defined as DataObjectClass of a data model.
- * @class
  * @param {string=} type
  * @param {*=} obj The object that is going to be extended
  * @constructor
@@ -62,7 +60,6 @@ var STR_MISSING_CALLBACK_ARGUMENT = 'Missing argument. Callback function expecte
  * @property {DataModel} $$model - The data model which is associated with this object.
  * @property {*} $$id - Gets the identifier of this object based on the associated model's primary key
  * @property {*} selectors - An object that represents a collection of selectors associated with this data object e.g is(':new'), is(':valid'), is(':enabled') etc
- * @memberOf module:most.classes
  */
 function DataObject(type, obj)
 {
@@ -175,6 +172,11 @@ util.inherits(DataObject, types.EventEmitter2);
 var STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
 var ARGUMENT_NAMES = /(?:^|,)\s*([^\s,=]+)/g;
 
+/**
+ * @ignore
+ * @param func
+ * @returns {Array}
+ */
 function $args ( func ) {
     var fnStr = func.toString().replace(STRIP_COMMENTS, '');
     var argsList = fnStr.slice(fnStr.indexOf('(')+1, fnStr.indexOf(')'));
@@ -713,7 +715,4 @@ DataObject.prototype.remove = function(context, callback) {
     }
 };
 
-if (typeof exports !== 'undefined')
-{
-    module.exports = DataObject;
-}
+module.exports = DataObject;
