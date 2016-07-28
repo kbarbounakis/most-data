@@ -28,18 +28,18 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /**
  * @private
  */
 var types = require('./types'), util = require('util');
 /**
+ * @class
  * @classdesc Implements data cache mechanisms in MOST Data Applications.
  * DataCache class is used as the internal data caching engine, if any other caching mechanism is not defined.
- * @class
  * @property {Number} ttl - An amount of time in seconds which is the default cached item lifetime.
  * @constructor
  * @augments EventEmitter2
- * @memberOf module:most
  */
 function DataCache() {
     this.initialized = false;
@@ -98,8 +98,8 @@ DataCache.prototype.remove = function(key, callback) {
 };
 
 /**
-* Flush all cached data.
-* @param {function(Error=)=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * Flush all cached data.
+ * @param {function(Error=)=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  *
  * @example
  var d = require("most-data");
@@ -107,7 +107,7 @@ DataCache.prototype.remove = function(key, callback) {
  d.cache.current.removeAll(function(err) {
     done(err);
  };
-*/
+ */
 DataCache.prototype.removeAll = function(callback) {
     var self = this;
     callback = callback || function() {};
@@ -139,12 +139,12 @@ DataCache.prototype.add = function(key, value, ttl, callback) {
     var self = this;
     callback = callback || function() {};
     self.init(function(err) {
-       if (err) {
-           callback(err);
-       }
+        if (err) {
+            callback(err);
+        }
         else {
-           self.rawCache.set(key, value, ttl, callback);
-       }
+            self.rawCache.set(key, value, ttl, callback);
+        }
     });
 };
 /**
@@ -231,44 +231,48 @@ DataCache.prototype.get = function(key, callback) {
     });
 };
 
-var cache = {
-    DataCache:DataCache,
+(function () {
+
     /**
-     * @returns DataCache
-     * @memberOf module:most.cache
+     * @exports most-data/data-cache
      */
-    getCurrent: function() {
-        return this.current;
-    }
-};
-/**
- * @type {DataCache|*}
- * @private
- */
-var currentDataCache;
-Object.defineProperty(cache, 'current', { get: function () {
-    //first of all check if a global application exists
-    if (typeof global !== 'undefined' || global!=null) {
-        var app = global.application;
-        if (app) {
-            //and if this application has a cache object
-            if (app.cache) {
-                //use this cache
-                return app.cache;
+    var dataCache = { };
+
+    /**
+     * @type {DataCache|*}
+     * @private
+     */
+    var currentDataCache;
+    Object.defineProperty(dataCache, 'current', { get: function () {
+        //first of all check if a global application exists
+        if (typeof global !== 'undefined' || global!=null) {
+            var app = global.application;
+            if (app) {
+                //and if this application has a cache object
+                if (app.cache) {
+                    //use this cache
+                    return app.cache;
+                }
             }
         }
-    }
-    //otherwise get current cache
-    if (typeof currentDataCache !== 'undefined')
+        //otherwise get current cache
+        if (typeof currentDataCache !== 'undefined')
+            return currentDataCache;
+        //or initialize current cache object
+        currentDataCache = new DataCache();
+        //and return it
         return currentDataCache;
-    //or initialize current cache object
-    currentDataCache = new DataCache();
-    //and return it
-    return currentDataCache;
-}, configurable: false, enumerable: false});
+    }, configurable: false, enumerable: false});
 
-/**
- * @namespace cache
- * @memberOf module:most
- */
-module.exports = cache;
+    dataCache.DataCache = DataCache;
+    /**
+     * Gets the current data cache
+     * @returns {DataCache}
+     */
+    dataCache.getCurrent = function() {
+        return this.current;
+    };
+
+    module.exports = dataCache;
+
+})(this);

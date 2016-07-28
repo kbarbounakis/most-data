@@ -344,52 +344,17 @@ DataConfiguration.prototype.model = function(name)
  */
 var namedConfiguations_ = { };
 
-var cfg =
-{
-    /**
-     * @type {DataConfiguration}
-     * @memberOf module:most.cfg
-     */
-    current:undefined,
-    /**
-     * Creates a instance data configuration class
-     * @returns {DataConfiguration}  Returns an instance of DataConfiguration class
-     * @memberOf module:most.cfg
-     */
-    createInstance: function() {
-        return new DataConfiguration();
-    },
-    /**
-     * Gets or creates a named configuration
-     * @param {string} name
-     * @returns {DataConfiguration}
-     * @memberOf module:most.cfg
-     */
-    getNamedConfiguration: function(name) {
-        if (typeof name !== 'string') {
-            throw new Error("Invalid configuration name. Expected string.");
-        }
-        if (name.length == 0) {
-            throw new Error("Invalid argument. Configuration name may not be empty string.");
-        }
-        if (/^current$/i.test(name)) {
-            return cfg.current;
-        }
-        if (typeof namedConfiguations_[name] !== 'undefined')
-            return namedConfiguations_[name];
-        namedConfiguations_[name] = new DataConfiguration();
-        return namedConfiguations_[name];
-    },
-    classes: {
-        DataConfiguration:DataConfiguration
-    }
+/**
+ * @exports most-data/data-configuration
+ */
+var cfg = {
+
 };
 /**
  * @type DataConfiguration
  * @private
  */
 var cfg_;
-
 Object.defineProperty(cfg, 'current', {
     get: function() {
         if (cfg_)
@@ -398,10 +363,43 @@ Object.defineProperty(cfg, 'current', {
         return cfg_;
     }, configurable:false, enumerable:false
     });
-
+/**
+ * Gets the current data configuration
+ * @returns DataConfiguration - An instance of DataConfiguration class which represents the current data configuration
+ */
+cfg.getCurrent = function() {
+    return this.current;
+};
+/**
+ * Creates an instance of DataConfiguration class
+ * @returns {DataConfiguration} - Returns an instance of DataConfiguration class
+ */
+cfg.createInstance= function() {
+    return new DataConfiguration();
+};
 
 /**
- * @namespace cfg
- * @memberOf module:most
+ * Gets an instance of DataConfiguration class based on the given name.
+ * If the named data configuration does not exists, it will create a new instance of DataConfiguration class with the given name.
+ * @param {string} name - A string which represents the name of the data configuration
+ * @returns {DataConfiguration}
  */
+cfg.getNamedConfiguration = function(name) {
+    if (typeof name !== 'string') {
+        throw new Error("Invalid configuration name. Expected string.");
+    }
+    if (name.length == 0) {
+        throw new Error("Invalid argument. Configuration name may not be empty string.");
+    }
+    if (/^current$/i.test(name)) {
+        return cfg.current;
+    }
+    if (typeof namedConfiguations_[name] !== 'undefined')
+        return namedConfiguations_[name];
+    namedConfiguations_[name] = new DataConfiguration();
+    return namedConfiguations_[name];
+};
+
+cfg.DataConfiguration = DataConfiguration;
+
 module.exports = cfg;

@@ -35,20 +35,21 @@ var model = require('./data-model'),
     types = require('./types'),
     cfg = require('./data-configuration'),
     validators = require('./data-validator'),
-    cache = require('./data-cache'),
-    common = require('./data-common'),
-    classes = require("./data-classes"),
+    dataCache = require('./data-cache'),
+    dataCommon = require('./data-common'),
+    dataClasses = require("./data-classes"),
     DefaultDataContext = require('./data-context').DefaultDataContext,
     NamedDataContext = require('./data-context').NamedDataContext;
 
 
+
 var most = {
     cfg: cfg,
-    common: common,
+    common: dataCommon,
     types: types,
-    cache:cache,
+    cache:dataCache,
     validators:validators,
-    classes: classes,
+    classes: dataClasses,
     /**
      * Creates an instance of DataContext class which represents the default data context. If parameter [name] is specified, returns the named data context specified in application configuration.
      * @param {string=} name

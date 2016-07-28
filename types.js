@@ -35,9 +35,9 @@
 var events = require('events'), util = require('util'), async = require('async'), qry = require('most-query');
 
 /**
- * @namespace types
- * @memberOf module:most
- */
+ * @module most-data/types
+ * */
+var types = { };
 
 /**
  * @classdesc Represents an abstract data connector to a database
@@ -1209,112 +1209,109 @@ var DataCachingType = {
      */
     Conditional: 'conditional'
 };
-var types =
-{
-    PrivilegeType:PrivilegeType,
-    DataObjectState:DataObjectState,
-    DataCachingType:DataCachingType,
-    DataQueryableField: DataQueryableField,
-    DataAdapter: DataAdapter,
-    DataContext: DataContext,
-    DataContextEmitter: DataContextEmitter,
-    EventEmitter2: EventEmitter2,
-    DataEventArgs: DataEventArgs,
-    DataEventListener: DataEventListener,
-    DataModelMigration: DataModelMigration,
-    DataAssociationMapping:DataAssociationMapping,
-    DataModelBatch: DataModelBatch,
-    parsers: {
-        parseInteger: function(val) {
-            if (typeof val === 'undefined' || val == null)
+
+types.PrivilegeType = PrivilegeType;
+types.DataObjectState = DataObjectState;
+types.DataCachingType = DataCachingType;
+types.DataQueryableField = DataQueryableField;
+types.DataAdapter = DataAdapter;
+types.DataContext = DataContext;
+types.DataContextEmitter = DataContextEmitter;
+types.EventEmitter2 = EventEmitter2;
+types.DataEventArgs = DataEventArgs;
+types.DataEventListener = DataEventListener;
+types.DataModelMigration = DataModelMigration;
+types.DataAssociationMapping = DataAssociationMapping;
+types.DataModelBatch = DataModelBatch;
+types.DataException=DataException;
+types.NotNullException=NotNullException;
+types.UniqueConstraintException=UniqueConstraintException;
+types.AccessDeniedException=AccessDeniedException;
+types.DataNotFoundException=DataNotFoundException;
+types.DataField=DataField;
+types.DataResultSet=DataResultSet;
+types.DataModelEventListener=DataModelEventListener;
+types.DataModelPrivilege=DataModelPrivilege;
+types.parsers = {
+    parseInteger: function(val) {
+        if (typeof val === 'undefined' || val == null)
+            return 0;
+        else if (typeof val === 'number')
+            return val;
+        else if (typeof val === 'string') {
+            if (val.match(IntegerRegex) || val.match(FloatRegex)) {
+                return parseInt(val, 10);
+            }
+            else if (val.match(BooleanTrueRegex))
+                return 1;
+            else if (val.match(BooleanFalseRegex))
                 return 0;
-            else if (typeof val === 'number')
-                return val;
-            else if (typeof val === 'string') {
-                if (val.match(IntegerRegex) || val.match(FloatRegex)) {
-                    return parseInt(val, 10);
-                }
-                else if (val.match(BooleanTrueRegex))
-                    return 1;
-                else if (val.match(BooleanFalseRegex))
-                    return 0;
-            }
-            else if (typeof val === 'boolean')
-                return val===true ? 1 : 0;
-            else {
-                return parseInt(val) || 0;
-            }
-        },
-        parseCounter: function(val) {
-            return types.parsers.parseInteger(val);
-        },
-        parseFloat: function(val) {
-            if (typeof val === 'undefined' || val == null)
-                return 0;
-            else if (typeof val === 'number')
-                return val;
-            else if (typeof val === 'string') {
-                if (val.match(IntegerRegex) || val.match(FloatRegex)) {
-                    return parseFloat(val);
-                }
-                else if (val.match(BooleanTrueRegex))
-                    return 1;
-            }
-            else if (typeof val === 'boolean')
-                return val===true ? 1 : 0;
-            else {
-                return parseFloat(val);
-            }
-        },
-        parseNumber: function(val) {
-            return types.parsers.parseFloat(val);
-        },
-        parseDateTime: function(val) {
-            if (typeof val === 'undefined' || val == null)
-                return null;
-            if (val instanceof Date)
-                return val;
-            if (typeof val === 'string') {
-                if (val.match(DateTimeRegex))
-                    return new Date(Date.parse(val));
-            }
-            else if (typeof val === 'number') {
-                return new Date(val);
-            }
-            return null;
-        },
-        parseDate: function(val) {
-            var res = types.parsers.parseDateTime(val);
-            if (res instanceof Date) {
-                res.setHours(0,0,0,0);
-                return res;
-            }
-            return res;
-        },
-        parseBoolean: function(val) {
-            return (types.parsers.parseInteger(val)!==0);
-        },
-        parseText: function(val) {
-            if (typeof val === 'undefined' || val == null)
-                return val;
-            else if (typeof val === 'string') {
-                return val;
-            }
-            else {
-                return val.toString();
-            }
+        }
+        else if (typeof val === 'boolean')
+            return val===true ? 1 : 0;
+        else {
+            return parseInt(val) || 0;
         }
     },
-    DataException:DataException,
-    NotNullException:NotNullException,
-    UniqueConstraintException:UniqueConstraintException,
-    AccessDeniedException:AccessDeniedException,
-    DataNotFoundException:DataNotFoundException,
-    DataField:DataField,
-    DataResultSet:DataResultSet,
-    DataModelEventListener:DataModelEventListener,
-    DataModelPrivilege:DataModelPrivilege
+    parseCounter: function(val) {
+        return types.parsers.parseInteger(val);
+    },
+    parseFloat: function(val) {
+        if (typeof val === 'undefined' || val == null)
+            return 0;
+        else if (typeof val === 'number')
+            return val;
+        else if (typeof val === 'string') {
+            if (val.match(IntegerRegex) || val.match(FloatRegex)) {
+                return parseFloat(val);
+            }
+            else if (val.match(BooleanTrueRegex))
+                return 1;
+        }
+        else if (typeof val === 'boolean')
+            return val===true ? 1 : 0;
+        else {
+            return parseFloat(val);
+        }
+    },
+    parseNumber: function(val) {
+        return types.parsers.parseFloat(val);
+    },
+    parseDateTime: function(val) {
+        if (typeof val === 'undefined' || val == null)
+            return null;
+        if (val instanceof Date)
+            return val;
+        if (typeof val === 'string') {
+            if (val.match(DateTimeRegex))
+                return new Date(Date.parse(val));
+        }
+        else if (typeof val === 'number') {
+            return new Date(val);
+        }
+        return null;
+    },
+    parseDate: function(val) {
+        var res = types.parsers.parseDateTime(val);
+        if (res instanceof Date) {
+            res.setHours(0,0,0,0);
+            return res;
+        }
+        return res;
+    },
+    parseBoolean: function(val) {
+        return (types.parsers.parseInteger(val)!==0);
+    },
+    parseText: function(val) {
+        if (typeof val === 'undefined' || val == null)
+            return val;
+        else if (typeof val === 'string') {
+            return val;
+        }
+        else {
+            return val.toString();
+        }
+    }
 };
-
 
 module.exports = types;

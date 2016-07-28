@@ -29,169 +29,175 @@
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/**
- * @ignore
- */
-var util = require('util');
-/**
- * Load native object extensions
- */
-if (typeof Array.prototype.find === 'undefined')
-{
+(function() {
+
+
     /**
-     * @param {Function} callback
-     * @param {Object=} [thisObject]
-     * @returns {*}
      * @ignore
      */
-    var find = function(callback, thisObject) {
-        if (this == null) {
-            throw new TypeError('Array.prototype.find called on null or undefined');
-        }
-        if (typeof callback !== 'function') {
-            throw new TypeError('callback must be a function');
-        }
-        var list = Object(this);
-        var length = list.length >>> 0;
-        var thisObj = arguments[1];
-        var value;
+    var util = require('util');
+    /**
+     * Load native object extensions
+     */
+    if (typeof Array.prototype.find === 'undefined')
+    {
+        /**
+         * @param {Function} callback
+         * @param {Object=} [thisObject]
+         * @returns {*}
+         * @ignore
+         */
+        var find = function(callback, thisObject) {
+            if (this == null) {
+                throw new TypeError('Array.prototype.find called on null or undefined');
+            }
+            if (typeof callback !== 'function') {
+                throw new TypeError('callback must be a function');
+            }
+            var list = Object(this);
+            var length = list.length >>> 0;
+            var thisObj = arguments[1];
+            var value;
 
-        for (var i = 0; i < length; i++) {
-            if (i in list) {
-                value = list[i];
-                if (callback.call(thisObj, value, i, list)) {
-                    return value;
+            for (var i = 0; i < length; i++) {
+                if (i in list) {
+                    value = list[i];
+                    if (callback.call(thisObj, value, i, list)) {
+                        return value;
+                    }
                 }
             }
-        }
-        return undefined;
-    };
+            return undefined;
+        };
 
-    if (Object.defineProperty) {
-        try {
-            Object.defineProperty(Array.prototype, 'find', {
-                value: find, configurable: true, enumerable: false, writable: true
-            });
-        } catch(e) {}
+        if (Object.defineProperty) {
+            try {
+                Object.defineProperty(Array.prototype, 'find', {
+                    value: find, configurable: true, enumerable: false, writable: true
+                });
+            } catch(e) {}
+        }
+
+        if (!Array.prototype.find) { Array.prototype.find = find; }
     }
 
-    if (!Array.prototype.find) { Array.prototype.find = find; }
-}
 
-
-if (typeof Array.prototype.select === 'undefined')
-{
-    /**
-     * @param {Function} callback
-     * @param {Object=} [thisObject]
-     * @returns {*}
-     * @ignore
-     */
-    var select = function(callback, thisObject) {
-        if (this == null) {
-            throw new TypeError('Array.prototype.find called on null or undefined');
-        }
-        if (typeof callback !== 'function') {
-            throw new TypeError('callback must be a function');
-        }
-        var list = Object(this);
-        var length = list.length >>> 0;
-        var thisObj = arguments[1];
-        var value;
-        var res = [];
-        for (var i = 0; i < length; i++) {
-            if (i in list) {
-                value = list[i];
-                var item = callback.call(thisObj, value, i, list);
-                if (item)
-                    res.push(item);
+    if (typeof Array.prototype.select === 'undefined')
+    {
+        /**
+         * @param {Function} callback
+         * @param {Object=} [thisObject]
+         * @returns {*}
+         * @ignore
+         */
+        var select = function(callback, thisObject) {
+            if (this == null) {
+                throw new TypeError('Array.prototype.find called on null or undefined');
             }
-        }
-        return res;
-    };
-
-    if (Object.defineProperty) {
-        try {
-            Object.defineProperty(Array.prototype, 'select', {
-                value: select, configurable: true, enumerable: false, writable: true
-            });
-        } catch(e) {}
-    }
-
-    if (!Array.prototype.select) { Array.prototype.select = select; }
-}
-
-if (typeof Array.prototype.distinct === 'undefined')
-{
-    /**
-     * @param {Function} callback
-     * @param {Object=} [thisObject]
-     * @returns {*}
-     * @ignore
-     */
-    var distinct = function(callback, thisObject) {
-        if (this == null) {
-            throw new TypeError('Array.prototype.find called on null or undefined');
-        }
-        if (typeof callback !== 'function') {
-            throw new TypeError('callback must be a function');
-        }
-        var list = Object(this);
-        var length = list.length >>> 0;
-        var thisObj = arguments[1];
-        var value;
-        var res = [];
-        for (var i = 0; i < length; i++) {
-            if (i in list) {
-                value = list[i];
-                var item = callback.call(thisObj, value, i, list);
-                if (item)
-                    if (res.indexOf(item)<0)
+            if (typeof callback !== 'function') {
+                throw new TypeError('callback must be a function');
+            }
+            var list = Object(this);
+            var length = list.length >>> 0;
+            var thisObj = arguments[1];
+            var value;
+            var res = [];
+            for (var i = 0; i < length; i++) {
+                if (i in list) {
+                    value = list[i];
+                    var item = callback.call(thisObj, value, i, list);
+                    if (item)
                         res.push(item);
+                }
             }
+            return res;
+        };
+
+        if (Object.defineProperty) {
+            try {
+                Object.defineProperty(Array.prototype, 'select', {
+                    value: select, configurable: true, enumerable: false, writable: true
+                });
+            } catch(e) {}
         }
-        return res;
-    };
 
-    if (Object.defineProperty) {
-        try {
-            Object.defineProperty(Array.prototype, 'distinct', {
-                value: distinct, configurable: true, enumerable: false, writable: true
-            });
-        } catch(e) {}
+        if (!Array.prototype.select) { Array.prototype.select = select; }
     }
 
-    if (!Array.prototype.distinct) { Array.prototype.distinct = distinct; }
-}
+    if (typeof Array.prototype.distinct === 'undefined')
+    {
+        /**
+         * @param {Function} callback
+         * @param {Object=} [thisObject]
+         * @returns {*}
+         * @ignore
+         */
+        var distinct = function(callback, thisObject) {
+            if (this == null) {
+                throw new TypeError('Array.prototype.find called on null or undefined');
+            }
+            if (typeof callback !== 'function') {
+                throw new TypeError('callback must be a function');
+            }
+            var list = Object(this);
+            var length = list.length >>> 0;
+            var thisObj = arguments[1];
+            var value;
+            var res = [];
+            for (var i = 0; i < length; i++) {
+                if (i in list) {
+                    value = list[i];
+                    var item = callback.call(thisObj, value, i, list);
+                    if (item)
+                        if (res.indexOf(item)<0)
+                            res.push(item);
+                }
+            }
+            return res;
+        };
 
-if (typeof Object.prototype.isNullOrUndefined === 'undefined')
-{
+        if (Object.defineProperty) {
+            try {
+                Object.defineProperty(Array.prototype, 'distinct', {
+                    value: distinct, configurable: true, enumerable: false, writable: true
+                });
+            } catch(e) {}
+        }
+
+        if (!Array.prototype.distinct) { Array.prototype.distinct = distinct; }
+    }
+
+    if (typeof Object.prototype.isNullOrUndefined === 'undefined')
+    {
+        /**
+         * @param {*} obj
+         * @returns {boolean}
+         * @ignore
+         */
+        var isNullOrUndefined = function(obj) {
+            return (typeof obj === 'undefined') || (obj==null);
+        };
+
+        if (Object.defineProperty) {
+            try {
+                Object.defineProperty(Object.prototype, 'isNullOrUndefined', {
+                    value: isNullOrUndefined, configurable: true, enumerable: false, writable: true
+                });
+            } catch(e) {}
+        }
+        if (!Object.prototype.isNullOrUndefined) { Object.prototype.isNullOrUndefined = isNullOrUndefined; }
+    }
     /**
-     * @param {*} obj
-     * @returns {boolean}
-     * @ignore
+     * @exports most-data/data-common
      */
-    var isNullOrUndefined = function(obj) {
-        return (typeof obj === 'undefined') || (obj==null);
+    var dataCommon = {
+
     };
-
-    if (Object.defineProperty) {
-        try {
-            Object.defineProperty(Object.prototype, 'isNullOrUndefined', {
-                value: isNullOrUndefined, configurable: true, enumerable: false, writable: true
-            });
-        } catch(e) {}
-    }
-    if (!Object.prototype.isNullOrUndefined) { Object.prototype.isNullOrUndefined = isNullOrUndefined; }
-}
-
-var common = {
     /**
-     *
+     * Logs the given data
      * @param {Error|string|{message:string,stack:string}|*} data
-     * @memberOf module:most.common
      */
-    log:function(data) {
+    dataCommon.log = function(data) {
         if (data instanceof Error) {
             console.log(data);
         }
@@ -201,62 +207,62 @@ var common = {
         if (data.stack) {
             util.log(data.stack);
         }
-    },
+    };
     /**
-     *
+     * Logs the given data if the process is running in debug mode
      * @param {Error|string|{message:string,stack:string}|*} data
-     * @memberOf module:most.common
      */
-    debug:function(data) {
+    dataCommon.debug = function(data) {
         if (process.env.NODE_ENV==='development')
             util.log(data);
-    },
+    };
+
     /**
-     *
-     * @param {String} data
-     * @memberOf module:most.common
+     * "Dasherizes" the given string
+     * @param {string} data
+     * @returns string
      */
-    dasherize:function(data) {
+    dataCommon.dasherize = function(data) {
         if (typeof data === 'string')
         {
             return data.replace(/(^\s*|\s*$)/g, '').replace(/[_\s]+/g, '-').replace(/([A-Z])/g, '-$1').replace(/-+/g, '-').replace(/^-/,'').toLowerCase();
         }
-    },
+    };
     /**
      * Checks if the specified object argument is undefined or null.
      * @param {*} obj
      * @returns {boolean}
-     * @memberOf module:most.common
      */
-    isNullOrUndefined: function(obj) {
+    dataCommon.isNullOrUndefined = function(obj) {
         return (typeof obj === 'undefined' || obj === null);
-    },
+    };
+
+
     /**
      * Checks if the specified object argument is not undefined or null.
      * @param {*} obj
      * @returns {boolean}
-     * @memberOf module:most.common
      */
-    isDefined: function(obj) {
+    dataCommon.isDefined = function(obj) {
         return (typeof obj !== 'undefined' && obj != null);
-    },
+    };
+
     /**
      * Returns a random integer between a minimum and a maximum value
      * @param {number} min
      * @param {number} max
-     * @memberOf module:most.common
      */
-    randomInt: function(min, max) {
+    dataCommon.randomInt = function(min, max) {
         return Math.floor(Math.random()*max) + min;
-    },
+    };
+
     /**
-     *
+     * Returns a sequence of random characters
      * @param {Number} howMany - The length of the random sequence of characters
      * @param {string=} chars - A sequence of characters to be used in random sequence
      * @returns {string}
-     * @memberOf module:most.common
      */
-    randomChars: function(howMany, chars) {
+    dataCommon.randomChars = function(howMany, chars) {
         /**
          * @type {{randomBytes:Function}|*}
          */
@@ -270,14 +276,14 @@ var common = {
             value[i] = chars[rnd[i] % len]
         }
         return value.join('');
-    },
+    };
+
     /**
      * Converts the given value to the equivalent MD5 formatted string.
      * @param {*} value
      * @returns {string|undefined}
-     * @memberOf module:most.common
      */
-    md5 : function(value) {
+    dataCommon.md5  = function(value) {
         if (typeof value === 'undefined' || value == null) {
             return;
         }
@@ -292,10 +298,9 @@ var common = {
             md5.update(JSON.stringify(value));
         }
         return md5.digest('hex');
-    }
-};
-/**
- * @namespace common
- * @memberOf module:most
- */
-module.exports = common;
+    };
+
+
+    module.exports = dataCommon;
+
+})(this);
