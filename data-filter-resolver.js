@@ -40,7 +40,6 @@ var Q = require('q'),
  * @abstract
  * @constructor
  * @augments DataModel
- * @memberOf module:most.classes
  */
 function DataFilterResolver() {
     //
@@ -75,7 +74,7 @@ DataFilterResolver.prototype.resolveMethod = function(name, args, callback) {
  * @param {Function} callback
  */
 DataFilterResolver.prototype.me = function(callback) {
-    var fx = new functions.classes.FunctionContext(this.context, this);
+    var fx = new functions.FunctionContext(this.context, this);
     fx.user().then(function(value) {
         callback(null, value)
     }).catch(function(err) {

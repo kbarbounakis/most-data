@@ -715,4 +715,4 @@ DataObject.prototype.remove = function(context, callback) {
     }
 };
 
-module.exports = DataObject;
+module.exports.DataObject = DataObject;

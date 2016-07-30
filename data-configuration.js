@@ -278,6 +278,43 @@ function DataConfiguration() {
     this.setModelPath = function(p) {
         path_ = p;   
         return this;
+    };
+    /**
+     * Sets a data model definition in application storage.
+     * Use this method in order to override default model loading process.
+     * @param {*} data - A generic object which represents a model definition
+     * @returns {DataConfiguration}
+     * @example
+     var most = require("most-data");
+     most.cfg.getCurrent().setModelDefinition({
+        "name":"UserColor",
+        "version":"1.1",
+        "title":"User Colors",
+        "fields":[
+            { "name": "id", "title": "Id", "type": "Counter", "nullable": false, "primary": true },
+            { "name": "user", "title": "User", "type": "User", "nullable": false },
+            { "name": "color", "title": "Color", "type": "Text", "nullable": false, "size":12 },
+            { "name": "tag", "title": "Tag", "type": "Text", "nullable": false, "size":24 }
+            ],
+        "constraints":[
+            {"type":"unique", "fields": [ "user" ]}
+        ],
+        "privileges":[
+            { "mask":15, "type":"self","filter":"id eq me()" }
+            ]
+    });
+     */
+    this.setModelDefinition = function(data) {
+        if (typeof data === 'undefined' || data == null) {
+            throw new Error("Invalid model definition. Expected object.")
+        }
+        if (typeof data === 'object') {
+            if (typeof data.name === 'undefined' || data.name === null) {
+                throw new Error("Invalid model definition. Expected model name.")
+            }
+            this.models[data.name] = data;
+        }
+      return this;
     }
 
 }

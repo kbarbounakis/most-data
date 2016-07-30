@@ -42,7 +42,6 @@ var util=require('util'),
 /**
  * @class
  * @constructor
- * @memberOf module:most.classes
  */
 function DataPermissionEventArgs() {
     /**
@@ -79,7 +78,6 @@ function DataPermissionEventArgs() {
 /**
  * An enumeration of the available permission masks
  * @enum {number}
- * @memberOf module:most.classes
  */
 var PermissionMask = {
     /**
@@ -111,7 +109,6 @@ var PermissionMask = {
 /**
  * @class
  * @constructor
- * @memberOf module:most.classes
  */
 function DataPermissionEventListener() {
     //

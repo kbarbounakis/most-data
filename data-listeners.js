@@ -80,9 +80,9 @@ NotNullConstraintListener.prototype.beforeSave = function(e, callback) {
 };
 
 /**
- * @classdesc Represents an event listener for validating data model's unique constraints. This listener is automatically registered in all data models.
  * @class
  * @constructor
+ * @classdesc Represents an event listener for validating data model's unique constraints. This listener is automatically registered in all data models.
  */
 function UniqueContraintListener() {
     //
@@ -90,7 +90,7 @@ function UniqueContraintListener() {
 /**
  * Occurs before creating or updating a data object and validates the unique constraints of data model.
  * @param {DataEventArgs|*} e - An object that represents the event arguments passed to this operation.
- * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 UniqueContraintListener.prototype.beforeSave = function(e, callback) {
 
@@ -183,9 +183,59 @@ UniqueContraintListener.prototype.beforeSave = function(e, callback) {
 };
 
 /**
- * @classdesc Represents an event listener for calculating field values. This listener is automatically registered in all data models.
  * @class
  * @constructor
+ * @classdesc Represents an event listener for calculating field values. This listener is automatically registered for all data models.
+ <p>
+ A data field may have a calculation attribute.
+ An instance of <a href="FunctionContext.html">FunctionContext</a> class will calculate this value by evaluating the expression provided.
+ <pre class="prettyprint"><code>
+ {
+        "name": "modifiedBy",
+        "title": "Modified By",
+        "description": "Modified by user.",
+        "type": "User",
+        "calculation":"javascript:return this.user();"
+    }
+ </code></pre>
+ <p>In the previous example modifiedBy field has a calculation for setting the user which performs the update operation.</p>
+<p><strong>Note:</strong>FunctionContext class may be extended in order to allow applications to perform value calculations.</p>
+ <pre class="prettyprint"><code>
+    FunctionContext.prototype.myColor = function() {
+        var deferred = Q.defer(),
+            self = this;
+        process.nextTick(function() {
+            return self.context.model("UserColor")
+                .where("user/name").equal(self.context.user.name)
+                .select("color")
+                .value().then(function(value) {
+                    deferred.resolve(value);
+                }).catch(function(err) {
+                    deferred.reject(err);
+                });
+        });
+        return deferred.promise;
+    }
+ </code></pre>
+ <pre class="prettyprint"><code>
+ {
+        "name": "color",
+        "title": "Color",
+        "type": "Text",
+        "calculation":"javascript:return this.myColor();"
+    }
+ </code></pre>
+ <p>In this example a custom method of FunctionContext class gets the user's favourite color.</p>
+ <p>This calculation may also be performed by setting the following promise expression:</p>
+ <pre class="prettyprint"><code>
+ {
+        "name": "color",
+        "title": "Color",
+        "type": "Text",
+        "calculation":"javascript:return this.context.model('UserColor').where('user/name').equal(this.context.user.name).select('color').value();"
+    }
+ </code></pre>
+ </p>
  */
 function CalculatedValueListener() {
     //

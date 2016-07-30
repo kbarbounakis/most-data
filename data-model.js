@@ -214,7 +214,6 @@ function EmptyQueryExpression() {
  * @constructor
  * @augments EventEmitter2
  * @param {*=} obj An object instance that holds data model attributes. This parameter is optional.
- * @memberOf module:most.classes
  */
 function DataModel(obj) {
 
@@ -411,6 +410,7 @@ function DataModel(obj) {
     if (typeof this.initialize === 'function')
         this.initialize();
 }
+
 util.inherits(DataModel, types.EventEmitter2);
 
 /**
@@ -1168,7 +1168,7 @@ DataModel.prototype.convert = function(obj, typeConvert)
                     catch(e) {
                         if (e.code === 'MODULE_NOT_FOUND') {
                             //if , finally, we are unable to find class file, load default DataObject class
-                            DataObjectClass = require('./data-object');
+                            DataObjectClass = require('./data-object').DataObject;
                         }
                         else {
                             throw e;
@@ -2685,9 +2685,7 @@ DataModel.prototype.levels = function(value) {
 };
 
 if (typeof exports !== 'undefined') {
-    module.exports = {
-        DataModel : DataModel
-    };
+    module.exports.DataModel = DataModel;
 }
 
 

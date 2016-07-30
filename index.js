@@ -28,6 +28,7 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 /**
  * @ignore
  */
@@ -41,53 +42,54 @@ var model = require('./data-model'),
     DefaultDataContext = require('./data-context').DefaultDataContext,
     NamedDataContext = require('./data-context').NamedDataContext;
 
+/**
+ *
+ * @exports most-data
+ */
+var most = { };
 
-
-var most = {
-    cfg: cfg,
-    common: dataCommon,
-    types: types,
-    cache:dataCache,
-    validators:validators,
-    classes: dataClasses,
-    /**
-     * Creates an instance of DataContext class which represents the default data context. If parameter [name] is specified, returns the named data context specified in application configuration.
-     * @param {string=} name
-     * @returns {DataContext}
-     * @memberOf most-data
-     */
-    createContext: function(name) {
-        if (typeof name === 'undefined' || name == null)
-            return new DefaultDataContext();
-        else
-            return new NamedDataContext(name);
-    },
-    /**
-     * @param {function(DataContext)} fn - A function fn(context) that is going to be invoked in current context
-     * @memberOf most-data
-     */
-    execute: function(fn)
-    {
-        fn = fn || function() {};
-        var ctx = new DefaultDataContext();
-        fn.call(null, ctx);
-    },
-    /**
-     * @param {string} userName
-     * @param {function(DataContext)} fn - A function fn(context) that is going to be invoked in current context
-     * @memberOf most-data
-     */
-    executeAs: function(userName, fn)
-    {
-        fn = fn || function() {};
-        var ctx = new DefaultDataContext();
-        ctx.user = { name:userName, authenticationType:'Basic' };
-        fn.call(null, ctx);
-    }
+most.cfg = cfg;
+most.common = dataCommon;
+most.types = types;
+most.cache = dataCache;
+most.validators = validators;
+most.classes = dataClasses;
+/**
+ * @ignore
+ * @deprecated - DataObject constructor will be removed. Use most.classes.DataObject.
+ */
+most.DataObject = require('./data-object').DataObject;
+/**
+ * Creates an instance of DataContext class which represents the default data context. If parameter [name] is specified, returns the named data context specified in application configuration.
+ * @param {string=} name
+ * @returns {DataContext}
+ * @memberOf most-data
+ */
+most.createContext = function(name) {
+    if (typeof name === 'undefined' || name == null)
+        return new DefaultDataContext();
+    else
+        return new NamedDataContext(name);
+};
+/**
+ * @param {function(DataContext)} fn - A function fn(context) that is going to be invoked in current context
+ */
+most.execute = function(fn)
+{
+    fn = fn || function() {};
+    var ctx = new DefaultDataContext();
+    fn.call(null, ctx);
+};
+/**
+ * @param {string} userName
+ * @param {function(DataContext)} fn - A function fn(context) that is going to be invoked in current context
+ */
+most.executeAs = function(userName, fn)
+{
+    fn = fn || function() {};
+    var ctx = new DefaultDataContext();
+    ctx.user = { name:userName, authenticationType:'Basic' };
+    fn.call(null, ctx);
 };
 
-most.DataObject = require('./data-object');
-/**
- * @exports most
- */
 module.exports = most;

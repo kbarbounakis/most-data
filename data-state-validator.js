@@ -37,9 +37,47 @@ var dataCommon = require("./data-common"),
     util = require("util");
 
 /**
- * Validates data object's state based on any unique constraint defined.
- * @class DataStateValidatorListener
+ * @class
  * @constructor
+ * @classdesc Validates the state of a data object. DataStateValidatorListener is one of the default listeners which are being registered for all data models.
+ <p>If the target data object belongs to a model which has one or more constraints, it will try to validate object's state against these constraints.
+ <p>In the following example the process tries to save the favourite color of a user and passes name instead of user's identifier.
+ DataStateValidatorListener will try to find a user based on the unique constraint of User model and then
+ it will try to validate object's state based on the defined unique constraint of UserColor model.</p>
+ <pre class="prettyprint"><code>
+ // #User.json
+ ...
+ "constraints":[
+ {
+     "description": "User name must be unique across different records.",
+     "type":"unique",
+     "fields": [ "name" ]
+ }]
+ ...
+ </code></pre>
+ <pre class="prettyprint"><code>
+ // #UserColor.json
+ ...
+ "constraints":[
+    { "type":"unique", "fields": [ "user", "tag" ] }
+ ]
+ ...
+ </code></pre>
+ <pre class="prettyprint"><code>
+ var userColor = {
+        "user": {
+            "name":"admin@example.com"
+        },
+        "color":"#FF3412",
+        "tag":"favourite"
+    };
+ context.model('UserColor').save(userColor).then(function(userColor) {
+        done();
+    }).catch(function (err) {
+        done(err);
+    });
+ </code></pre>
+ </p>
  */
 function DataStateValidatorListener() {
     //
@@ -73,27 +111,47 @@ function mapKey_(obj, callback) {
              * @type {DataQueryable}
              */
             var q;
+            var fnAppendQuery = function(attr, value) {
+                if (dataCommon.isNullOrUndefined(value))
+                    value = null;
+                if (q)
+                    q.and(attr).equal(value);
+                else
+                    q = self.where(attr).equal(value);
+            };
             if (util.isArray(constraint.fields)) {
                 for (var i = 0; i < constraint.fields.length; i++) {
                     var attr = constraint.fields[i];
                     if (!obj.hasOwnProperty(attr)) {
-                        cb();
-                        return;
+                        return cb();
                     }
-                    var value = obj[attr];
+                    var parentObj = obj[attr], value = parentObj;
                     //check field mapping
                     var mapping = self.inferMapping(attr);
-                    if (!dataCommon.isNullOrUndefined(mapping)) {
-                        if (typeof obj[attr] === 'object') {
-                            value=obj[attr][mapping.parentField];
+                    if (dataCommon.isDefined(mapping) && (typeof parentObj === 'object')) {
+                        if (parentObj.hasOwnProperty(mapping.parentField)) {
+                            fnAppendQuery(attr, parentObj[mapping.parentField]);
+                        }
+                        else {
+                            /**
+                             * Try to find if parent model has a unique constraint and constraint fields are defined
+                             * @type {DataModel}
+                             */
+                            var parentModel = self.context.model(mapping.parentModel),
+                                parentConstraint = parentModel.constraintCollection.find(function(x) { return x.type==='unique' });
+                            if (parentConstraint) {
+                                parentConstraint.fields.forEach(function(x) {
+                                    fnAppendQuery(attr + "/" + x, parentObj[x]);
+                                });
+                            }
+                            else {
+                                fnAppendQuery(attr, null);
+                            }
                         }
                     }
-                    if (dataCommon.isNullOrUndefined(value))
-                        value = null;
-                    if (q)
-                        q.and(attr).equal(value);
-                    else
-                        q = self.where(attr).equal(value);
+                    else {
+                        fnAppendQuery(attr, value);
+                    }
                 }
                 if (dataCommon.isNullOrUndefined(q)) {
                     cb();

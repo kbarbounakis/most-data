@@ -36,13 +36,18 @@ var types = require('./types'),
     dataCommon = require('./data-common'),
     moment = require('moment'),
     Q = require("q");
+
 /**
- * @class FunctionContext
- * @param {DataContext|*=} context
- * @param {DataModel|*=} model
+ * @exports most-data/functions
+ */
+var functions = { };
+
+/**
+ * @class
+ * @param {DataContext=} context
+ * @param {DataModel=} model
  * @param {*=} target
  * @constructor
- * @memberOf module:most.classes
 */
 function FunctionContext(context, model, target) {
     /**
@@ -110,7 +115,7 @@ FunctionContext.prototype.eval = function(expr, callback) {
 
 };
 /**
- * @returns {Promise<T>|*}
+ * @returns {Promise|*}
  */
 FunctionContext.prototype.now = function() {
     var deferred = Q.defer();
@@ -120,7 +125,7 @@ FunctionContext.prototype.now = function() {
     return deferred.promise;
 };
 /**
- * @returns {Promise<T>|*}
+ * @returns {Promise|*}
  */
 FunctionContext.prototype.today = function() {
     var deferred = Q.defer();
@@ -130,7 +135,7 @@ FunctionContext.prototype.today = function() {
     return deferred.promise;
 };
 /**
- * @returns {Promise<T>|*}
+ * @returns {Promise|*}
  */
 FunctionContext.prototype.newid = function() {
     var deferred = Q.defer();
@@ -164,7 +169,7 @@ function newGuidInternal() {
     return uuid.join('');
 }
 /**
- * @returns {Promise<T>|*}
+ * @returns {Promise|*}
  */
 FunctionContext.prototype.newGuid = function() {
     var deferred = Q.defer();
@@ -187,7 +192,7 @@ function randomIntSync (min, max) {
  * Generates a random integer value between the given minimum and maximum value
  * @param {number} min
  * @param {number} max
- * @returns {Promise<T>|*}
+ * @returns {Promise|*}
  */
 FunctionContext.prototype.int = function(min, max) {
     var deferred = Q.defer();
@@ -204,7 +209,7 @@ FunctionContext.prototype.int = function(min, max) {
 };
 /**
  * @param {number} length
- * @returns {Promise<T>|*}
+ * @returns {Promise|*}
  */
 FunctionContext.prototype.chars = function(length) {
 
@@ -227,7 +232,7 @@ FunctionContext.prototype.chars = function(length) {
 };
 /**
  * @param {number} length
- * @returns {Promise<T>|*}
+ * @returns {Promise|*}
  */
 FunctionContext.prototype.password = function(length) {
     var deferred = Q.defer();
@@ -248,7 +253,7 @@ FunctionContext.prototype.password = function(length) {
     return deferred.promise;
 };
 /**
- * @returns {Promise<T>|*}
+ * @returns {Promise|*}
  */
 FunctionContext.prototype.user = function() {
     var self = this, context = self.model.context, deferred = Q.defer();
@@ -288,90 +293,85 @@ FunctionContext.prototype.user = function() {
     return deferred.promise;
 };
 /**
- * @returns {Promise<T>|*}
+ * @returns {Promise|*}
  */
 FunctionContext.prototype.me = function() {
     return this.user();
 };
 
-var functions = {
-    /**
-     * @namespace
-     * @ignore
-     */
-    classes: {
-        FunctionContext: FunctionContext
-    },
-    createContext: function() {
-        return new FunctionContext();
-    },
-    /**
-     * Gets the current date and time
-     * @param {FunctionContext} e The current function context
-     * @param {Function} callback The callback function to be called
-     */
-    now: function(e, callback) {
-        callback.call(this, null, new Date());
-    },
-    /**
-     * Gets the current date
-     * @param {FunctionContext} e
-     * @param {Function} callback
-     */
-    today: function(e, callback) {
-        var d = new Date();
-        callback.call(this, d.getDate());
-    },
-    /**
-     * Gets new identity key for a primary key column
-     * @param {FunctionContext} e
-     * @param {Function} callback
-     */
-    newid: function(e, callback)
-    {
-        e.model.context.db.selectIdentity(e.model.sourceAdapter, e.model.primaryKey, callback);
-    },
-    /**
-     * Gets the current user
-     * @param {FunctionContext} e The current function context
-     * @param {Function} callback The callback function to be called
-     */
-    user: function(e, callback) {
-        callback = callback || function() {};
-        var user = e.model.context.interactiveUser || e.model.context.user || {  };
-        //ensure user name (or anonymous)
-        user.name = user.name || 'anonymous';
-        if (user['id']) {
-            return callback(null, user['id']);
-        }
-        var userModel = e.model.context.model('User');
-        userModel.where('name').equal(user.name).silent().select(['id','name']).first(function(err, result) {
-            if (err) {
-                console.log(err);
-                callback();
-            }
-            else {
-                //filter result to exclude anonymous user
-                var filtered = result.filter(function(x) { return x.name!='anonymous'; }, result);
-                //if user was found
-                if (filtered.length>0) {
-                    e.model.context.user.id = result[0].id;
-                    callback(null, result[0].id);
-                }
-                //if anonymous was found
-                else if (result.length>0) {
-                    callback(null, result[0].id);
-                }
-                else
-                    callback();
-            }
-        });
-
-    }
+functions.FunctionContext = FunctionContext;
+/**
+ * Creates a new instance of FunctionContext class
+ * @param {DataContext|*=} context
+ * @param {DataModel|*=} model
+ * @param {*=} target
+ * @returns FunctionContext
+ */
+functions.createContext = function(context, model, target) {
+    return new FunctionContext();
 };
 /**
- *
+ * Gets the current date and time
+ * @param {FunctionContext} e The current function context
+ * @param {Function} callback The callback function to be called
  */
-if (typeof exports !== 'undefined') {
-    module.exports = functions;
-}
+functions.now = function(e, callback) {
+    callback.call(this, null, new Date());
+};
+/**
+ * Gets the current date
+ * @param {FunctionContext} e
+ * @param {Function} callback
+ */
+functions.today = function(e, callback) {
+    var d = new Date();
+    callback.call(this, d.getDate());
+};
+/**
+ * Gets new identity key for a primary key column
+ * @param {FunctionContext} e
+ * @param {Function} callback
+ */
+functions.newid = function(e, callback)
+{
+    e.model.context.db.selectIdentity(e.model.sourceAdapter, e.model.primaryKey, callback);
+};
+
+/**
+ * Gets the current user
+ * @param {FunctionContext} e The current function context
+ * @param {Function} callback The callback function to be called
+ */
+functions.user = function(e, callback) {
+    callback = callback || function() {};
+    var user = e.model.context.interactiveUser || e.model.context.user || {  };
+    //ensure user name (or anonymous)
+    user.name = user.name || 'anonymous';
+    if (user['id']) {
+        return callback(null, user['id']);
+    }
+    var userModel = e.model.context.model('User');
+    userModel.where('name').equal(user.name).silent().select(['id','name']).first(function(err, result) {
+        if (err) {
+            console.log(err);
+            callback();
+        }
+        else {
+            //filter result to exclude anonymous user
+            var filtered = result.filter(function(x) { return x.name!='anonymous'; }, result);
+            //if user was found
+            if (filtered.length>0) {
+                e.model.context.user.id = result[0].id;
+                callback(null, result[0].id);
+            }
+            //if anonymous was found
+            else if (result.length>0) {
+                callback(null, result[0].id);
+            }
+            else
+                callback();
+        }
+    });
+};
+
+module.exports = functions;
