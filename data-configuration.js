@@ -38,6 +38,7 @@ var array = require('most-array'),
     fs = require("fs");
 
 /**
+ * @ignore
  * @class
  * @constructor
  * @property {string} name
@@ -315,7 +316,20 @@ function DataConfiguration() {
             this.models[data.name] = data;
         }
       return this;
-    }
+    };
+    /**
+     * Gets a native object which represents the definition of the model with the given name.
+     * @param {string} name
+     * @returns {DataModel|undefined}
+     */
+    this.getModelDefinition = function(name) {
+        if (typeof name === 'undefined' || name == null) {
+            return;
+        }
+        if (typeof name === 'string') {
+            return this.model(name);
+        }
+    };
 
 }
 

@@ -185,7 +185,7 @@ UniqueContraintListener.prototype.beforeSave = function(e, callback) {
 /**
  * @class
  * @constructor
- * @classdesc Represents an event listener for calculating field values. This listener is automatically registered for all data models.
+ * @classdesc Represents an event listener which calculates field values. This listener is being registered for all data models.
  <p>
  A data field may have a calculation attribute.
  An instance of <a href="FunctionContext.html">FunctionContext</a> class will calculate this value by evaluating the expression provided.
@@ -503,9 +503,26 @@ DataCachingListener.prototype.afterExecute = function(event, callback) {
 
 
 /**
- * @classdesc Represents an event listener for calculating default values. This listener is automatically registered in all data models.
  * @class
  * @constructor
+ * @classdesc Represents an event listener for calculating default values.
+ * DefaultValueListener is one of the default listeners which are being registered for all data models.
+ <p>
+ A data field may have a default value attribute.
+ An instance of <a href="FunctionContext.html">FunctionContext</a> class will calculate this value by evaluating the expression provided.
+ The default value listener will process all fields of an inserted data object which have a default value expression and does not have a defined value.
+ <pre class="prettyprint"><code>
+ {
+        "name": "createdBy",
+        "title": "Created By",
+        "type": "User",
+        "value":"javascript:return this.user();",
+        "readonly":true
+    }
+ </code></pre>
+ <p></p>
+ <p><strong>Note:</strong> FunctionContext class may be extended in order to allow applications to perform value calculations.</p>
+ </p>
  */
 function DefaultValueListener() {
     //

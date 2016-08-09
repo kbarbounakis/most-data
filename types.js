@@ -482,6 +482,15 @@ DataEventListener.prototype.afterRemove = function(e, cb) {
     return this;
 };
 
+/**
+ * Occurs after upgrading a data model.
+ * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
+ * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ */
+DataEventListener.prototype.afterMigrate = function(e, cb) {
+    return this;
+};
+
 var DateTimeRegex = /^(\d{4})(?:-?W(\d+)(?:-?(\d+)D?)?|(?:-(\d+))?-(\d+))(?:[T ](\d+):(\d+)(?::(\d+)(?:\.(\d+))?)?)?(?:Z(-?\d*))?$/g;
 var BooleanTrueRegex = /^true$/ig;
 var BooleanFalseRegex = /^false$/ig;
@@ -829,6 +838,11 @@ function DataModelMigration() {
      * @type {Array}
      */
     this.add = [];
+    /**
+     * Gets an array that contains a collection of constraints which are going to be added
+     * @type {Array}
+     */
+    this.constraints = [];
     /**
      * Gets an array that contains the definition of fields that are going to be deleted
      * @type {Array}

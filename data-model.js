@@ -456,6 +456,7 @@ DataModel.prototype.clone = function(context) {
     this.removeAllListeners('after.remove');
     this.removeAllListeners('before.execute');
     this.removeAllListeners('after.execute');
+    this.removeAllListeners('after.migrate');
 
     //0. Permission Event Listener
     var perms = require('./data-permission');
@@ -518,6 +519,9 @@ DataModel.prototype.clone = function(context) {
                 //if listener exports afterExecute then register this as after.execute event listener
                 if (typeof m.afterExecute == 'function')
                     this.on('after.execute', m.afterExecute);
+                //if listener exports afterMigrate then register this as after.migrate event listener
+                if (typeof m.afterMigrate == 'function')
+                    this.on('after.migrate', m.afterMigrate);
             }
         }
     }
@@ -527,7 +531,7 @@ DataModel.prototype.clone = function(context) {
     this.on('before.save', perms.DataPermissionEventListener.prototype.beforeSave);
     //before remove (validate permissions)
     this.on('before.remove', perms.DataPermissionEventListener.prototype.beforeRemove);
-};
+}
 
 DataModel.prototype.join = function(model) {
     var result = new DataQueryable(this);
@@ -2000,18 +2004,16 @@ DataModel.prototype.migrate = function(callback)
     conf.cache[self.name] = conf.cache[self.name] || {};
     if (conf.cache[self.name].version==self.version) {
         //model has already been migrated, so do nothing
-        callback();
-        return;
+        return callback();
     }
     //do not migrate sealed models
     if (self.sealed) {
-        callback();
-        return;
+        return callback();
     }
     var context = self.context;
     //do migration
     var fields = self.attributes.filter(function(x) {
-        return (self.name== x.model) && (!x.many);
+        return (self.name == x.model) && (!x.many);
     });
 
     if ((fields==null) || (fields.length==0))
@@ -2036,12 +2038,19 @@ DataModel.prototype.migrate = function(callback)
                 return y.name == m.name;
             });
         }
-
     });
     //first of all migrate base models if any
     var baseModel = self.base(), db = context.db;
-    if (baseModel!=null) {
+    if (baseModel) {
         models.push(baseModel);
+        //add primary key constraint
+        migration.constraints.push({
+            type:"foreignKey",
+            parentAdapter : baseModel.sourceAdapter,
+            parentField: baseModel.primaryKey,
+            childAdapter: self.sourceAdapter,
+            childField: self.primaryKey
+        });
     }
     //execute transaction
     db.executeInTransaction(function(tr) {
@@ -2049,12 +2058,14 @@ DataModel.prototype.migrate = function(callback)
             db.migrate(migration, function(err) {
                 if (err) { tr(err); return; }
                 if (migration['updated']) {
-                    tr(null);
-                    return;
+                    return tr();
                 }
                 migrateInternal_.call(self, db, function(err) {
-                    if (err) { tr(err); return; }
-                    tr(null);
+                    if (err) { return tr(err); }
+                    //execute after migrate events
+                    self.emit('after.migrate', { model:self }, function(err) {
+                        return tr(err);
+                    });
                 });
             });
         }
@@ -2070,12 +2081,14 @@ DataModel.prototype.migrate = function(callback)
                 db.migrate(migration, function(err) {
                     if (err) { tr(err); return; }
                     if (migration['updated']) {
-                        tr(null);
-                        return;
+                        return tr();
                     }
                     migrateInternal_.call(self, db, function(err) {
-                        if (err) { tr(err); return; }
-                        tr(null);
+                        if (err) { return tr(err); }
+                        //execute after migrate events
+                        self.emit('after.migrate', { model:self }, function(err) {
+                            return tr(err);
+                        });
                     });
                 });
             });
@@ -2088,16 +2101,19 @@ DataModel.prototype.migrate = function(callback)
         }
         callback(err);
     });
-}
-
+};
+/**
+ * @param {DataContext} db
+ * @param {Function} callback
+ * @private
+ */
 function migrateInternal_(db, callback) {
 
     var self = this;
     var view = self.viewAdapter, adapter = self.sourceAdapter;
-    if (view==adapter) {
-        //exit (with no action)
-        callback(null);
-        return;
+    if (view===adapter) {
+        //apply data seeding and exit
+        return seedInternal_.call(self, callback);
     }
     var baseModel = self.base();
     //get array of fields
@@ -2131,14 +2147,10 @@ function migrateInternal_(db, callback) {
     }
     //execute query
     db.createView(view, q, function(err) {
-        if (err) {
-            callback(err);
-        }
-        else {
-            seedInternal_.call(self, callback);
-        }
+        if (err) { return callback(err); }
+        return seedInternal_.call(self, callback);
     });
-};
+}
 
 function seedInternal_(callback) {
     var self = this;
@@ -2162,7 +2174,7 @@ function seedInternal_(callback) {
                 //if model has no data
                 if (count==0) {
                     //set items state to new
-                    items.forEach(function(x) {x.$state=1; });
+                    items.forEach(function(x) { x.$state=1; });
                     self.silent().save(items, callback);
                 }
                 else {
@@ -2682,6 +2694,43 @@ DataModel.prototype.validateForInsert = function(obj, callback) {
 DataModel.prototype.levels = function(value) {
     var result = new DataQueryable(this);
     return result.levels(value);
+};
+/**
+ * Gets an array of active models which are derived from this model.
+ * @returns {Promise|*}
+ * @example
+ * context.model("Thing").getSubTypes().then(function(result) {
+        console.log(JSON.stringify(result,null,4));
+        return done();
+    }).catch(function(err) {
+        return done(err);
+    });
+ */
+DataModel.prototype.getSubTypes = function () {
+    var self = this;
+    var d = Q.defer();
+    process.nextTick(function() {
+        var migrations = self.context.model("Migration");
+        if (typeof migrations === 'undefined' || migrations == null) {
+            return d.resolve([]);
+        }
+        migrations.silent()
+            .select("model")
+            .groupBy("model")
+            .all().then(function(result) {
+            var conf = self.context.getConfiguration(), arr = [];
+            result.forEach(function(x) {
+                var m = conf.getModelDefinition(x.model);
+                if (m && m.inherits === self.name) {
+                    arr.push(m.name);
+                }
+            });
+            return d.resolve(arr);
+        }).catch(function(err) {
+            return d.reject(err)
+        });
+    });
+    return d.promise;
 };
 
 if (typeof exports !== 'undefined') {

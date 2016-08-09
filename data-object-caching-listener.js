@@ -30,7 +30,6 @@
  */
 
 /**
- * @type {dataCache|exports|module.exports}
  * @ignore
  */
 var dataCache = require('./data-cache'),
@@ -79,9 +78,6 @@ DataObjectCachingListener.prototype.afterRemove = function(e, callback) {
 if (typeof exports !== 'undefined')
 {
     module.exports = {
-        /**
-         * @constructs DataObjectCachingListener
-         */
         DataObjectCachingListener:DataObjectCachingListener
     };
 }
