@@ -38,10 +38,8 @@ var string = require('string'),
     async = require('async'),
     events = require('events'),
     qry = require('most-query'),
-    cfg = require('./data-configuration'),
     types = require('./types'),
     functions = require('./functions'),
-    dataCache = require('./data-cache'),
     dataCommon = require('./data-common'),
     dataListeners = require('./data-listeners'),
     validators = require('./data-validator'),
@@ -50,7 +48,6 @@ var string = require('string'),
     DataQueryable = require('./data-queryable').DataQueryable,
     DataAttributeResolver = require('./data-queryable').DataAttributeResolver,
     DataObjectAssociationListener = dataAssociations.DataObjectAssociationListener,
-    DataField = types.DataField,
     DataModelView = require('./data-model-view').DataModelView,
     DataFilterResolver = require('./data-filter-resolver').DataFilterResolver,
     Q = require("q");
@@ -249,11 +246,11 @@ function DataModel(obj) {
     }, enumerable: false, configurable: false});
 
     Object.defineProperty(this, 'sourceAdapter', { get: function() {
-        return self.source!=null ? self.source :  self.name.concat('Base');
+        return dataCommon.isDefined(self.source) ? self.source :  self.name.concat('Base');
     }, enumerable: false, configurable: false});
 
     Object.defineProperty(this, 'viewAdapter', { get: function() {
-        return self.view!=null ? self.view :  self.name.concat('Data');
+        return dataCommon.isDefined(self.view) ? self.view :  self.name.concat('Data');
     }, enumerable: false, configurable: false});
 
     var silent_ = false;
@@ -280,17 +277,11 @@ function DataModel(obj) {
      * @type {Array}
      */
     var attributes;
-
-    /**
-     * Gets an array that contains all model attributes
-     * @type {Array|*}
-    */
-    this.attributes = undefined;
     /**
      * @private
      */
     this._clearAttributes = function() {
-        attributes = undefined;
+        attributes = null;
     };
 
     /**
@@ -301,7 +292,7 @@ function DataModel(obj) {
      */
     Object.defineProperty(this, 'attributes', { get: function() {
         //validate self field collection
-        if (typeof attributes !== 'undefined')
+        if (typeof attributes !== 'undefined' && attributes != null)
             return attributes;
         //init attributes collection
         attributes = [];
@@ -447,6 +438,8 @@ DataModel.prototype.clone = function(context) {
     var CalculatedValueListener = dataListeners.CalculatedValueListener,
         DefaultValueListener = dataListeners.DefaultValueListener,
         DataCachingListener = dataListeners.DataCachingListener,
+        DataModelCreateViewListener = dataListeners.DataModelCreateViewListener,
+        DataModelSeedListener = dataListeners.DataModelSeedListener,
         DataStateValidatorListener = require('./data-state-validator').DataStateValidatorListener;
 
     //register system event listeners
@@ -456,7 +449,7 @@ DataModel.prototype.clone = function(context) {
     this.removeAllListeners('after.remove');
     this.removeAllListeners('before.execute');
     this.removeAllListeners('after.execute');
-    this.removeAllListeners('after.migrate');
+    this.removeAllListeners('after.upgrade');
 
     //0. Permission Event Listener
     var perms = require('./data-permission');
@@ -468,7 +461,6 @@ DataModel.prototype.clone = function(context) {
     //3. Calculated values listener
     this.on('before.save', CalculatedValueListener.prototype.beforeSave);
 
-
     //register before execute caching
     if (this.caching=='always' || this.caching=='conditional') {
         this.on('before.execute', DataCachingListener.prototype.beforeExecute);
@@ -477,6 +469,10 @@ DataModel.prototype.clone = function(context) {
     if (this.caching=='always' || this.caching=='conditional') {
         this.on('after.execute', DataCachingListener.prototype.afterExecute);
     }
+
+    //migration listeners
+    this.on('after.upgrade',DataModelCreateViewListener.prototype.afterUpgrade);
+    this.on('after.upgrade',DataModelSeedListener.prototype.afterUpgrade);
 
     /**
      * change:8-Jun 2015
@@ -519,9 +515,9 @@ DataModel.prototype.clone = function(context) {
                 //if listener exports afterExecute then register this as after.execute event listener
                 if (typeof m.afterExecute == 'function')
                     this.on('after.execute', m.afterExecute);
-                //if listener exports afterMigrate then register this as after.migrate event listener
-                if (typeof m.afterMigrate == 'function')
-                    this.on('after.migrate', m.afterMigrate);
+                //if listener exports afterUpgrade then register this as after.upgrade event listener
+                if (typeof m.afterUpgrade == 'function')
+                    this.on('after.upgrade', m.afterUpgrade);
             }
         }
     }
@@ -739,70 +735,6 @@ DataModel.prototype.filter = function(params, callback) {
         }
     });
 };
-/**
- *
- * @param {string|*} constraint
- * @param {*} target
- * @returns {DataQueryable|undefined}
- * @private
- */
-function constraintAsQueryable_(constraint, target) {
-    /**
-     * @type {DataModel|*}
-     */
-    var self = this, con = constraint;
-    if (typeof constraint === 'string') {
-        self.constraints = self.constraints || [];
-        con = self.constraints.find(function(x) { return x.type === 'constraint'; });
-        if (dataCommon.isNullOrUndefined(con)) {
-             return;
-        }
-    }
-    if (!dataCommon.isNullOrUndefined(target)) {
-        con.fields = con.fields || [];
-        if (con.fields.length==0) { return; }
-        //enumerate fields
-        var find = { }, result = new DataQueryable(self), value, bQueried = false;
-        for (var i = 0; i < con.fields.length; i++) {
-            var x = con.fields[i], field = self.field(x);
-            if (dataCommon.isNullOrUndefined(field)) {
-                throw new Error('A field which is defined in a constraint cannot be found in target model.');
-            }
-            if (target.hasOwnProperty(x)) {
-                if (typeof target[x] !== 'undefined' && target[x] != null) {
-                    var mapping = self.inferMapping(x);
-                    if (typeof mapping === 'undefined' || mapping === null)
-                        value = target[x];
-                    else if ((mapping.associationType==='association') && (mapping.childModel===self.name)) {
-                        if (typeof target[x] === 'object')
-                            value = target[x][mapping.parentField];
-                        else
-                            value = target[x];
-                    }
-                    else {
-                        //unsupported type of mapping
-                        return;
-                    }
-                }
-                else
-                //cannot search by constraint because of null or undefined constraint field
-                    return;
-                //add query expression
-                if (bQueried) {
-                    result.and(x).equal(value);
-                }
-                else {
-                    result.where(x).equal(value);
-                    bQueried = true;
-                }
-            }
-            else {
-                //cannot search by constraint because of missing field
-                return;
-            }
-        }
-    }
-}
 
 /**
  * Prepares a data query with the given object as parameters and returns the equivalent DataQueryable instance
@@ -1888,37 +1820,35 @@ DataModel.prototype.remove = function(obj, callback)
     self.once('before.remove', DataObjectAssociationListener.prototype.afterSave);
     //execute before update events
     self.emit('before.remove', e, function(err) {
-        //if an error occured
+        //if an error occurred
         if (err) {
             //invoke callback with error
-            callback.call(self, err);
+            return callback(err);
         }
-        //otherwise execute save operation
-        else {
-            //save base object if any
+        //get db context
+        var db = self.context.db;
+        //create delete query
+        var q = qry.deleteFrom(self.sourceAdapter).where(self.primaryKey).equal(obj[self.primaryKey]);
+        //execute delete query
+        db.execute(q, null, function(err) {
+            if (err) {
+                return callback(err);
+            }
+            //remove base object
             removeBaseObject_.call(self, e.target, function(err, result) {
-                //if result is defined
-                if (result!==undefined)
-                //sync original object
+                if (err) {
+                    return callback(err);
+                }
+                if (typeof result !== 'undefined' && result != null) {
                     util._extend(e.target, result);
-                //get db context
-                var db = self.context.db;
-                //create delete query
-                var q = qry.deleteFrom(self.sourceAdapter).where(self.primaryKey).equal(obj[self.primaryKey]);
-                db.execute(q, null, function(err) {
-                    if (err) {
-                        callback.call(self, err);
-                    }
-                    else {
-                        //execute after update events
-                        self.emit('after.remove',e, function(err) {
-                            //invoke callback
-                            callback.call(self, err, e.target);
-                        });
-                    }
+                }
+                //execute after remove events
+                self.emit('after.remove',e, function(err) {
+                    //invoke callback
+                    return callback(err, e.target);
                 });
             });
-        }
+        });
     });
 
 }
@@ -1971,10 +1901,9 @@ DataModel.prototype.ensureModel = function(callback) {
         return;
     }
     //get migration model
-    var conf = self.context.getConfiguration();
     var migrationModel = self.context.model("migration");
     //ensure migration
-    var version = self.version!=null ? self.version : '0.0';
+    var version = dataCommon.isDefined(self.version) ? self.version : '0.0';
     migrationModel.where('appliesTo').equal(self.sourceAdapter).and('version').equal(version).count(function(err, result) {
         if (err) {
             callback(err);
@@ -2046,10 +1975,10 @@ DataModel.prototype.migrate = function(callback)
         //add primary key constraint
         migration.constraints.push({
             type:"foreignKey",
-            parentAdapter : baseModel.sourceAdapter,
-            parentField: baseModel.primaryKey,
-            childAdapter: self.sourceAdapter,
-            childField: self.primaryKey
+            primaryKeyTable : baseModel.sourceAdapter,
+            primaryKeyField: baseModel.primaryKey,
+            foreignKeyTable: self.sourceAdapter,
+            foreignKeyField: self.primaryKey
         });
     }
     //execute transaction
@@ -2060,12 +1989,9 @@ DataModel.prototype.migrate = function(callback)
                 if (migration['updated']) {
                     return tr();
                 }
-                migrateInternal_.call(self, db, function(err) {
-                    if (err) { return tr(err); }
-                    //execute after migrate events
-                    self.emit('after.migrate', { model:self }, function(err) {
-                        return tr(err);
-                    });
+                //execute after migrate events
+                self.emit('after.upgrade', { model:self }, function(err) {
+                    return tr(err);
                 });
             });
         }
@@ -2083,12 +2009,9 @@ DataModel.prototype.migrate = function(callback)
                     if (migration['updated']) {
                         return tr();
                     }
-                    migrateInternal_.call(self, db, function(err) {
-                        if (err) { return tr(err); }
-                        //execute after migrate events
-                        self.emit('after.migrate', { model:self }, function(err) {
-                            return tr(err);
-                        });
+                    //execute after migrate events
+                    self.emit('after.upgrade', { model:self }, function(err) {
+                        return tr(err);
                     });
                 });
             });
@@ -2102,96 +2025,6 @@ DataModel.prototype.migrate = function(callback)
         callback(err);
     });
 };
-/**
- * @param {DataContext} db
- * @param {Function} callback
- * @private
- */
-function migrateInternal_(db, callback) {
-
-    var self = this;
-    var view = self.viewAdapter, adapter = self.sourceAdapter;
-    if (view===adapter) {
-        //apply data seeding and exit
-        return seedInternal_.call(self, callback);
-    }
-    var baseModel = self.base();
-    //get array of fields
-    var fields = self.attributes.filter(function(x) {
-        return (self.name== x.model) && (!x.many);
-    }).map(function(x) {
-        return qry.fields.select(x.name).from(adapter);
-    });
-    /**
-     * @type {QueryExpression}
-     */
-    var q = qry.query(adapter).select(fields);
-    //get base adapter
-    var baseAdapter = (baseModel!=null) ? baseModel.name.concat('Data') : null, baseFields = [];
-    //enumerate columns of base model (if any)
-    if (dataCommon.isDefined(baseModel)) {
-        baseModel.attributes.forEach(function(x) {
-            //get all fields (except primary and one-to-many relations)
-            if ((!x.primary) && (!x.many))
-                baseFields.push(qry.fields.select(x.name).from(baseAdapter))
-        });
-    }
-    if (baseFields.length>0)
-    {
-        var from = qry.createField(adapter, self.key().name),
-            to = qry.createField(baseAdapter, self.base().key().name);
-        q.$expand = { $entity: { },$with:[] };
-        q.$expand.$entity[baseAdapter]=baseFields;
-        q.$expand.$with.push(from);
-        q.$expand.$with.push(to);
-    }
-    //execute query
-    db.createView(view, q, function(err) {
-        if (err) { return callback(err); }
-        return seedInternal_.call(self, callback);
-    });
-}
-
-function seedInternal_(callback) {
-    var self = this;
-    try {
-        /**
-         * Gets items to be seeded
-         * @type {Array}
-         */
-        var items = self['seed'];
-        //if model has an array of items to be seeded
-        if (util.isArray(items)) {
-            if (items.length==0) {
-                //if seed array is empty exit
-                callback(); return;
-            }
-            //try to insert items if model does not have any record
-            self.asQueryable().silent().flatten().count(function(err, count) {
-                if (err) {
-                    callback(err); return;
-                }
-                //if model has no data
-                if (count==0) {
-                    //set items state to new
-                    items.forEach(function(x) { x.$state=1; });
-                    self.silent().save(items, callback);
-                }
-                else {
-                    //model was already seeded
-                    callback();
-                }
-            });
-        }
-        else {
-            //do nothing and exit
-            callback();
-        }
-    }
-    catch (e) {
-        callback(e);
-    }
-}
 
 /**
  * Gets an instance of DataField class which represents the primary key of this model.
@@ -2481,31 +2314,6 @@ DataModel.prototype.inferMapping = function(name) {
     }
 };
 
-function validateRequired_(attr, callback) {
-    var self = this;
-    var validator = new validators.RequiredValidator();
-    validator.setContext(self.context);
-    var validationResult = validator.validateSync(null);
-    if (validationResult) {
-        return callback(new types.DataException(validationResult.code,validationResult.message, validationResult.innerMessage, self.name, attr.name));
-    }
-    else {
-        return callback();
-    }
-}
-
-function validateMaxLength_(attr, callback) {
-    var self = this;
-    var validator = new validators.MaxLengthValidator(attr.size);
-    validator.setContext(self.context);
-    var validationResult = validator.validateSync(null);
-    if (validationResult) {
-        return callback(new types.DataException(validationResult.code,validationResult.message, validationResult.innerMessage, self.name, attr.name));
-    }
-    else {
-        return callback();
-    }
-}
 
 /**
  *

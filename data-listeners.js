@@ -628,6 +628,116 @@ DefaultValueListener.prototype.beforeSave = function(e, callback) {
     }
 };
 
+/**
+ * @class
+ * @constructor
+ */
+function DataModelCreateViewListener() {
+    //
+}
+/**
+ * Occurs after upgrading a data model.
+ * @param {DataEventArgs} event - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ */
+DataModelCreateViewListener.prototype.afterUpgrade = function(event, callback) {
+
+    var self = event.model,
+        qry = require("most-query"),
+        db = self.context.db;
+    var view = self.viewAdapter, adapter = self.sourceAdapter;
+    if (view===adapter) {
+        return callback();
+    }
+    var baseModel = self.base();
+    //get array of fields
+    var fields = self.attributes.filter(function(x) {
+        return (self.name== x.model) && (!x.many);
+    }).map(function(x) {
+        return qry.fields.select(x.name).from(adapter);
+    });
+    /**
+     * @type {QueryExpression}
+     */
+    var q = qry.query(adapter).select(fields);
+    //get base adapter
+    var baseAdapter = (baseModel!=null) ? baseModel.name.concat('Data') : null, baseFields = [];
+    //enumerate columns of base model (if any)
+    if (dataCommon.isDefined(baseModel)) {
+        baseModel.attributes.forEach(function(x) {
+            //get all fields (except primary and one-to-many relations)
+            if ((!x.primary) && (!x.many))
+                baseFields.push(qry.fields.select(x.name).from(baseAdapter))
+        });
+    }
+    if (baseFields.length>0)
+    {
+        var from = qry.createField(adapter, self.key().name),
+            to = qry.createField(baseAdapter, self.base().key().name);
+        q.$expand = { $entity: { },$with:[] };
+        q.$expand.$entity[baseAdapter]=baseFields;
+        q.$expand.$with.push(from);
+        q.$expand.$with.push(to);
+    }
+    //execute query
+    return db.createView(view, q, function(err) {
+        callback(err);
+    });
+};
+
+/**
+ * @class
+ * @constructor
+ */
+function DataModelSeedListener() {
+    //
+}
+
+/**
+ * Occurs after upgrading a data model.
+ * @param {DataEventArgs} event - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ */
+DataModelSeedListener.prototype.afterUpgrade = function(event, callback) {
+    var self = event.model;
+    try {
+        /**
+         * Gets items to be seeded
+         * @type {Array}
+         */
+        var items = self['seed'];
+        //if model has an array of items to be seeded
+        if (util.isArray(items)) {
+            if (items.length==0) {
+                //if seed array is empty exit
+                return callback();
+            }
+            //try to insert items if model does not have any record
+            self.asQueryable().silent().flatten().count(function(err, count) {
+                if (err) {
+                    callback(err); return;
+                }
+                //if model has no data
+                if (count==0) {
+                    //set items state to new
+                    items.forEach(function(x) { x.$state=1; });
+                    self.silent().save(items, callback);
+                }
+                else {
+                    //model was already seeded
+                    return callback();
+                }
+            });
+        }
+        else {
+            //do nothing and exit
+            return callback();
+        }
+    }
+    catch (e) {
+        callback(e);
+    }
+};
 
 if (typeof exports !== 'undefined')
 {
@@ -636,6 +746,8 @@ if (typeof exports !== 'undefined')
         UniqueContraintListener:UniqueContraintListener,
         CalculatedValueListener:CalculatedValueListener,
         DataCachingListener:DataCachingListener,
-        DefaultValueListener:DefaultValueListener
+        DefaultValueListener:DefaultValueListener,
+        DataModelCreateViewListener:DataModelCreateViewListener,
+        DataModelSeedListener:DataModelSeedListener
     };
 }

@@ -487,7 +487,7 @@ DataEventListener.prototype.afterRemove = function(e, cb) {
  * @param {DataEventArgs} e - An object that represents the event arguments passed to this operation.
  * @param {Function} cb - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
-DataEventListener.prototype.afterMigrate = function(e, cb) {
+DataEventListener.prototype.afterUpgrade = function(e, cb) {
     return this;
 };
 
