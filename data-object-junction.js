@@ -207,12 +207,14 @@ function DataObjectJunction(obj, association) {
                     { name: "id", type:"Counter", primary: true },
                     { name: "parentId", nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
                     { name: "valueId", nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
-                    constraints: [
+                    "constraints": [
                         {
-                            description: "The relation between two objects must be unique.",
-                            type:"unique",
-                            fields: [ "parentId", "valueId" ]
+                            "description": "The relation between two objects must be unique.",
+                            "type":"unique",
+                            "fields": [ "parentId", "valueId" ]
                         }
+                    ], "privileges":[
+                        { "mask":15, "type":"global" }
                     ]};
                 //initialize base model
                 baseModel = new DataModel(conf.models[self.mapping.associationAdapter]);

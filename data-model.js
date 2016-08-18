@@ -333,7 +333,7 @@ function DataModel(obj) {
         if (baseModel) {
             baseModel.attributes.forEach(function(x) {
                 if (!x.primary) {
-                    //check if member is overriden by the current model
+                    //check if member is overridden by the current model
                     field = self.fields.find(function(y) { return y.name == x.name; });
                     if (typeof field === 'undefined')
                         attributes.push(x);

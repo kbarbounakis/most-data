@@ -216,6 +216,8 @@ function HasParentJunction(obj, association) {
                             type:"unique",
                             fields: [ 'parentId', 'valueId' ]
                         }
+                    ], "privileges":[
+                        { "mask":15, "type":"global" }
                     ]};
                 //initialize base model
                 baseModel = new DataModel(conf.models[adapter]);
