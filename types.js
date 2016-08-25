@@ -844,6 +844,11 @@ function DataModelMigration() {
      */
     this.constraints = [];
     /**
+     * Gets an array that contains a collection of indexes which are going to be added or updated
+     * @type {Array}
+     */
+    this.indexes = [];
+    /**
      * Gets an array that contains the definition of fields that are going to be deleted
      * @type {Array}
      */
@@ -1057,11 +1062,13 @@ function DataAssociationMapping(obj) {
  * @property {string} appearance - Gets or sets the appearance template of this field, if any.
  * @property {{type:string,custom:string,minValue:*,maxValue:*,minLength:number,maxLength:number,pattern:string,patternMessage:string}|*} validation - Gets or sets data validation attributes.
  * @property {*} options - Gets or sets the available options for this field.
- * @property {boolean} virtual - Gets or sets a boolean that indicates whether this fields is a view only field or not.
+ * @property {boolean} virtual - Gets or sets a boolean that indicates whether this field is a view only field or not.
+ * @property {boolean} indexed - Gets or sets a boolean which indicates whether this field will be indexed for searching items. The default value is false.
   */
 function DataField() {
     this.nullable = true;
     this.primary = false;
+    this.indexed = false;
     this.readonly = false;
     this.expandable = false;
     this.virtual = false;

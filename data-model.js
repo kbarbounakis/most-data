@@ -1981,6 +1981,17 @@ DataModel.prototype.migrate = function(callback)
             foreignKeyField: self.primaryKey
         });
     }
+    //add indexes (for associated models)
+    fields.forEach(function(x) {
+        //validate mapping
+        var mapping = self.inferMapping(x.name);
+        if (mapping && mapping.associationType === 'association') {
+            migration.indexes.push({
+                name: "INDEX_" + migration.appliesTo.toUpperCase() + "_" + x.name.toUpperCase(),
+                columns: [ x.name ]
+            });
+        }
+    });
     //execute transaction
     db.executeInTransaction(function(tr) {
         if (models.length==0) {
