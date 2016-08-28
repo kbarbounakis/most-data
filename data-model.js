@@ -957,9 +957,9 @@ DataModel.prototype.min = function(attr, callback) {
  */
 DataModel.prototype.base = function()
 {
-    if (this.inherits==null)
+    if (typeof this.inherits === 'undefined' || this.inherits == null)
         return null;
-    if (this.context==null)
+    if (typeof this.context === 'undefined' || this.context == null)
         throw new Error("The underlying data context cannot be empty.");
     return this.context.model(this.inherits);
 };
@@ -1868,7 +1868,7 @@ function removeBaseObject_(obj, callback) {
         return 0;
     }
     //if current model does not have a base model
-    if (base==null) {
+    if (typeof base === 'undefined' || base == null) {
         //exit operation
         callback.call(self, null);
     }
