@@ -206,7 +206,7 @@ function HasParentJunction(obj, association) {
             var adapter = self.mapping.associationAdapter;
             baseModel = self.parent.context.model(adapter);
             if (dataCommon.isNullOrUndefined(baseModel)) {
-                conf.models[adapter] = { name:adapter, title: adapter, sealed:true, hidden:true, type:"hidden", source:adapter, view:adapter, version:'1.0', fields:[
+                conf.models[adapter] = { name:adapter, title: adapter, sealed:false, hidden:true, type:"hidden", source:adapter, view:adapter, version:'1.0', fields:[
                     { name: "id", type:"Counter", primary: true },
                     { name: 'parentId', nullable:false, type:parentField.type },
                     { name: 'valueId', nullable:false, type:childField.type } ],

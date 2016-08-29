@@ -203,7 +203,7 @@ function DataObjectJunction(obj, association) {
             var adapter = self.mapping.associationAdapter;
             baseModel = self.parent.context.model(adapter);
             if (dataCommon.isNullOrUndefined(baseModel)) {
-                conf.models[self.mapping.associationAdapter] = { name:adapter, title: adapter, source:adapter, type:"hidden", hidden:true, sealed:true, view:adapter, version:'1.0', fields:[
+                conf.models[self.mapping.associationAdapter] = { name:adapter, title: adapter, source:adapter, type:"hidden", hidden:true, sealed:false, view:adapter, version:'1.0', fields:[
                     { name: "id", type:"Counter", primary: true },
                     { name: "parentId", nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
                     { name: "valueId", nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
@@ -223,6 +223,15 @@ function DataObjectJunction(obj, association) {
             return baseModel;
         },configurable:false, enumerable:false
     });
+
+    /**
+     * Gets an instance of DataModel class which represents the data adapter of this association
+     * @returns {DataModel}
+     */
+    this.getBaseModel = function() {
+        return this.baseModel;
+    }
+
 
 }
 DataObjectJunction.STR_OBJECT_FIELD = 'parentId';
