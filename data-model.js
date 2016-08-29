@@ -325,6 +325,8 @@ function DataModel(obj) {
                     util._extend(clone, x);
                     //set field model
                     clone.model = field.model;
+                    //set cloned attribute
+                    clone.cloned = true;
                 }
             }
             //finally push field
@@ -1219,6 +1221,65 @@ function cast_(obj, state) {
             change: 2016-02-27
             author:k.barbounakis@gmail.com
             description:exclude non editable attributes on update operation
+             */
+            return (y.state==2) ? (y.hasOwnProperty("editable") ? y.editable : true) : true;
+        }).forEach(function(x) {
+            name = obj.hasOwnProperty(x.property) ? x.property : x.name;
+            if (obj.hasOwnProperty(name))
+            {
+                var mapping = self.inferMapping(name);
+                if (typeof mapping === 'undefined' || mapping === null)
+                    result[x.name] = obj[name];
+                else if ((mapping.associationType==='association') && (mapping.childModel===self.name)) {
+                    if ((typeof obj[name] === 'object') && (obj[name] != null))
+                    //set associated key value (e.g. primary key value)
+                        result[x.name] = obj[name][mapping.parentField];
+                    else
+                    //set raw value
+                        result[x.name] = obj[name];
+                }
+            }
+        });
+        return result;
+    }
+}
+
+
+/**
+ * @param {*} obj
+ * @param {number=} state
+ * @returns {*}
+ * @private
+ */
+function castForValidation_(obj, state) {
+    var self = this;
+    if (obj==null)
+        return {};
+    if (typeof obj === 'object' && obj instanceof Array)
+    {
+        return obj.map(function(x) {
+            return castForValidation_.call(self, x, state);
+        });
+    }
+    else
+    {
+        //ensure state (set default state to Insert=1)
+        state = dataCommon.isNullOrUndefined(state) ? (dataCommon.isNullOrUndefined(obj.$state) ? 1 : obj.$state) : state;
+        var result = {}, name;
+        self.attributes.filter(function(x) {
+            if (x.model!==self.name) {
+                if (!x.cloned)
+                    return false;
+            }
+            return (!x.readonly) ||
+                (x.readonly && (typeof x.calculation!=='undefined') && state==2) ||
+                (x.readonly && (typeof x.value!=='undefined') && state==1) ||
+                (x.readonly && (typeof x.calculation!=='undefined') && state==1);
+        }).filter(function(y) {
+            /*
+             change: 2016-02-27
+             author:k.barbounakis@gmail.com
+             description:exclude non editable attributes on update operation
              */
             return (y.state==2) ? (y.hasOwnProperty("editable") ? y.editable : true) : true;
         }).forEach(function(x) {
@@ -2342,7 +2403,7 @@ function validate_(obj, state, callback) {
         return callback();
     }
     //get object copy (based on the defined state)
-    var objCopy = self.cast(obj, state);
+    var objCopy = castForValidation_.call (self, obj, state);
     async.eachSeries(self.attributes, function(attr, cb) {
         var validator, validationResult;
         //get value

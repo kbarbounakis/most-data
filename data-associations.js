@@ -171,6 +171,9 @@ DataObjectAssociationListener.prototype.afterSave = function(e, callback) {
                         if (x.mapping.childModel===e.model.name) {
                             var HasParentJunction = require('./has-parent-junction').HasParentJunction;
                             junction = new HasParentJunction(obj, x.mapping);
+                            if (e.model.$silent) {
+                                junction.getBaseModel().silent();
+                            }
                             if (e.state==1 || e.state==2) {
                                 junction.insert(childs, function(err) {
                                     if (err) { return cb(err); }
@@ -189,6 +192,9 @@ DataObjectAssociationListener.prototype.afterSave = function(e, callback) {
                         else if (x.mapping.parentModel===e.model.name) {
                             var DataObjectJunction = require('./data-object-junction').DataObjectJunction;
                             junction = new DataObjectJunction(obj, x.mapping);
+                            if (e.model.$silent) {
+                                junction.getBaseModel().silent();
+                            }
                             if (e.state==1 || e.state==2) {
                                 junction.insert(childs, function(err) {
                                     if (err) { return cb(err); }
