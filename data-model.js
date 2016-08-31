@@ -2031,17 +2031,6 @@ DataModel.prototype.migrate = function(callback)
     });
     //first of all migrate base models if any
     var baseModel = self.base(), db = context.db;
-    if (baseModel) {
-        models.push(baseModel);
-        //add primary key constraint
-        migration.constraints.push({
-            type:"foreignKey",
-            primaryKeyTable : baseModel.sourceAdapter,
-            primaryKeyField: baseModel.primaryKey,
-            foreignKeyTable: self.sourceAdapter,
-            foreignKeyField: self.primaryKey
-        });
-    }
     //add indexes (for associated models)
     fields.forEach(function(x) {
         //validate mapping
