@@ -646,9 +646,10 @@ DataModelCreateViewListener.prototype.afterUpgrade = function(event, callback) {
         qry = require("most-query"),
         db = self.context.db;
     var view = self.viewAdapter, adapter = self.sourceAdapter;
-    if (view===adapter) {
-        return callback();
-    }
+    //if data model is a sealed model do nothing anb exit
+    if (self.sealed) { return callback(); }
+    //if view adapter is the same with source adapter do nothing and exit
+    if (view===adapter) { return callback(); }
     var baseModel = self.base();
     //get array of fields
     var fields = self.attributes.filter(function(x) {
@@ -739,6 +740,47 @@ DataModelSeedListener.prototype.afterUpgrade = function(event, callback) {
     }
 };
 
+/**
+ * @class
+ * @constructor
+ */
+function DataModelSubTypesListener() {
+    //
+}
+
+/**
+ * Occurs after upgrading a data model.
+ * @param {DataEventArgs} event - An object that represents the event arguments passed to this operation.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ */
+DataModelSubTypesListener.prototype.afterUpgrade = function(event, callback) {
+    var self = event.model, context = event.model.context;
+    try {
+        self.getSubTypes().then(function(result) {
+            if (result.length==0) { return callback(); }
+            //enumerate sub types
+            async.eachSeries(result, function(name, cb) {
+                //get model
+                var model = context.model(name);
+                if (typeof model === 'undefined' || model == null) { return cb(); }
+                //if model is sealed do nothing
+                if (model.sealed) { return cb(); }
+                //create event arguments
+                var ev = { model:model };
+                //execute create view listener
+                DataModelCreateViewListener.prototype.afterUpgrade(ev, cb);
+            }, function(err) {
+                return callback(err);
+            });
+        }).catch(function(err) {
+            return callback(err);
+        });
+    }
+    catch (e) {
+        callback(e);
+    }
+};
+
 if (typeof exports !== 'undefined')
 {
     module.exports = {
@@ -748,6 +790,7 @@ if (typeof exports !== 'undefined')
         DataCachingListener:DataCachingListener,
         DefaultValueListener:DefaultValueListener,
         DataModelCreateViewListener:DataModelCreateViewListener,
-        DataModelSeedListener:DataModelSeedListener
+        DataModelSeedListener:DataModelSeedListener,
+        DataModelSubTypesListener:DataModelSubTypesListener
     };
 }

@@ -442,6 +442,7 @@ DataModel.prototype.clone = function(context) {
         DataCachingListener = dataListeners.DataCachingListener,
         DataModelCreateViewListener = dataListeners.DataModelCreateViewListener,
         DataModelSeedListener = dataListeners.DataModelSeedListener,
+        DataModelSubTypesListener = dataListeners.DataModelSubTypesListener,
         DataStateValidatorListener = require('./data-state-validator').DataStateValidatorListener;
 
     //register system event listeners
@@ -1958,25 +1959,16 @@ DataModel.prototype.ensureModel = function(callback) {
     var self = this;
     if (self.name=='Migration') {
         //do nothing
-        callback(null);
-        return;
+        return callback();
     }
     //get migration model
     var migrationModel = self.context.model("migration");
     //ensure migration
     var version = dataCommon.isDefined(self.version) ? self.version : '0.0';
     migrationModel.where('appliesTo').equal(self.sourceAdapter).and('version').equal(version).count(function(err, result) {
-        if (err) {
-            callback(err);
-        }
-        else {
-            if (result>0) {
-                callback(null);
-            }
-            else {
-                self.migrate(callback);
-            }
-        }
+        if (err) { return callback(err); }
+        if (result>0) { return callback(); }
+        self.migrate(callback);
     });
 };
 
@@ -1991,7 +1983,7 @@ DataModel.prototype.migrate = function(callback)
     //prepare migration cache
     var conf = self.context.getConfiguration();
     conf.cache = conf.cache || {};
-    conf.cache[self.name] = conf.cache[self.name] || {};
+    conf.cache[self.name] = conf.cache[self.name] || { };
     if (conf.cache[self.name].version==self.version) {
         //model has already been migrated, so do nothing
         return callback();
@@ -2029,8 +2021,7 @@ DataModel.prototype.migrate = function(callback)
             });
         }
     });
-    //first of all migrate base models if any
-    var baseModel = self.base(), db = context.db;
+    var db = context.db;
     //add indexes (for associated models)
     fields.forEach(function(x) {
         //validate mapping
@@ -2042,6 +2033,7 @@ DataModel.prototype.migrate = function(callback)
             });
         }
     });
+
     //execute transaction
     db.executeInTransaction(function(tr) {
         if (models.length==0) {
@@ -2059,14 +2051,16 @@ DataModel.prototype.migrate = function(callback)
         else {
             async.eachSeries(models,function(m, cb)
             {
-                if (m)
+                if (m) {
                     m.migrate(cb);
-                else
-                    cb(null);
+                }
+                else {
+                    return cb();
+                }
             }, function(err) {
                 if (err) { tr(err); return; }
                 db.migrate(migration, function(err) {
-                    if (err) { tr(err); return; }
+                    if (err) { return tr(err);  }
                     if (migration['updated']) {
                         return tr();
                     }
