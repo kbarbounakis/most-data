@@ -2022,6 +2022,10 @@ DataModel.prototype.migrate = function(callback)
         }
     });
     var db = context.db;
+    var baseModel = self.base();
+    if (baseModel!=null) {
+        models.push(baseModel);
+    }
     //add indexes (for associated models)
     fields.forEach(function(x) {
         //validate mapping
