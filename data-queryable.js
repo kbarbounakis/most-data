@@ -2481,6 +2481,11 @@ function afterExecute_(result, callback) {
                                     return cb(err);
                                 }
                                 expandQ.prepare();
+                                //Important Backward compatibility issue (<1.8.0)
+                                //Description: if $levels parameter is not defined then set the default value to 0.
+                                if (typeof expandQ.$levels === 'undefined') {
+                                    expandQ.$levels = 0;
+                                }
                                 //append where statement for this operation
                                 expandQ.where(mapping.parentField).in(values);
                                 //set silent (?)
