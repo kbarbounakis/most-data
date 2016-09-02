@@ -2391,7 +2391,21 @@ function validate_(obj, state, callback) {
     }
     //get object copy (based on the defined state)
     var objCopy = castForValidation_.call (self, obj, state);
-    async.eachSeries(self.attributes, function(attr, cb) {
+
+    var attributes = self.attributes.filter(function(x) {
+        if (x.model!==self.name) {
+            if (!x.cloned)
+                return false;
+        }
+        return (!x.readonly) ||
+            (x.readonly && (typeof x.calculation!=='undefined') && state==2) ||
+            (x.readonly && (typeof x.value!=='undefined') && state==1) ||
+            (x.readonly && (typeof x.calculation!=='undefined') && state==1);
+    }).filter(function(y) {
+        return (state==2) ? (y.hasOwnProperty("editable") ? y.editable : true) : true;
+    });
+
+    async.eachSeries(attributes, function(attr, cb) {
         var validator, validationResult;
         //get value
         var value = objCopy[attr.name];
