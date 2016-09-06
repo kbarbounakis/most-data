@@ -74,26 +74,30 @@ DataAttributeResolver.prototype.selecteNestedAttribute = function(attr, alias) {
     }
     return expr;
 };
-
-DataAttributeResolver.prototype.selectAggregatedAttribute = function(aggr, attr) {
+/**
+ * @param {string} aggregation
+ * @param {string} attribute
+ * @param {string=} alias
+ * @returns {*}
+ */
+DataAttributeResolver.prototype.selectAggregatedAttribute = function(aggregation, attribute, alias) {
     var self=this, result;
-    if (DataAttributeResolver.prototype.testNestedAttribute(attr)) {
-        result = DataAttributeResolver.prototype.selecteNestedAttribute.call(self,attr);
+    if (DataAttributeResolver.prototype.testNestedAttribute(attribute)) {
+        result = DataAttributeResolver.prototype.selecteNestedAttribute.call(self,attribute, alias);
     }
     else {
-        result = self.fieldOf(attr);
+        result = self.fieldOf(attribute);
     }
-    var alias = result.as(), name = result.name(), expr;
-    if (alias) {
-        expr = result[alias];
-        result[alias] = { };
-        result[alias]['$' + aggr ] = expr;
+    var sAlias = result.as(), name = result.name(), expr;
+    if (sAlias) {
+        expr = result[sAlias];
+        result[sAlias] = { };
+        result[sAlias]['$' + aggregation ] = expr;
     }
     else {
         expr = result.$name;
         result[name] = { };
-        result[alias]['$' + aggr ] = expr;
-        delete field.$name;
+        result[name]['$' + aggregation ] = expr;
     }
     return result;
 };
@@ -260,6 +264,51 @@ DataAttributeResolver.prototype.testAttribute = function(s) {
  * @param {string} s
  * @returns {*}
  */
+DataAttributeResolver.prototype.testAggregatedNestedAttribute = function(s) {
+    if (typeof s !== 'string')
+        return;
+    /**
+     * @private
+     */
+    var matches;
+    /**
+     * nested attribute aggregate function with alias e.g. f(x/b) as a
+     * @ignore
+     */
+    matches = /^(\w+)\((\w+)\/(\w+)\)\sas\s(\w+)$/i.exec(s);
+    if (matches) {
+        return { aggr: matches[1], name: matches[2] + '/' + matches[3], property:matches[4] };
+    }
+    /**
+     * nested attribute aggregate function with alias e.g. f(x/b/c) as a
+     * @ignore
+     */
+    matches = /^(\w+)\((\w+)\/(\w+)\/(\w+)\)\sas\s(\w+)$/i.exec(s);
+    if (matches) {
+        return { aggr: matches[1], name: matches[2] + '/' + matches[3] + '/' + matches[4], property:matches[5] };
+    }
+    /**
+     * nested attribute aggregate function with alias e.g. f(x/b)
+     * @ignore
+     */
+    matches = /^(\w+)\((\w+)\/(\w+)\)$/i.exec(s);
+    if (matches) {
+        return { aggr: matches[1], name: matches[2] + '/' + matches[3]  };
+    }
+    /**
+     * nested attribute aggregate function with alias e.g. f(x/b/c)
+     * @ignore
+     */
+    matches = /^(\w+)\((\w+)\/(\w+)\/(\w+)\)$/i.exec(s);
+    if (matches) {
+        return { aggr: matches[1], name: matches[2] + '/' + matches[3] + '/' + matches[4] };
+    }
+};
+
+/**
+ * @param {string} s
+ * @returns {*}
+ */
 DataAttributeResolver.prototype.testNestedAttribute = function(s) {
     if (typeof s !== 'string')
         return;
@@ -313,7 +362,7 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
      */
     matches = /^(\w+)\((\w+)\/(\w+)\/(\w+)\)$/i.exec(s);
     if (matches) {
-        return { name: matches[1] + '('  + matches[2] + '/' + matches[3] + '/' + matches[4]  +  + ')' };
+        return { name: matches[1] + '('  + matches[2] + '/' + matches[3] + '/' + matches[4]  + ')' };
     }
     /**
      * nested attribute with alias e.g. x/b
@@ -1036,6 +1085,32 @@ DataQueryable.prototype.between = function(value1, value2) {
     return this;
 };
 
+function select_(arg) {
+    var self = this;
+    if (typeof arg === 'string' && arg.length==0) {
+        return;
+    }
+    var a = DataAttributeResolver.prototype.testAggregatedNestedAttribute.call(self,arg);
+    if (a) {
+        return DataAttributeResolver.prototype.selectAggregatedAttribute.call(self, a.aggr , a.name, a.property);
+    }
+    else {
+        a = DataAttributeResolver.prototype.testNestedAttribute.call(self,arg);
+        if (a) {
+            return DataAttributeResolver.prototype.selecteNestedAttribute.call(self, a.name, a.property);
+        }
+        else {
+            a = DataAttributeResolver.prototype.testAttribute.call(self,arg);
+            if (a) {
+                return self.fieldOf(a.name, a.property);
+            }
+            else {
+                return self.fieldOf(arg);
+            }
+        }
+    }
+}
+
 /**
  * Selects a field or a collection of fields of the current model.
  * @param {...string} attr  An array of fields, a field or a view name
@@ -1128,33 +1203,42 @@ DataQueryable.prototype.select = function(attr) {
                             arr.push(self.fieldOf(field.name));
                     }
                     else {
-                        var b = DataAttributeResolver.prototype.testNestedAttribute.call(self,name);
+                        var b = DataAttributeResolver.prototype.testAggregatedNestedAttribute.call(self,name);
                         if (b) {
-                            expr = DataAttributeResolver.prototype.selecteNestedAttribute.call(self, b.name, x.property);
+                            expr = DataAttributeResolver.prototype.selectAggregatedAttribute.call(self, b.aggr , b.name);
                             if (expr) { arr.push(expr); }
                         }
                         else {
-                            b = DataAttributeResolver.prototype.testAttribute.call(self,name);
+                            b = DataAttributeResolver.prototype.testNestedAttribute.call(self,name);
                             if (b) {
-                                arr.push(self.fieldOf(b.name, x.property));
+                                expr = DataAttributeResolver.prototype.selecteNestedAttribute.call(self, b.name, x.property);
+                                if (expr) { arr.push(expr); }
                             }
-                            else if (/\./g.test(name)) {
-                                name = name.split('.')[0];
-                                arr.push(self.fieldOf(name));
-                            }
-                            else
-                            {
-                                arr.push(self.fieldOf(name));
+                            else {
+                                b = DataAttributeResolver.prototype.testAttribute.call(self,name);
+                                if (b) {
+                                    arr.push(self.fieldOf(b.name, x.property));
+                                }
+                                else if (/\./g.test(name)) {
+                                    name = name.split('.')[0];
+                                    arr.push(self.fieldOf(name));
+                                }
+                                else
+                                {
+                                    arr.push(self.fieldOf(name));
+                                }
                             }
                         }
                     }
                 });
             }
             //select a field from a joined entity
-            else if (/\//.test(arg)) {
-                arr = arr || [];
-                expr = DataAttributeResolver.prototype.selecteNestedAttribute.call(self, arg);
-                if (expr) { arr.push(expr); }
+            else {
+                expr = select_.call(self, arg);
+                if (expr) {
+                    arr = arr || [];
+                    arr.push(expr);
+                }
             }
         }
         if (util.isArray(arr)) {
@@ -1183,20 +1267,10 @@ DataQueryable.prototype.select = function(attr) {
                     }
                     //test nested attribute and simple attribute expression
                     else {
-
-                        var a = DataAttributeResolver.prototype.testNestedAttribute.call(self,x);
-                        if (a) {
-                            expr = DataAttributeResolver.prototype.selecteNestedAttribute.call(self, a.name, a.property);
-                            if (expr) { arr.push(expr); }
-                        }
-                        else {
-                            a = DataAttributeResolver.prototype.testAttribute.call(self,x);
-                            if (a) {
-                                arr.push(self.fieldOf(a.name, a.property));
-                            }
-                            else {
-                                arr.push(self.fieldOf(x));
-                            }
+                        expr = select_.call(self, x);
+                        if (expr) {
+                            arr = arr || [];
+                            arr.push(expr);
                         }
                     }
                 }

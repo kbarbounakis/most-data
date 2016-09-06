@@ -1269,8 +1269,8 @@ function castForValidation_(obj, state) {
         var result = {}, name;
         self.attributes.filter(function(x) {
             if (x.model!==self.name) {
-                if (!x.cloned)
-                    return false;
+                if (types.parsers.parseBoolean(x.cloned) == false)
+                        return false;
             }
             return (!x.readonly) ||
                 (x.readonly && (typeof x.calculation!=='undefined') && state==2) ||
