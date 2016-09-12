@@ -319,7 +319,7 @@ function insert_(obj, callback) {
                     child = {};
                     child[self.mapping.childField] = item;
                 }
-                //validate if child identifierr exists
+                //validate if child identifier exists
                 if (child.hasOwnProperty(self.mapping.childField)) {
                     insertSingleObject_.call(self, child, function(err) {
                         cb(err);
@@ -342,8 +342,10 @@ function insert_(obj, callback) {
                              * and finally defines the relation between child and parent objects
                              */
                             if (!result) {
+                                //ensure silent mode
+                                if (self.getBaseModel().$silent) { relatedModel.silent(); }
                                 //insert related item if does not exists
-                                relatedModel.insert(child, function(err) {
+                                relatedModel.save(child, function(err) {
                                     if (err) {
                                         cb(err);
                                     }
@@ -414,7 +416,7 @@ DataObjectJunction.prototype.clear = function(callback) {
             //get parent id
             var parentId = self.parent[self.mapping.parentField];
             //get relation model
-            var relationModel = self.getRelationModel();
+            var relationModel = self.getBaseModel();
             //validate relation existance
             relationModel.where(DataObjectJunction.STR_OBJECT_FIELD).equal(parentId).all(function(err, result) {
                 if (err) {
@@ -444,8 +446,8 @@ function insertSingleObject_(obj, callback) {
     }
     var parentId = self.parent[self.mapping.parentField], childId = child[self.mapping.childField];
     //get relation model
-    var relationModel = self.getRelationModel();
-    //validate relation existance
+    var relationModel = self.getBaseModel();
+    //validate relation existence
     relationModel.where(DataObjectJunction.STR_OBJECT_FIELD).equal(parentId).and(DataObjectJunction.STR_VALUE_FIELD).equal(childId).first(function(err, result) {
         if (err) {
             //on error exit with error

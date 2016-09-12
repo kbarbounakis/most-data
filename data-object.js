@@ -36,6 +36,7 @@ var util = require('util'),
     dataCommon = require('./data-common'),
     types = require('./types'),
     DataObjectJunction = require('./data-object-junction').DataObjectJunction,
+    DataObjectTag = require('./data-object-tag').DataObjectTag,
     DataObjectRelation = require('./data-object-relation').DataObjectRelation,
     HasManyAssociation = require('./has-many-association').HasManyAssociation,
     HasOneAssociation = require('./has-one-association').HasOneAssociation,
@@ -129,10 +130,6 @@ function DataObject(type, obj)
         configurable:false
     });
 
-    if (typeof obj !== 'undefined' && obj != null) {
-        util._extend(this, obj);
-    }
-
     var __selectors = { };
     Object.defineProperty(this,'selectors',{
         get: function() { return __selectors; } ,
@@ -158,6 +155,11 @@ function DataObject(type, obj)
             callback(null, (state==2));
         });
     });
+
+    if (typeof obj !== 'undefined' && obj != null) {
+        util._extend(this, obj);
+    }
+
     /**
      * Gets the identifier of this DataObject instance.
      * @returns {*}
@@ -165,7 +167,7 @@ function DataObject(type, obj)
     this.getId = function () {
         return this.$$id;
     };
-    
+
 }
 util.inherits(DataObject, types.EventEmitter2);
 
@@ -280,8 +282,6 @@ DataObject.prototype.is = function(selector) {
 /**
  * Gets the type of this data object.
  * @returns {string}
- * @deprecated Use DataObject.$$type instead
- * @ignore
  */
 DataObject.prototype.getType = function() {
     return this.$$type;
@@ -291,8 +291,7 @@ DataObject.prototype.getType = function() {
  * @returns {DataModel|*}
  */
 DataObject.prototype.getModel = function() {
-    if (this.context)
-        return this.context.model(this.$$type);
+    return this.$$model;
 };
 
 /**
@@ -380,10 +379,17 @@ DataObject.prototype.property = function(name) {
             return new HasOneAssociation(self, mapping);
     }
     else if (mapping.associationType=='junction') {
-        if (mapping.parentModel==model.name)
-            return new DataObjectJunction(self, mapping);
-        else
+        if (mapping.parentModel==model.name) {
+            if (self.context.getConfiguration().hasDataType(field.type)) {
+                return new DataObjectTag(self, mapping);
+            }
+            else {
+                return new DataObjectJunction(self, mapping);
+            }
+        }
+        else {
             return new HasParentJunction(self, mapping);
+        }
     }
     else {
         er = new Error('The association which is specified for the given field is not implemented.'); er.code = 'EDATA';
@@ -713,6 +719,108 @@ DataObject.prototype.remove = function(context, callback) {
     else {
         return remove_.call(self, context || self.context, callback);
     }
+};
+/*
+ * Gets an instance of a DataModel class which represents the additional model that has been set in additionalType attribute of this data object.
+ * @returns {Promise<DataModel>}
+ */
+DataObject.prototype.getAdditionalModel = function() {
+    var self = this;
+    var Q = require('q'), deferred = Q.defer();
+    process.nextTick(function() {
+        try {
+            var model = self.getModel();
+            var attr = self.getModel().attributes.find(function(x) { return x.name === "additionalType"; });
+            if (typeof attr === 'undefined') {
+                return deferred.resolve();
+            }
+            var attrName = attr.property || attr.name;
+            self.attr(attrName, function(err, additionalType) {
+                try {
+                    if (err) {
+                        return deferred.reject(err);
+                    }
+                    //if additional type is undefined
+                    if (typeof additionalType === 'undefined' || additionalType == null) {
+                        //return nothing
+                        return deferred.resolve();
+                    }
+                    //if additional type is equal to current model
+                    if (additionalType === model.name) {
+                        //return nothing
+                        return deferred.resolve(model);
+                    }
+                    return deferred.resolve(self.context.model(additionalType));
+                }
+                catch(e) {
+                    return deferred.reject(e);
+                }
+            });
+        }
+        catch(e) {
+            return deferred.reject(e);
+        }
+    });
+    return deferred.promise;
+};
+
+/**
+ * Gets an instance of data object which represents the additional typed object as this is defined in additionalType attribute.
+ * @returns {Promise<DataObject>}
+ * @example
+ //get a place and afterwards get the country associated with it
+ var places = context.model("Place");
+ places.silent().where("name").equal("France").first().then(function(result) {
+    if (result) {
+        var place = places.convert(result);
+        return place.getAdditionalObject().then(function(result) {
+            //place your code here
+            return done();
+        });
+    }
+    return done();
+}).catch(function (err) {
+    return done(err);
+});
+ */
+DataObject.prototype.getAdditionalObject = function() {
+    var self = this;
+    var Q = require('q'), deferred = Q.defer();
+    process.nextTick(function() {
+        try {
+            self.getAdditionalModel().then(function(additionalModel) {
+                try {
+                    if (typeof additionalModel === 'undefined' || additionalModel == null) {
+                        return deferred.resolve();
+                    }
+                    //if additional type is equal to current model
+                    if (additionalModel.name === self.getModel().name) {
+                        //return nothing
+                        return deferred.resolve();
+                    }
+                    if (self.getModel().$silent) { additionalModel.silent(); }
+                    additionalModel.where(self.getModel().getPrimaryKey()).equal(self.getId()).first().then(function(result) {
+                        if (result) {
+                            return deferred.resolve(additionalModel.convert(result));
+                        }
+                        return deferred.resolve();
+                    }).catch(function(err) {
+                        return deferred.reject(err);
+                    });
+                }
+                catch(e) {
+                    return deferred.reject(e);
+                }
+            }).catch(function(err) {
+                return deferred.reject(err);
+            });
+        }
+        catch (e) {
+            return deferred.reject(e);
+        }
+
+    });
+    return deferred.promise;
 };
 
 module.exports.DataObject = DataObject;

@@ -42,6 +42,16 @@ var util=require('util'),
 /**
  * @class
  * @constructor
+ * @private
+ * @ignore
+ */
+function EachSeriesCancelled() {
+    //
+}
+
+/**
+ * @class
+ * @constructor
  */
 function DataPermissionEventArgs() {
     /**
@@ -246,7 +256,7 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
                         and('parentPrivilege').equal(null).
                         and('target').equal('0').
                         and('workspace').equal(workspace).
-                        and('account').in(accounts).
+                        and('account').in(accounts.map(function(x) { return x.id; })).
                         and('mask').bit(requestMask).silent().count(function(err, count) {
                             if (err) {
                                 cb(err);
@@ -271,7 +281,7 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
                             and('parentPrivilege').equal(mapping.parentModel).
                             and('target').equal(e.target[mapping.childField]).
                             and('workspace').equal(workspace).
-                            and('account').in(accounts).
+                            and('account').in(accounts.map(function(x) { return x.id; })).
                             and('mask').bit(requestMask).silent().count(function(err, count) {
                                 if (err) {
                                     cb(err);
@@ -296,7 +306,7 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
                                     and('parentPrivilege').equal(mapping.parentModel).
                                     and('target').equal(result[mapping.childField]).
                                     and('workspace').equal(workspace).
-                                    and('account').in(accounts).
+                                    and('account').in(accounts.map(function(x) { return x.id; })).
                                     and('mask').bit(requestMask).silent().count(function(err, count) {
                                         if (err) {
                                             cb(err);
@@ -326,7 +336,7 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
                         and('parentPrivilege').equal(null).
                         and('target').equal(e.target[model.primaryKey]).
                         and('workspace').equal(workspace).
-                        and('account').in(accounts).
+                        and('account').in(accounts.map(function(x) { return x.id; })).
                         and('mask').bit(requestMask).silent().count(function(err, count) {
                             if (err) {
                                 cb(err);
@@ -520,7 +530,7 @@ function queryUser(context, username, callback) {
 function effectiveAccounts(context, callback) {
     if (typeof context === 'undefined' || context == null) {
         //push no account
-        callback(null, [ 0 ]);
+        callback(null, [ { id: 0 } ]);
         return;
     }
     /**
@@ -545,12 +555,12 @@ function effectiveAccounts(context, callback) {
             else {
                 var arr = [];
                 if (result) {
-                    arr.push(result.id);
+                    arr.push({ "id": result.id, "name": result.name });
                     result.groups = result.groups || [];
-                    result.groups.forEach(function(x) { arr.push(x.id) });
+                    result.groups.forEach(function(x) { arr.push({ "id": x.id, "name": x.name }); });
                 }
                 if (arr.length==0)
-                    arr.push(0);
+                    arr.push({ id: 0 });
                 callback(null, arr);
             }
         });
@@ -568,22 +578,22 @@ function effectiveAccounts(context, callback) {
                 if (err) { callback(err); return; }
                 var arr = [ ];
                 if (user) {
-                    arr.push(user.id);
+                    arr.push({ "id": user.id, "name": user.name });
                     if (util.isArray(user.groups))
-                        user.groups.forEach(function(x) { arr.push(x.id) });
+                        user.groups.forEach(function(x) { arr.push({ "id": x.id, "name": x.name }); });
                 }
                 if (anonymous) {
-                    arr.push(anonymous.id);
+                    arr.push({ "id": anonymous.id, "name": "anonymous" });
                     if (util.isArray(anonymous.groups))
-                        anonymous.groups.forEach(function(x) { arr.push(x.id) });
+                        anonymous.groups.forEach(function(x) { arr.push({ "id": x.id, "name": x.name }); });
                 }
                 if (arr.length==0)
-                    arr.push(0);
+                    arr.push({ id: 0 });
                 callback(null, arr);
             });
         });
     }
-};
+}
 
 /**
  * Occurs before executing a data operation.
@@ -698,35 +708,38 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                 perms1 = qry.entity(permissions.viewAdapter).as('p0'), expr = null;
             async.eachSeries(privileges, function(item, cb) {
                 if (cancel) {
-                    cb(null);
-                    return;
+                    return cb();
                 }
                 try {
                     if (item.type=='global') {
                         //check if a privilege is assigned by the model
                         if (item.account==='*') {
                             //get permission and exit
-                            cancel=true;
                             assigned=true;
-                            cb(null);
-                            return;
+                            return cb(new EachSeriesCancelled());
+                        }
+                        else if (item.hasOwnProperty("account")) {
+                            if (accounts.findIndex(function(x) { return x.name === item.account })>=0) {
+                                assigned=true;
+                                return cb(new EachSeriesCancelled());
+                            }
                         }
                         //try to find user has global permissions assigned
                         permissions.where('privilege').equal(model.name).
                             and('parentPrivilege').equal(null).
                             and('target').equal('0').
                             and('workspace').equal(1).
-                            and('account').in(accounts).
+                            and('account').in(accounts.map(function(x) { return x.id; })).
                             and('mask').bit(requestMask).silent().count(function(err, count) {
                                 if (err) {
                                     cb(err);
                                 }
                                 else {
                                     if (count>=1) {
-                                        cancel=true;
                                         assigned=true;
+                                        return cb(new EachSeriesCancelled());
                                     }
-                                    cb(null);
+                                    cb();
                                 }
                             });
                     }
@@ -734,8 +747,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                         //get field mapping
                         var mapping = model.inferMapping(item.property);
                         if (!mapping) {
-                            cb(null);
-                            return;
+                            return cb();
                         }
                         if (expr==null)
                             expr = qry.query();
@@ -744,9 +756,9 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                             and(perms1.select('parentPrivilege')).equal(mapping.parentModel).
                             and(perms1.select('workspace')).equal(workspace).
                             and(perms1.select('mask')).bit(requestMask).
-                            and(perms1.select('account')).in(accounts).prepare(true);
+                            and(perms1.select('account')).in(accounts.map(function(x) { return x.id; })).prepare(true);
                         assigned=true;
-                        cb(null);
+                        cb();
                     }
                     else if (item.type=='item') {
                         if (expr==null)
@@ -756,9 +768,9 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                             and(perms1.select('parentPrivilege')).equal(null).
                             and(perms1.select('workspace')).equal(workspace).
                             and(perms1.select('mask')).bit(requestMask).
-                            and(perms1.select('account')).in(accounts).prepare(true);
+                            and(perms1.select('account')).in(accounts.map(function(x) { return x.id; })).prepare(true);
                         assigned=true;
-                        cb(null);
+                        cb();
                     }
                     else if (item.type=='self') {
                         if (typeof item.filter === 'string' ) {
@@ -774,33 +786,41 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                                         if (q.query.$expand) { expand = q.query.$expand; }
                                         expr.prepare(true);
                                         assigned=true;
-                                        cb(null);
+                                        cb();
                                     }
                                     else
-                                        cb(null);
+                                        cb();
                                 }
                             });
                         }
                         else {
-                            cb(null);
+                            cb();
                         }
                     }
                     else {
-                        cb(null);
+                        cb();
                     }
                 }
                 catch (e) {
                     cb(e);
                 }
             }, function(err) {
-                if (!err) {
-                    if (!assigned) {
-                        //prepare no access query
-                        e.query.prepare();
-                        //add no record parameter
-                        e.query.where(e.model.fieldOf(e.model.primaryKey)).equal(null).prepare();
+                if (err) {
+                    cancel = (err instanceof EachSeriesCancelled);
+                    if (!cancel) {
+                        return callback(err);
                     }
-                    else if (expr) {
+                }
+                if (!assigned) {
+                    //prepare no access query
+                    e.query.prepare();
+                    //add no record parameter
+                    e.query.where(e.model.fieldOf(e.model.primaryKey)).equal(null).prepare();
+                    return callback();
+                }
+                else if (expr) {
+                    return context.model("Permission").migrate(function(err) {
+                        if (err) { return callback(err); }
                         var q = qry.query(model.viewAdapter).select([model.primaryKey]).distinct();
                         if (expand) {
                             q.join(expand[0].$entity).with(expand[0].$with);
@@ -808,16 +828,17 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                         q.join(perms1).with(expr);
                         var pqAlias = 'pq' + common.randomInt(100000,999999).toString();
                         e.query.join(q.as(pqAlias)).with(qry.where(entity.select(model.primaryKey)).equal(qry.entity(pqAlias).select(model.primaryKey)));
-                    }
+                        return callback();
+                    });
                 }
-                callback(err);
-            });
+                return callback();
 
+            });
         });
 
     }
     else {
-        callback(null);
+        callback();
     }
 };
 

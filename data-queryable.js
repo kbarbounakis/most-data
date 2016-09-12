@@ -3339,6 +3339,68 @@ DataQueryable.prototype.toExpand = function(attr) {
     }
     throw new Error("Invalid parameter. Expected not empty string.")
 };
+/**
+ * Executes the specified query against the underlying model and returns the first item.
+ * @returns {Promise|*}
+ */
+DataQueryable.prototype.getItem = function() {
+    var self = this, d = Q.defer();
+    process.nextTick(function() {
+        self.first().then(function (result) {
+            return d.resolve(result);
+        }).catch(function(err) {
+            return d.reject(err);
+        });
+    });
+    return d.promise;
+};
+/**
+ * Gets an instance of DataObject by executing the defined query.
+ * @returns {Promise|*}
+ */
+DataQueryable.prototype.getTypedItem = function() {
+    var self = this, d = Q.defer();
+    process.nextTick(function() {
+        self.first().then(function (result) {
+            return d.resolve(self.model.convert(result));
+        }).catch(function(err) {
+            return d.reject(err);
+        });
+    });
+    return d.promise;
+};
+/**
+ * Gets a collection of DataObject instances by executing the defined query.
+ * @returns {Promise|*}
+ */
+DataQueryable.prototype.getTypedItems = function() {
+    var self = this, d = Q.defer();
+    process.nextTick(function() {
+        self.getItems().then(function (result) {
+            return d.resolve(self.model.convert(result));
+        }).catch(function(err) {
+            return d.reject(err);
+        });
+    });
+    return d.promise;
+};
+
+/**
+ * Gets a result set that contains a collection of DataObject instances by executing the defined query.
+ * @returns {Promise|*}
+ */
+DataQueryable.prototype.getTypedList = function() {
+    var self = this, d = Q.defer();
+    process.nextTick(function() {
+        self.list().then(function (result) {
+            result.records = self.model.convert(result.records.slice(0));
+            return d.resolve(result);
+        }).catch(function(err) {
+            return d.reject(err);
+        });
+    });
+    return d.promise;
+};
 
 if (typeof exports !== 'undefined')
 {

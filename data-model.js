@@ -31,7 +31,7 @@
 /**
  * @private
  */
-var string = require('string'),
+var S = require('string'),
     util = require('util'),
     path = require("path"),
     fs = require("fs"),
@@ -51,6 +51,42 @@ var string = require('string'),
     DataModelView = require('./data-model-view').DataModelView,
     DataFilterResolver = require('./data-filter-resolver').DataFilterResolver,
     Q = require("q");
+
+/**
+ * @param {DataField} field
+ * @private
+ */
+function inferTagMapping_(field) {
+    /**
+     * @type {DataModel|*}
+     */
+    var self = this;
+    //validate field argument
+    if (typeof field === 'undefined' || field == null) {
+        return;
+    }
+    //validate DataField.many attribute
+    if (!(field.hasOwnProperty('many') && field.many == true)) {
+        return;
+    }
+    //check if the type of the given field is a primitive data type
+    //(a data type that is defined in the collection of data types)
+    var conf = self.context.getConfiguration(), dataType = conf.dataTypes[field.type];
+    if (typeof dataType === 'undefined' || dataType == null) {
+        return;
+    }
+    //get associated model name
+    var name = self.name.concat(S(field.name).capitalize());
+    var primaryKey = self.key();
+    return new types.DataAssociationMapping({
+        "associationType": "junction",
+        "associationAdapter": name,
+        "cascade": "delete",
+        "parentModel": self.name,
+        "parentField": primaryKey.name,
+        "refersTo": field.name
+    });
+}
 
 /**
  * @ignore
@@ -268,6 +304,7 @@ function DataModel(obj) {
             silent_ = !!value;
         return this;
     };
+
     Object.defineProperty(this, '$silent', { get: function() {
         return silent_;
     }, enumerable: false, configurable: false});
@@ -1010,6 +1047,59 @@ DataModel.prototype.base = function()
         }
     });
 }
+/**
+ * @returns {*}
+ * @constructor
+ * @private
+ */
+function getDataObjectClass_() {
+    var self = this;
+    var DataObjectClass = self['DataObjectClass'];
+    if (typeof DataObjectClass === 'undefined')
+    {
+        if (typeof self.classPath === 'string') {
+            DataObjectClass = require(self.classPath);
+        }
+        else {
+            //try to find class file with data model's name in lower case
+            // e.g. OrderDetail -> orderdetail-model.js (backward compatibility naming convention)
+            var classPath = path.join(process.cwd(),'app','models',self.name.toLowerCase().concat('-model.js'));
+            try {
+                DataObjectClass = require(classPath);
+            }
+            catch(e) {
+                if (e.code === 'MODULE_NOT_FOUND') {
+                    try {
+                        //if the specified class file was not found try to dasherize model name
+                        // e.g. OrderDetail -> order-detail-model.js
+                        classPath = path.join(process.cwd(),'app','models',dataCommon.dasherize(self.name).concat('-model.js'));
+                        DataObjectClass = require(classPath);
+                    }
+                    catch(e) {
+                        if (e.code === 'MODULE_NOT_FOUND') {
+                            if (typeof self.inherits === 'undefined' || self.inherits == null) {
+                                //if , finally, we are unable to find class file, load default DataObject class
+                                DataObjectClass = require('./data-object').DataObject;
+                            }
+                            else {
+                                DataObjectClass = getDataObjectClass_.call(self.base());
+                            }
+                        }
+                        else {
+                            throw e;
+                        }
+                    }
+                }
+                else {
+                    throw e;
+                }
+            }
+        }
+        //cache DataObject class property
+        self.context.getConfiguration().models[self.name]['DataObjectClass'] = self['DataObjectClass'] = DataObjectClass;
+    }
+    return DataObjectClass;
+}
 
 /**
  * Converts an object or a collection of objects to the corresponding data object instance
@@ -1077,51 +1167,13 @@ DataModel.prototype.convert = function(obj, typeConvert)
 {
     var self = this;
     if (typeof obj === 'undefined' || obj == null)
-        return null;
+        return obj;
     /**
      * @constructor
      * @augments DataObject
      * @ignore
      */
-    var DataObjectClass = self['DataObjectClass'];
-    if (typeof DataObjectClass === 'undefined')
-    {
-        if (typeof self.classPath === 'string') {
-            DataObjectClass = require(self.classPath);
-        }
-        else {
-            //try to find class file with data model's name in lower case
-            // e.g. OrderDetail -> orderdetail-model.js (backward compatibility naming convention)
-            var classPath = path.join(process.cwd(),'app','models',self.name.toLowerCase().concat('-model.js'));
-            try {
-                DataObjectClass = require(classPath);
-            }
-            catch(e) {
-                if (e.code === 'MODULE_NOT_FOUND') {
-                    try {
-                        //if the specified class file was not found try to dasherize model name
-                        // e.g. OrderDetail -> order-detail-model.js
-                        classPath = path.join(process.cwd(),'app','models',dataCommon.dasherize(self.name).concat('-model.js'));
-                        DataObjectClass = require(classPath);
-                    }
-                    catch(e) {
-                        if (e.code === 'MODULE_NOT_FOUND') {
-                            //if , finally, we are unable to find class file, load default DataObject class
-                            DataObjectClass = require('./data-object').DataObject;
-                        }
-                        else {
-                            throw e;
-                        }
-                    }
-                }
-                else {
-                    throw e;
-                }
-            }
-        }
-        //cache DataObject class property
-        self.context.getConfiguration().models[self.name]['DataObjectClass'] = self['DataObjectClass'] = DataObjectClass;
-    }
+    var DataObjectClass = getDataObjectClass_.call(self);
 
     if (util.isArray(obj)) {
         var arr = [], src;
@@ -2011,26 +2063,34 @@ DataModel.prototype.migrate = function(callback)
 
     //get all related models
     var models = [];
-    self.fields.filter(function(x) {
-        return (!conf.dataTypes[x.type] && (self.name!=x.type));
-    }).forEach(function(x) {
-        var m = context.model(x.type);
-        if (m) {
-            var m1 = models.find(function(y) {
-                return y.name == m.name;
-            });
-        }
-    });
+    // self.fields.filter(function(x) {
+    //     return (!conf.dataTypes[x.type] && (self.name!=x.type));
+    // }).forEach(function(x) {
+    //     var m = context.model(x.type);
+    //     if (m) {
+    //         var m1 = models.find(function(y) {
+    //             return y.name == m.name;
+    //         });
+    //     }
+    // });
     var db = context.db;
     var baseModel = self.base();
     if (baseModel!=null) {
         models.push(baseModel);
     }
-    //add indexes (for associated models)
+    //validate associated models
     fields.forEach(function(x) {
         //validate mapping
         var mapping = self.inferMapping(x.name);
         if (mapping && mapping.associationType === 'association') {
+            if (mapping.childModel === self.name) {
+                //get parent model
+                var parentModel = self.context.model(mapping.parentModel),
+                    attr = parentModel.getAttribute(mapping.parentField);
+                if (attr) {
+                        x.type = attr.type;
+                }
+            }
             migration.indexes.push({
                 name: "INDEX_" + migration.appliesTo.toUpperCase() + "_" + x.name.toUpperCase(),
                 columns: [ x.name ]
@@ -2041,14 +2101,17 @@ DataModel.prototype.migrate = function(callback)
     //execute transaction
     db.executeInTransaction(function(tr) {
         if (models.length==0) {
-            db.migrate(migration, function(err) {
-                if (err) { tr(err); return; }
-                if (migration['updated']) {
-                    return tr();
-                }
-                //execute after migrate events
-                self.emit('after.upgrade', { model:self }, function(err) {
-                    return tr(err);
+            self.emit('before.upgrade', { model:self }, function(err) {
+                if (err) { return tr(err); }
+                db.migrate(migration, function(err) {
+                    if (err) { return tr(err); }
+                    if (migration['updated']) {
+                        return tr();
+                    }
+                    //execute after migrate events
+                    self.emit('after.upgrade', { model:self }, function(err) {
+                        return tr(err);
+                    });
                 });
             });
         }
@@ -2062,15 +2125,18 @@ DataModel.prototype.migrate = function(callback)
                     return cb();
                 }
             }, function(err) {
-                if (err) { tr(err); return; }
-                db.migrate(migration, function(err) {
-                    if (err) { return tr(err);  }
-                    if (migration['updated']) {
-                        return tr();
-                    }
-                    //execute after migrate events
-                    self.emit('after.upgrade', { model:self }, function(err) {
-                        return tr(err);
+                if (err) { return tr(err); }
+                self.emit('before.upgrade', { model:self }, function(err) {
+                    if (err) { return tr(err); }
+                    db.migrate(migration, function(err) {
+                        if (err) { return tr(err);  }
+                        if (migration['updated']) {
+                            return tr();
+                        }
+                        //execute after migrate events
+                        self.emit('after.upgrade', { model:self }, function(err) {
+                            return tr(err);
+                        });
                     });
                 });
             });
@@ -2289,6 +2355,18 @@ DataModel.prototype.inferMapping = function(name) {
         var associatedModel = self.context.model(field.type);
         if ((typeof associatedModel === 'undefined') || (associatedModel == null))
         {
+            if (typeof field.many === 'boolean' && field.many) {
+                //validate primitive type mapping
+                var tagMapping = inferTagMapping_.call(self, field);
+                if (tagMapping) {
+                    //apply data association mapping to definition
+                    var definitionField = conf.fields.find(function(x) {
+                        return x.name === field.name;
+                    });
+                    definitionField.mapping = field.mapping = tagMapping;
+                    return new types.DataAssociationMapping(definitionField.mapping);
+                }
+            }
             return null;
         }
         //in this case we have two possible associations. Junction or Foreign Key association
@@ -2341,7 +2419,7 @@ DataModel.prototype.inferMapping = function(name) {
             if (re.test(field.name) || field.many) {
                 //return a data junction
                 result = new types.DataAssociationMapping({
-                    associationAdapter: self.name.concat(string(field.name).capitalize()),
+                    associationAdapter: self.name.concat(S(field.name).capitalize()),
                     parentModel: self.name, parentField: self.primaryKey,
                     childModel: associatedModel.name,
                     childField: associatedModel.primaryKey,
@@ -2609,6 +2687,51 @@ DataModel.prototype.getSubTypes = function () {
             return d.resolve(arr);
         }).catch(function(err) {
             return d.reject(err)
+        });
+    });
+    return d.promise;
+};
+/**
+ * Gets an attribute of this data model.
+ * @param {string} name
+ */
+DataModel.prototype.getAttribute = function (name) {
+    if (typeof name === 'undefined' || name == null) { return; }
+    if (typeof name !== 'string') { return; }
+    return this.attributes.find(function(x) { return x.name === name; });
+};
+
+/**
+ * Gets a collection of DataObject instances by executing the defined query.
+ * @returns {Promise|*}
+ */
+DataModel.prototype.getTypedItems = function() {
+    var self = this,
+        d = Q.defer();
+    process.nextTick(function() {
+        var q = new DataQueryable(self);
+        q.getTypedItems().then(function (result) {
+            return d.resolve(result);
+        }).catch(function(err) {
+            return d.reject(err);
+        });
+    });
+    return d.promise;
+};
+
+/**
+ * Gets a result set that contains a collection of DataObject instances by executing the defined query.
+ * @returns {Promise|*}
+ */
+DataModel.prototype.getTypedList = function() {
+    var self = this,
+        d = Q.defer();
+    process.nextTick(function() {
+        var q = new DataQueryable(self);
+        q.getTypedList().then(function (result) {
+            return d.resolve(result);
+        }).catch(function(err) {
+            return d.reject(err);
         });
     });
     return d.promise;

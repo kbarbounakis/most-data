@@ -302,6 +302,8 @@ function insert_(obj, callback) {
                 else {
                     //get related model
                     var relatedModel = self.parent.context.model(self.mapping.parentModel);
+                    //ensure silent mode
+                    if (self.getBaseModel().$silent) { relatedModel.silent(); }
                     //find object by querying child object
                     relatedModel.find(item).select([self.mapping.parentField]).first(function (err, result) {
                         if (err) {

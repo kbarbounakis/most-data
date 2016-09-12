@@ -331,6 +331,21 @@ function DataConfiguration() {
         }
     };
 
+    /**
+     * Gets a boolean which indicates whether the specified data type is defined in data types collection or not.
+     * @param name
+     * @returns {boolean}
+     */
+    this.hasDataType = function(name) {
+        if (typeof name === 'undefined' || name == null) {
+            return false;
+        }
+        if (typeof name !== 'string') {
+            return false;
+        }
+        return this.dataTypes.hasOwnProperty(name);
+    }
+
 }
 
 

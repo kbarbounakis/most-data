@@ -99,7 +99,7 @@ DataExpandResolver.prototype.testExpandExpression = function(s) {
     if (typeof s === 'undefined' || s == null) {
         return [];
     }
-    var result = [], reOptions = /(;|^)(\$filter|\$levels|\$orderby|\$groupby|\$select|\$top|\$skip|\$search|\$count)=(.*?)(;\$|$)/ig;
+    var result = [], reOptions = /(;|^)(\$expand|\$filter|\$levels|\$orderby|\$groupby|\$select|\$top|\$skip|\$search|\$count)=(.*?)(;\$|$)/ig;
     var matches = testSplitExpandExpr_(s);
     for (var i = 0; i < matches.length; i++) {
         var match = matches[i];
