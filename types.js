@@ -1024,7 +1024,6 @@ DataModelBatch.prototype.prepare = function(obj) {
  * @property {string} cascade - Gets or sets the action that occurs when parent item is going to be deleted (all|none|null|delete). The default value is 'none'.
  * @property {string} associationType - Gets or sets the type of this association (junction|association). The default value is 'association'.
  * @property {string[]} select - Gets or sets an array of fields to select from associated model. If this property is empty then all associated model fields will be selected.
- * @property {boolean} oneToOne - Gets or sets a boolean value that indicates whether current relation is one-to-one relation. The default value is false.
  * @param {*=} obj - An object that contains relation mapping attributes
  * @constructor
  */
@@ -1032,7 +1031,6 @@ function DataAssociationMapping(obj) {
     this.cascade = 'none';
     this.associationType = 'association';
     this.select = [];
-    this.oneToOne = false;
     if (typeof obj === 'object') { util._extend(this, obj); }
 }
 

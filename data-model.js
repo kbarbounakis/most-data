@@ -2391,8 +2391,7 @@ DataModel.prototype.inferMapping = function(name) {
                     childModel:self.name,
                     childField:field.name,
                     associationType:'association',
-                    cascade:'null',
-                    oneToOne:false
+                    cascade:'null'
                 });
                 //cache mapping
                 conf.mappings_[name] = result;
@@ -2409,7 +2408,6 @@ DataModel.prototype.inferMapping = function(name) {
                     childField:associatedField.name,
                     associationType:'association',
                     cascade:'null',
-                    oneToOne:false,
                     refersTo:field.property || field.name
                 });
                 //cache mapping
@@ -2430,8 +2428,7 @@ DataModel.prototype.inferMapping = function(name) {
                     childModel: associatedModel.name,
                     childField: associatedModel.primaryKey,
                     associationType: 'junction',
-                    cascade: 'delete',
-                    oneToOne: false
+                    cascade: 'delete'
                 });
                 //cache mapping
                 conf.mappings_[name] = result;
@@ -2445,8 +2442,7 @@ DataModel.prototype.inferMapping = function(name) {
                     childModel: self.name,
                     childField: field.name,
                     associationType: 'association',
-                    cascade: 'null',
-                    oneToOne: false
+                    cascade: 'null'
                 });
                 //cache mapping
                 conf.mappings_[name] = result;
