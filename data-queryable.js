@@ -399,20 +399,33 @@ DataAttributeResolver.prototype.resolveJunctionAttributeJoin = function(attr) {
         //first approach (default association adapter)
         //the underlying model is the parent model e.g. Group > Group Members
         if (mapping.parentModel === self.name) {
+
+            var parentField = "parentId", valueField = "valueId";
+            if (typeof mapping.childModel === 'undefined') {
+                parentField = "object"; valueField = "value"
+            }
             q =qry.query(self.viewAdapter).select(['*']);
             //init an entity based on association adapter (e.g. GroupMembers as members)
             entity = qry.entity(mapping.associationAdapter).as(field.name);
             //init join expression between association adapter and current data model
             //e.g. Group.id = GroupMembers.parentId
             expr = qry.query().where(qry.fields.select(mapping.parentField).from(self.viewAdapter))
-                    .equal(qry.fields.select("parentId").from(field.name));
+                    .equal(qry.fields.select(parentField).from(field.name));
             //append join
             q.join(entity).with(expr);
-            //return the resolved attribute for futher proccesing e.g. members.id
+            //data object tagging
+            if (typeof mapping.childModel === 'undefined') {
+                return {
+                    $expand:[q.$expand],
+                    $select:qry.fields.select(valueField).from(field.name)
+                }
+            }
+
+            //return the resolved attribute for futher processing e.g. members.id
             if (member[1] === mapping.childField) {
                 return {
                     $expand:[q.$expand],
-                    $select:qry.fields.select("valueId").from(field.name)
+                    $select:qry.fields.select(valueField).from(field.name)
                 }
             }
             else {
@@ -2480,13 +2493,29 @@ function afterExecute_(result, callback) {
                         });
                     }
                     else if (mapping.parentModel==self.model.name && mapping.associationType=='junction') {
-                        //create a dummy object
-                        var DataObjectJunction = require('./data-object-junction').DataObjectJunction;
-                        junction = new DataObjectJunction(self.model.convert({}), mapping);
-                        //ensure array of results
+                        //get array of results
                         arr = util.isArray(result) ? result : [result];
                         //get array of key values (for parents)
                         values = arr.filter(function(x) { return (typeof x[mapping.parentField]!=='undefined') && (x[mapping.parentField]!=null); }).map(function(x) { return x[mapping.parentField] });
+                        if (typeof mapping.childModel === 'undefined') {
+                            var DataObjectTag = require('./data-object-tag').DataObjectTag;
+                            junction = new DataObjectTag(self.model.convert({ }), mapping);
+                            return junction.getBaseModel().where("object").in(values).flatten().silent().select("object", "value").all().then(function(items) {
+                                arr.forEach(function(x) {
+                                    x[field.name] = items.filter(function(y) {
+                                        return y["object"]===x[mapping.parentField];
+                                    }).map(function (y) {
+                                       return y.value;
+                                    });
+                                });
+                                return cb();
+                            }).catch(function (err) {
+                                return cb(err);
+                            });
+                        }
+                        //create a dummy object
+                        var DataObjectJunction = require('./data-object-junction').DataObjectJunction;
+                        junction = new DataObjectJunction(self.model.convert({}), mapping);
                         //query junction model
                         junction.baseModel.where('parentId').in(values).flatten().silent().all(function(err, junctions) {
                             if (err) { cb(err); return; }
@@ -2494,7 +2523,6 @@ function afterExecute_(result, callback) {
                             values = junctions.map(function(x) { return x['valueId'] });
                             //get child model
                             var childModel = self.model.context.model(mapping.childModel);
-
                             childModel.filter(options, function(err, expandQ) {
                                 if (err) {
                                     return cb(err);

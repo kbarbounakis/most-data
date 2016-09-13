@@ -698,82 +698,88 @@ DataModel.prototype.filter = function(params, callback) {
     else if (typeof params === 'object') {
         filter = params.$filter;
     }
-    parser.parse(filter, function(err, query) {
-        if (err) {
-            callback(err);
-        }
-        else {
-            //create a DataQueryable instance
-            var q = new DataQueryable(self);
-            q.query.$where = query;
-            if ($joinExpressions.length>0)
-                q.query.$expand = $joinExpressions;
-            //prepare
-            q.query.prepare();
 
-            if (typeof params === 'object') {
-                //apply query parameters
-                var select = params.$select,
-                    skip = params.$skip || 0,
-                    orderBy = params.$orderby || params.$order,
-                    groupBy = params.$groupby || params.$group,
-                    expand = params.$expand,
-                    levels = parseInt(params.$levels),
-                    top = params.$top || params.$take;
-                //select fields
-                if (typeof select === 'string') {
-                    q.select.apply(q, select.split(',').map(function(x) {
-                        return x.replace(/^\s+|\s+$/g, '');
-                    }));
-                }
-                //apply group by fields
-                if (typeof groupBy === 'string') {
-                    q.groupBy.apply(q, groupBy.split(',').map(function(x) {
-                        return x.replace(/^\s+|\s+$/g, '');
-                    }));
-                }
-                if ((typeof levels === 'number') && !isNaN(levels)) {
-                    //set expand levels
-                    q.levels(levels);
-                }
-                //set $skip
-                q.skip(skip);
-                if (top)
-                    q.query.take(top);
-                //set $orderby
-                if (orderBy) {
-                    orderBy.split(',').map(function(x) {
-                        return x.replace(/^\s+|\s+$/g, '');
-                    }).forEach(function(x) {
-                        if (/\s+desc$/i.test(x)) {
-                            q.orderByDescending(x.replace(/\s+desc$/i, ''));
-                        }
-                        else if (/\s+asc/i.test(x)) {
-                            q.orderBy(x.replace(/\s+asc/i, ''));
-                        }
-                        else {
-                            q.orderBy(x);
-                        }
-                    });
-                }
-                if (expand) {
-
-                    var resolver = require("./data-expand-resolver");
-                    var matches = resolver.testExpandExpression(expand);
-                    if (matches && matches.length>0) {
-                        q.expand.apply(q, matches);
-                    }
-                }
-                //return
-                callback(null, q);
+    try {
+        parser.parse(filter, function(err, query) {
+            if (err) {
+                callback(err);
             }
             else {
-                //and finally return DataQueryable instance
-                callback(null, q);
-            }
+                //create a DataQueryable instance
+                var q = new DataQueryable(self);
+                q.query.$where = query;
+                if ($joinExpressions.length>0)
+                    q.query.$expand = $joinExpressions;
+                //prepare
+                q.query.prepare();
 
-        }
-    });
+                if (typeof params === 'object') {
+                    //apply query parameters
+                    var select = params.$select,
+                        skip = params.$skip || 0,
+                        orderBy = params.$orderby || params.$order,
+                        groupBy = params.$groupby || params.$group,
+                        expand = params.$expand,
+                        levels = parseInt(params.$levels),
+                        top = params.$top || params.$take;
+                    //select fields
+                    if (typeof select === 'string') {
+                        q.select.apply(q, select.split(',').map(function(x) {
+                            return x.replace(/^\s+|\s+$/g, '');
+                        }));
+                    }
+                    //apply group by fields
+                    if (typeof groupBy === 'string') {
+                        q.groupBy.apply(q, groupBy.split(',').map(function(x) {
+                            return x.replace(/^\s+|\s+$/g, '');
+                        }));
+                    }
+                    if ((typeof levels === 'number') && !isNaN(levels)) {
+                        //set expand levels
+                        q.levels(levels);
+                    }
+                    //set $skip
+                    q.skip(skip);
+                    if (top)
+                        q.query.take(top);
+                    //set $orderby
+                    if (orderBy) {
+                        orderBy.split(',').map(function(x) {
+                            return x.replace(/^\s+|\s+$/g, '');
+                        }).forEach(function(x) {
+                            if (/\s+desc$/i.test(x)) {
+                                q.orderByDescending(x.replace(/\s+desc$/i, ''));
+                            }
+                            else if (/\s+asc/i.test(x)) {
+                                q.orderBy(x.replace(/\s+asc/i, ''));
+                            }
+                            else {
+                                q.orderBy(x);
+                            }
+                        });
+                    }
+                    if (expand) {
+
+                        var resolver = require("./data-expand-resolver");
+                        var matches = resolver.testExpandExpression(expand);
+                        if (matches && matches.length>0) {
+                            q.expand.apply(q, matches);
+                        }
+                    }
+                    //return
+                    callback(null, q);
+                }
+                else {
+                    //and finally return DataQueryable instance
+                    callback(null, q);
+                }
+
+            }
+        });
+    }
+    catch(e) {
+        return callback(e);
+    }
 };
 
 /**

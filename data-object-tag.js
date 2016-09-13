@@ -53,7 +53,7 @@ var util = require('util'),
             "@id": "https://themost.io/skills",
             "name": "skills",
             "title": "Skills",
-            "description": "A collection of skills of the person.",
+            "description": "A collection of skills of this person.",
             "many": true,
             "type": "Text"
         }
@@ -70,45 +70,47 @@ var util = require('util'),
  <pre class="prettyprint"><code>
  var persons = context.model('Person');
  persons.where('email').equal('veronica.fletcher@example.com')
+     .getTypedItem().then(function(person) {
+            person.property('skills').all().then(function(result) {
+                return done(null, result);
+            });
+        }).catch(function(err) {
+            return done(err);
+        });
+ </code></pre>
+ <p>
+ Insert item(s):
+ </p>
+ <pre class="prettyprint"><code>
+ var persons = context.model('Person');
+ persons.where('email').equal('veronica.fletcher@example.com')
+     .getTypedItem().then(function(person) {
+                person.property('skills').insert([
+                    "node.js",
+                    "C#.NET",
+                    "PHP"
+                ]).then(function() {
+                    return done();
+                });
+            }).catch(function(err) {
+                return done(err);
+            });
+ </code></pre>
+ <p>
+ Remove item(s):
+ </p>
+ <pre class="prettyprint"><code>
+ var persons = context.model('Person');
+ persons.where('email').equal('veronica.fletcher@example.com')
  .getTypedItem().then(function(person) {
-        person.property('skills').where('name').equal('alexis.rees@example.com').all().then(function(result) {
-            done(null, result);
-        });
-    }).catch(function(err) {
-        done(err);
-    });
- </code></pre>
- <p>
- Connects two objects (by inserting an association between parent and child object):
- </p>
- <pre class="prettyprint"><code>
- //add a user (by name) in Administrators group
- var groups = context.model('Group');
- groups.where('name').equal('Administrators')
- .first().then(function(result) {
-        var group = groups.convert(result);
-        group.property('members').insert({ name: 'alexis.rees@example.com' }).then(function() {
-            done();
-        });
-    }).catch(function(err) {
-        done(err);
-    });
- </code></pre>
- <p>
- Disconnects two objects (by removing an existing association):
- </p>
- <pre class="prettyprint"><code>
- //remove a user (by name) from Administrators group
- var groups = context.model('Group');
- groups.where('name').equal('Administrators')
- .first().then(function(result) {
-        var group = groups.convert(result);
-        group.property('members').remove({ name: 'alexis.rees@example.com' }).then(function() {
-            done();
-        });
-    }).catch(function(err) {
-        done(err);
-    });
+                person.property('skills').remove([
+                    "C#.NET"
+                ]).then(function() {
+                    return done();
+                });
+            }).catch(function(err) {
+                return done(err);
+            });
  </code></pre>
  * @class
  * @constructor
@@ -165,8 +167,9 @@ function DataObjectTag(obj, association) {
             var definition = conf.getModelDefinition(self.mapping.associationAdapter);
             if (typeof definition === 'undefined' || definition == null) {
                 var parentModel = self.parent.getModel(),
-                    refersTo = parentModel.getAttribute(self.mapping.refersTo),
-                    parentField = parentModel.getAttribute(self.mapping.parentField);
+                    refersToType = parentModel.getAttribute(self.mapping.refersTo).type,
+                    parentFieldType = parentModel.getAttribute(self.mapping.parentField).type;
+                if (parentFieldType === 'Counter') { parentFieldType = 'Integer'; }
                 definition = {
                     "name": self.mapping.associationAdapter,
                     "hidden": true,
@@ -178,10 +181,10 @@ function DataObjectTag(obj, association) {
                             "name": "id", "type": "Counter", "nullable": false, "primary": true
                         },
                         {
-                            "name": "object", "type": parentField.type, "nullable": false, "many": false
+                            "name": "object", "type": parentFieldType, "nullable": false, "many": false
                         },
                         {
-                            "name": "value", "type": refersTo.type, "nullable": false
+                            "name": "value", "type": refersToType, "nullable": false
                         }
                     ],
                     "constraints": [
@@ -231,6 +234,7 @@ util.inherits(DataObjectTag, DataQueryable);
 DataObjectTag.prototype.migrate = function(callback) {
     this.getBaseModel().migrate(callback);
 };
+
 /**
  * Overrides DataQueryable.execute() method
  * @param callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
@@ -267,22 +271,21 @@ function insert_(obj, callback) {
 }
 
 /**
- * Inserts an association between parent object and the given object or array of objects.
- * @param {*|Array} obj - An object or an array of objects to be related with parent object
- * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
- * @returns {Promise<T>|*} - If callback parameter is missing then returns a Promise object.
+ * Inserts an array of values
+ * @param {Function=} callback
  * @example
- //add a user (by name) in Administrators group
- var groups = context.model('Group');
- groups.where('name').equal('Administrators')
- .first().then(function(result) {
-        var group = groups.convert(result);
-        group.property('members').insert({ name: 'alexis.rees@example.com' }).then(function() {
-            done();
+ context.model('Person').where('email').equal('veronica.fletcher@example.com')
+ .getTypedItem().then(function(person) {
+        person.property('skills').insert([
+            "node.js",
+            "C#.NET"
+        ]).then(function() {
+            return done();
         });
     }).catch(function(err) {
-        done(err);
+        return done(err);
     });
+ *
  */
 DataObjectTag.prototype.insert = function(obj, callback) {
     var self = this;
@@ -318,10 +321,29 @@ function clear_(callback) {
 }
 
 /**
- * Removes all the associated items
+ * Removes all values
  * @param {Function=} callback
+ * @deprecated - This method is deprecated. Use removeAll() method instead
  */
 DataObjectTag.prototype.clear = function(callback) {
+    return this.removeAll(callback);
+};
+
+/**
+ * Removes all values
+ * @param {Function=} callback
+ * @example
+ context.model('Person').where('email').equal('veronica.fletcher@example.com')
+ .getTypedItem().then(function(person) {
+        person.property('skills').removeAll().then(function() {
+            return done();
+        });
+    }).catch(function(err) {
+        return done(err);
+    });
+ *
+ */
+DataObjectTag.prototype.removeAll = function(callback) {
     var self = this;
     if (typeof callback !== 'function') {
         var Q = require('q'), deferred = Q.defer();
@@ -360,22 +382,21 @@ function remove_(obj, callback) {
 }
 
 /**
- * Removes the association between parent object and the given object or array of objects.
- * @param {*|Array} obj - An object or an array of objects to be disconnected from parent object
- * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
- * @returns {Promise<T>|*} - If callback parameter is missing then returns a Promise object.
+ * Removes a value or an array of values
+ * @param {Array|*} obj
+ * @param {Function=} callback
  * @example
- //remove a user (by name) from Administrators group
- var groups = context.model('Group');
- groups.where('name').equal('Administrators')
- .first().then(function(result) {
-        var group = groups.convert(result);
-        group.property('members').remove({ name: 'alexis.rees@example.com' }).then(function() {
-            done();
+ context.model('Person').where('email').equal('veronica.fletcher@example.com')
+ .getTypedItem().then(function(person) {
+        person.property('skills').remove([
+            "node.js"
+        ]).then(function() {
+            return done();
         });
     }).catch(function(err) {
-        done(err);
+        return done(err);
     });
+ *
  */
 DataObjectTag.prototype.remove = function(obj, callback) {
     var self = this;

@@ -322,7 +322,7 @@ DataObject.prototype.removeProperty = function(name) {
 
 /**
  * @param {String} name The relation name
- * @returns {DataQueryable|HasManyAssociation|HasOneAssociation|DataObjectJunction|HasParentJunction|{value:Function}}
+ * @returns {DataQueryable|HasManyAssociation|HasOneAssociation|DataObjectJunction|DataObjectTag|HasParentJunction|{value:Function}}
  */
 DataObject.prototype.property = function(name) {
     if (typeof name !== 'string')
@@ -379,8 +379,8 @@ DataObject.prototype.property = function(name) {
             return new HasOneAssociation(self, mapping);
     }
     else if (mapping.associationType=='junction') {
-        if (mapping.parentModel==model.name) {
-            if (self.context.getConfiguration().hasDataType(field.type)) {
+        if (mapping.parentModel===model.name) {
+            if (typeof mapping.childModel === 'undefined') {
                 return new DataObjectTag(self, mapping);
             }
             else {
@@ -594,13 +594,10 @@ DataObject.prototype.query = function(attr)
  * @private
  */
 function save_(context, callback) {
-    var self = this, type = self.$$type;
-    if (!type) {
-        return callback.call(self, new types.DataException('ETYPE', 'Object type cannot be empty during save operation.'));
-    }
+    var self = this;
     //get current application
-    var model = context.model(type);
-    if (!model) {
+    var model = self.getModel();
+    if (typeof model === 'undefined' || model == null) {
         return callback.call(self, new types.DataException('EMODEL','Data model cannot be found.'));
     }
     var i;
@@ -621,8 +618,8 @@ function save_(context, callback) {
 
 /**
  * Saves the current data object.
- * @param context {DataContext=} - The current data context.
- * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @param {DataContext=}  context - The current data context.
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  * @returns {Promise<T>|*} - If callback parameter is missing then returns a Promise object.
  * @example
  //retrieve an order and change paymentDue date
@@ -661,15 +658,10 @@ DataObject.prototype.save = function(context, callback) {
  */
 function remove_(context, callback) {
     var self = this;
-    if (typeof self.$$type === 'undefined' || self.$$type == null) {
-        callback.call(self, new types.DataException('ETYPE','Object type cannot be empty during remove operation.'));
-        return;
-    }
     //get current application
-    var model = context.model(self.$$type);
-    if (!model) {
-        callback.call(self, new types.DataException('EMODEL','Data model cannot be found.'));
-        return;
+    var model = self.getModel();
+    if (typeof model === 'undefined' || model == null) {
+        return callback.call(self, new types.DataException('EMODEL','Data model cannot be found.'));
     }
     //register before listeners
     var beforeListeners = self.listeners('before.remove');
@@ -688,8 +680,8 @@ function remove_(context, callback) {
 
 /**
  * Deletes the current data object.
- * @param context {DataContext=} - The current data context.
- * @param callback {Function=} - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
+ * @param {DataContext=} context - The current data context.
+ * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  * @returns {Promise<T>|*} - If callback parameter is missing then returns a Promise object.
  * @example
  //retrieve a order, and remove it
@@ -821,6 +813,25 @@ DataObject.prototype.getAdditionalObject = function() {
 
     });
     return deferred.promise;
+};
+/**
+ * Sets a boolean which indicates whether the next data operation will be executed in silent mode.
+ * @param {boolean=} value
+ * @returns DataObject
+ * @example
+ context.model("Person").where("email").equal("alexis.rees@example.com").getTypedItem()
+        .then(function(person) {
+            //...
+            return person.silent().save().then(function() {
+                return done();
+            });
+        }).catch(function(err) {
+            return done(err);
+        });
+ */
+DataObject.prototype.silent = function(value) {
+    this.getModel().silent(value);
+    return this;
 };
 
 module.exports.DataObject = DataObject;

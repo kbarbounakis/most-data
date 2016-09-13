@@ -191,21 +191,51 @@ DataObjectAssociationListener.prototype.afterSave = function(e, callback) {
                             }
                         }
                         else if (x.mapping.parentModel===e.model.name) {
-                            var DataObjectJunction = require('./data-object-junction').DataObjectJunction;
-                            junction = new DataObjectJunction(obj, x.mapping);
-                            if (e.model.$silent) {
-                                junction.getBaseModel().silent();
-                            }
+
                             if (e.state==1 || e.state==2) {
-                                junction.insert(childs, function(err) {
-                                    if (err) { return cb(err); }
-                                    if (!util.isArray(childs.deleted)) { return cb(); }
-                                    junction.remove(childs.deleted, function(err) {
-                                        if (err) { return cb(err); }
-                                        delete childs.deleted;
-                                        cb();
+                                var DataObjectJunction = require('./data-object-junction').DataObjectJunction,
+                                    DataObjectTag = require('./data-object-tag').DataObjectTag;
+
+                                if (typeof x.mapping.childModel === 'undefined') {
+                                    /**
+                                     * @type {DataObjectTag}
+                                     */
+                                    var tags = new DataObjectTag(obj, x.mapping);
+                                    if (e.model.$silent) { tags.getBaseModel().silent(); }
+                                    return tags.silent().all().then(function(result) {
+                                        var toBeRemoved = result.filter(function(x) { return childs.indexOf(x)<0; });
+                                        var toBeInserted = childs.filter(function(x) { return result.indexOf(x)<0; });
+                                        if (toBeRemoved.length>0) {
+                                            return tags.remove(toBeRemoved).then(function() {
+                                                if (toBeInserted.length==0) { return cb(); }
+                                                return tags.insert(toBeInserted).then(function() {
+                                                    return cb();
+                                                });
+                                            }).catch(function (err) {
+                                                return cb(err);
+                                            });
+                                        }
+                                        if (toBeInserted.length==0) { return cb(); }
+                                        return tags.insert(toBeInserted).then(function() {
+                                            return cb();
+                                        });
+                                    }).catch(function (err) {
+                                        return cb(err);
                                     });
-                                });
+                                }
+                                else {
+                                    junction = new DataObjectJunction(obj, x.mapping);
+                                    if (e.model.$silent) { junction.getBaseModel().silent(); }
+                                    junction.insert(childs, function(err) {
+                                        if (err) { return cb(err); }
+                                        if (!util.isArray(childs.deleted)) { return cb(); }
+                                        junction.remove(childs.deleted, function(err) {
+                                            if (err) { return cb(err); }
+                                            delete childs.deleted;
+                                            cb();
+                                        });
+                                    });
+                                }
                             }
                             else  {
                                 cb();
