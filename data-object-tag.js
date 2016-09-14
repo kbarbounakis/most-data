@@ -35,7 +35,7 @@
 var util = require('util'),
     async = require('async'),
     qry = require('most-query'),
-    dataCommon = require('./data-common'),
+    _ = require('lodash'),
     types = require('./types'),
     DataQueryable = require('./data-queryable').DataQueryable;
 
@@ -165,7 +165,7 @@ function DataObjectTag(obj, association) {
             var context = self.parent.context;
             var conf = context.getConfiguration();
             var definition = conf.getModelDefinition(self.mapping.associationAdapter);
-            if (typeof definition === 'undefined' || definition == null) {
+            if (_.isNil(definition)) {
                 var parentModel = self.parent.getModel(),
                     refersToType = parentModel.getAttribute(self.mapping.refersTo).type,
                     parentFieldType = parentModel.getAttribute(self.mapping.parentField).type;

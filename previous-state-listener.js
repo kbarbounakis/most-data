@@ -36,10 +36,10 @@
  * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 exports.beforeSave = function(event, callback) {
-    var dataCommon = require("./data-common");
+    var _ = require("lodash");
     if (event.state==1) { return callback(); }
     var key = event.model.primaryKey;
-    if (dataCommon.isNullOrUndefined(event.target[key])) {
+    if (_.isNil(event.target[key])) {
         return callback();
     }
     event.model.where(key).equal(event.target[key]).silent().first(function(err,result) {

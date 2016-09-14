@@ -32,6 +32,7 @@
  * @ignore
  */
 var dataCommon = require("./data-common"),
+    _ = require("lodash"),
     types = require("./types"),
     async = require("async"),
     util = require("util");
@@ -89,7 +90,7 @@ function DataStateValidatorListener() {
  */
 function mapKey_(obj, callback) {
     var self = this;
-    if (typeof obj === 'undefined' || obj == null) {
+    if (_.isNil(obj)) {
         return callback(new Error('Object cannot be null at this context'));
     }
     if (self.primaryKey && obj[self.primaryKey]) {
@@ -112,7 +113,7 @@ function mapKey_(obj, callback) {
              */
             var q;
             var fnAppendQuery = function(attr, value) {
-                if (dataCommon.isNullOrUndefined(value))
+                if (_.isNil(value))
                     value = null;
                 if (q)
                     q.and(attr).equal(value);
@@ -153,7 +154,7 @@ function mapKey_(obj, callback) {
                         fnAppendQuery(attr, value);
                     }
                 }
-                if (dataCommon.isNullOrUndefined(q)) {
+                if (_.isNil(q)) {
                     cb();
                 }
                 else {
@@ -193,14 +194,14 @@ function mapKey_(obj, callback) {
  */
 DataStateValidatorListener.prototype.beforeSave = function(e, callback) {
     try {
-        if (dataCommon.isNullOrUndefined(e)) {
+        if (_.isNil(e)) {
             return callback();
         }
-        if (dataCommon.isNullOrUndefined(e.state)) {e.state = 1; }
+        if (_.isNil(e.state)) {e.state = 1; }
 
         var model = e.model, target = e.target;
         //if model or target is not defined do nothing and exit
-        if (dataCommon.isNullOrUndefined(model) || dataCommon.isNullOrUndefined(target)) {
+        if (_.isNil(model) || _.isNil(target)) {
             return callback();
         }
         //get key state
@@ -256,12 +257,12 @@ DataStateValidatorListener.prototype.beforeSave = function(e, callback) {
  */
 DataStateValidatorListener.prototype.beforeRemove = function(e, callback) {
     //validate event arguments
-    if (dataCommon.isNullOrUndefined(e)) { return callback(); }
+    if (_.isNil(e)) { return callback(); }
     //validate state (the default is Delete=4)
-    if (dataCommon.isNullOrUndefined(e.state)) {e.state = 4; }
+    if (_.isNil(e.state)) {e.state = 4; }
     var model = e.model, target = e.target;
     //if model or target is not defined do nothing and exit
-    if (dataCommon.isNullOrUndefined(model) || dataCommon.isNullOrUndefined(target)) {
+    if (_.isNil(model) || _.isNil(target)) {
         return callback();
     }
     //if object primary key is already defined

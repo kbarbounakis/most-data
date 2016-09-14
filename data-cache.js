@@ -32,7 +32,9 @@
 /**
  * @private
  */
-var types = require('./types'), util = require('util');
+var types = require('./types'),
+    _ = require('lodash'),
+    util = require('util');
 /**
  * @class
  * @classdesc Implements data cache mechanisms in MOST Data Applications.
@@ -206,8 +208,8 @@ DataCache.prototype.ensure = function(key, fn, callback) {
 DataCache.prototype.get = function(key, callback) {
     var self = this;
     callback = callback || function() {};
-    if (typeof key === 'undefined' || key == null) {
-        callback();
+    if (_.isNil(key)) {
+        return callback();
     }
     self.init(function(err) {
         if (err) {

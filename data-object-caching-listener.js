@@ -33,6 +33,7 @@
  * @ignore
  */
 var dataCache = require('./data-cache'),
+    _ = require('lodash'),
     dataCommon = require('./data-common');
 /**
  * @class
@@ -45,14 +46,14 @@ function DataObjectCachingListener() {
 }
 DataObjectCachingListener.prototype.afterSave = function(e, callback) {
     try {
-        if (dataCommon.isNullOrUndefined(e.target)) {
+        if (_.isNil(e.target)) {
             callback();
             return;
         }
         //get object id
         var id = e.model.idOf(e.target);
         //validate object id
-        if (dataCommon.isNullOrUndefined(id)) {
+        if (_.isNil(id)) {
             callback();
             return;
         }

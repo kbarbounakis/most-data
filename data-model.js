@@ -32,6 +32,7 @@
  * @private
  */
 var S = require('string'),
+    _ = require("lodash"),
     util = require('util'),
     path = require("path"),
     fs = require("fs"),
@@ -62,7 +63,7 @@ function inferTagMapping_(field) {
      */
     var self = this;
     //validate field argument
-    if (typeof field === 'undefined' || field == null) {
+    if (_.isNil(field)) {
         return;
     }
     //validate DataField.many attribute
@@ -72,7 +73,7 @@ function inferTagMapping_(field) {
     //check if the type of the given field is a primitive data type
     //(a data type that is defined in the collection of data types)
     var conf = self.context.getConfiguration(), dataType = conf.dataTypes[field.type];
-    if (typeof dataType === 'undefined' || dataType == null) {
+    if (_.isNil(dataType)) {
         return;
     }
     //get associated model name
@@ -662,7 +663,7 @@ DataModel.prototype.filter = function(params, callback) {
                                 }
                             return false;
                         });
-                        if (dataCommon.isNullOrUndefined(joinExpr))
+                        if (_.isNil(joinExpr))
                             $joinExpressions.push(y);
                     });
                 }
@@ -794,7 +795,7 @@ DataModel.prototype.filter = function(params, callback) {
  */
 DataModel.prototype.find = function(obj) {
     var self = this, result;
-    if (dataCommon.isNullOrUndefined(obj))
+    if (_.isNil(obj))
     {
         result = new DataQueryable(this);
         result.where(self.primaryKey).equal(null);
@@ -1172,7 +1173,7 @@ function getDataObjectClass_() {
 DataModel.prototype.convert = function(obj, typeConvert)
 {
     var self = this;
-    if (typeof obj === 'undefined' || obj == null)
+    if (_.isNil(obj))
         return obj;
     /**
      * @constructor
@@ -1267,7 +1268,7 @@ function cast_(obj, state) {
     else
     {
         //ensure state (set default state to Insert=1)
-        state = dataCommon.isNullOrUndefined(state) ? (dataCommon.isNullOrUndefined(obj.$state) ? 1 : obj.$state) : state;
+        state = _.isNil(state) ? (_.isNil(obj.$state) ? 1 : obj.$state) : state;
         var result = {}, name;
         self.attributes.filter(function(x) {
             if (x.model!==self.name) { return false; }
@@ -1287,7 +1288,7 @@ function cast_(obj, state) {
             if (obj.hasOwnProperty(name))
             {
                 var mapping = self.inferMapping(name);
-                if (typeof mapping === 'undefined' || mapping === null)
+                if (_.isNil(mapping))
                     result[x.name] = obj[name];
                 else if ((mapping.associationType==='association') && (mapping.childModel===self.name)) {
                     if ((typeof obj[name] === 'object') && (obj[name] != null))
@@ -1323,7 +1324,7 @@ function castForValidation_(obj, state) {
     else
     {
         //ensure state (set default state to Insert=1)
-        state = dataCommon.isNullOrUndefined(state) ? (dataCommon.isNullOrUndefined(obj.$state) ? 1 : obj.$state) : state;
+        state = _.isNil(state) ? (_.isNil(obj.$state) ? 1 : obj.$state) : state;
         var result = {}, name;
         self.attributes.filter(function(x) {
             if (x.model!==self.name) {
@@ -1346,7 +1347,7 @@ function castForValidation_(obj, state) {
             if (obj.hasOwnProperty(name))
             {
                 var mapping = self.inferMapping(name);
-                if (typeof mapping === 'undefined' || mapping === null)
+                if (_.isNil(mapping))
                     result[x.name] = obj[name];
                 else if ((mapping.associationType==='association') && (mapping.childModel===self.name)) {
                     if ((typeof obj[name] === 'object') && (obj[name] != null))
@@ -1372,11 +1373,11 @@ DataModel.prototype.recast = function(dest, src, callback)
 {
     callback = callback || function() {};
     var self = this;
-    if (typeof src === 'undefined' || src === null) {
+    if (_.isNil(src)) {
         callback();
         return;
     }
-    if (typeof dest === 'undefined' || dest === null) {
+    if (_.isNil(dest)) {
         dest = { };
     }
     async.eachSeries(self.fields, function(field, cb) {
@@ -1386,7 +1387,7 @@ DataModel.prototype.recast = function(dest, src, callback)
                 if (field.property && field.property!==field.name)
                     delete dest[field.name];
                 var mapping = self.inferMapping(field.name), name = field.property || field.name;
-                if (typeof mapping=== 'undefined' || mapping === null) {
+                if (_.isNil(mapping)) {
                     //set destination property
                     dest[name] = src[field.name];
                     cb(null);
@@ -1704,7 +1705,7 @@ function saveBaseObject_(obj, callback) {
                                         if (pm.type==='Counter' && typeof db.nextIdentity !== 'function' && e.state==1) {
                                             //if data adapter contains lastIdentity function
                                             var lastIdentity = db.lastIdentity || function(lastCallback) {
-                                                    if (typeof result === 'undefined' || result === null)
+                                                    if (_.isNil(result))
                                                         lastCallback(null, { insertId: null});
                                                     lastCallback(null, result);
                                                 };
@@ -1988,7 +1989,7 @@ function removeBaseObject_(obj, callback) {
         return 0;
     }
     //if current model does not have a base model
-    if (typeof base === 'undefined' || base == null) {
+    if (_.isNil(base)) {
         //exit operation
         callback.call(self, null);
     }
@@ -2199,7 +2200,7 @@ DataModel.prototype.dataviews = function(name) {
     var self = this;
     var re = new RegExp('^' + name.replace('*','\\*').replace('$','\\$') + '$', 'ig');
     var view = self.views.filter(function(x) { return re.test(x.name);})[0];
-    if (dataCommon.isNullOrUndefined(view))
+    if (_.isNil(view))
         return;
     return util._extend(new DataModelView(self), view);
 };
@@ -2216,7 +2217,7 @@ DataModel.prototype.getDataView = function(name) {
     var self = this;
     var re = new RegExp('^' + name.replace('$','\$') + '$', 'ig');
     var view = self.views.filter(function(x) { return re.test(x.name);})[0];
-    if (dataCommon.isNullOrUndefined(view))
+    if (_.isNil(view))
     {
         return util._extend(new DataModelView(self), {
             "name":"default",
@@ -2236,7 +2237,7 @@ DataModel.prototype.getDataView = function(name) {
  * @private
  */
   function cacheMapping_(field, mapping) {
-    if (typeof field === 'undefined' || field == null)
+    if (_.isNil(field))
         return;
     //cache mapping
     var cachedModel = this.getConfiguration().models[this.name];
@@ -2466,7 +2467,7 @@ function validate_(obj, state, callback) {
      * @type {DataModel|*}
      */
     var self = this;
-    if (typeof obj === 'undefined' || obj == null) {
+    if (_.isNil(obj)) {
         return callback();
     }
     //get object copy (based on the defined state)
@@ -2672,7 +2673,7 @@ DataModel.prototype.getSubTypes = function () {
     var d = Q.defer();
     process.nextTick(function() {
         var migrations = self.context.model("Migration");
-        if (typeof migrations === 'undefined' || migrations == null) {
+        if (_.isNil(migrations)) {
             return d.resolve([]);
         }
         migrations.silent()
@@ -2698,7 +2699,7 @@ DataModel.prototype.getSubTypes = function () {
  * @param {string} name
  */
 DataModel.prototype.getAttribute = function (name) {
-    if (typeof name === 'undefined' || name == null) { return; }
+    if (_.isNil(name)) { return; }
     if (typeof name !== 'string') { return; }
     return this.attributes.find(function(x) { return x.name === name; });
 };

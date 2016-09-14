@@ -33,7 +33,7 @@
  * @ignore
  */
 var util = require('util'),
-    dataCommon = require('./data-common'),
+    _ = require("lodash"),
     types = require('./types'),
     DataObjectJunction = require('./data-object-junction').DataObjectJunction,
     DataObjectTag = require('./data-object-tag').DataObjectTag,
@@ -118,7 +118,7 @@ function DataObject(type, obj)
     var model_;
     Object.defineProperty(this,'$$model',{
         get: function() {
-            if (typeof type_ === 'undefined' || type_ == null)
+            if (_.isNil(type_))
                 return;
             if (model_) { return model_; }
             if (context_) {
@@ -311,7 +311,7 @@ DataObject.prototype.idOf = function() {
  */
 DataObject.prototype.removeProperty = function(name) {
     var model = this.$$model, field = model.field(name);
-    if (dataCommon.isNullOrUndefined(field)) {
+    if (_.isNil(field)) {
         var er = new Error('The specified field cannot be found.'); er.code = 'EDATA';
         throw er;
     }
@@ -330,12 +330,12 @@ DataObject.prototype.property = function(name) {
     var self = this, er;
     //validate relation based on the given name
     var model = self.$$model, field = model.field(name);
-    if (dataCommon.isNullOrUndefined(field)) {
+    if (_.isNil(field)) {
         er = new Error('The specified field cannot be found.'); er.code = 'EDATA';
         throw er;
     }
     var mapping = model.inferMapping(field.name);
-    if (dataCommon.isNullOrUndefined(mapping)) {
+    if (_.isNil(mapping)) {
         //return queryable field value
         return {
             value:function(callback) {
@@ -405,7 +405,7 @@ DataObject.prototype.property = function(name) {
 function attrOf_(name, callback) {
     var self = this, model = this.$$model,
         mapping = model.inferMapping(name);
-    if (typeof mapping === 'undefined' || mapping == null) {
+    if (_.isNil(mapping)) {
         if (self.hasOwnProperty(name)) {
             return callback(null, self[name]);
         }
@@ -486,7 +486,7 @@ DataObject.prototype.attr = function(name, callback)
         var self = this, model = self.$$model, field = model.field(name);
         if (field) {
             var mapping = model.inferMapping(field.name);
-            if (typeof mapping === 'undefined' || mapping == null) {
+            if (_.isNil(mapping)) {
                 if (self[model.primaryKey]) {
                     model.where(model.primaryKey).equal(self[model.primaryKey]).select(name).first(function(err, result) {
                         if (err) { callback(err); return; }
@@ -597,7 +597,7 @@ function save_(context, callback) {
     var self = this;
     //get current application
     var model = self.getModel();
-    if (typeof model === 'undefined' || model == null) {
+    if (_.isNil(model)) {
         return callback.call(self, new types.DataException('EMODEL','Data model cannot be found.'));
     }
     var i;
@@ -660,7 +660,7 @@ function remove_(context, callback) {
     var self = this;
     //get current application
     var model = self.getModel();
-    if (typeof model === 'undefined' || model == null) {
+    if (_.isNil(model)) {
         return callback.call(self, new types.DataException('EMODEL','Data model cannot be found.'));
     }
     //register before listeners
@@ -733,7 +733,7 @@ DataObject.prototype.getAdditionalModel = function() {
                         return deferred.reject(err);
                     }
                     //if additional type is undefined
-                    if (typeof additionalType === 'undefined' || additionalType == null) {
+                    if (_.isNil(additionalType)) {
                         //return nothing
                         return deferred.resolve();
                     }
@@ -782,7 +782,7 @@ DataObject.prototype.getAdditionalObject = function() {
         try {
             self.getAdditionalModel().then(function(additionalModel) {
                 try {
-                    if (typeof additionalModel === 'undefined' || additionalModel == null) {
+                    if (_.isNil(additionalModel)) {
                         return deferred.resolve();
                     }
                     //if additional type is equal to current model

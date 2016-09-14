@@ -32,7 +32,11 @@
 /**
  * @ignore
   */
-var events = require('events'), util = require('util'), async = require('async'), qry = require('most-query');
+var events = require('events'),
+    _ = require('lodash'),
+    util = require('util'),
+    async = require('async'),
+    qry = require('most-query');
 
 /**
  * @module most-data/types
@@ -627,7 +631,7 @@ function DataQueryableField(name) {
  * @returns {DataQueryableField}
  */
 DataQueryableField.prototype.as = function(s) {
-    if (typeof s === 'undefined' || s==null) {
+    if (_.isNil(s)) {
         delete this.$as;
         return this;
     }
@@ -1253,7 +1257,7 @@ types.DataModelEventListener=DataModelEventListener;
 types.DataModelPrivilege=DataModelPrivilege;
 types.parsers = {
     parseInteger: function(val) {
-        if (typeof val === 'undefined' || val == null)
+        if (_.isNil(val))
             return 0;
         else if (typeof val === 'number')
             return val;
@@ -1276,7 +1280,7 @@ types.parsers = {
         return types.parsers.parseInteger(val);
     },
     parseFloat: function(val) {
-        if (typeof val === 'undefined' || val == null)
+        if (_.isNil(val))
             return 0;
         else if (typeof val === 'number')
             return val;
@@ -1297,7 +1301,7 @@ types.parsers = {
         return types.parsers.parseFloat(val);
     },
     parseDateTime: function(val) {
-        if (typeof val === 'undefined' || val == null)
+        if (_.isNil(val))
             return null;
         if (val instanceof Date)
             return val;
@@ -1322,7 +1326,7 @@ types.parsers = {
         return (types.parsers.parseInteger(val)!==0);
     },
     parseText: function(val) {
-        if (typeof val === 'undefined' || val == null)
+        if (_.isNil(val))
             return val;
         else if (typeof val === 'string') {
             return val;

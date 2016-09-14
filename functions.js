@@ -35,6 +35,7 @@ var types = require('./types'),
     util = require('util'),
     dataCommon = require('./data-common'),
     moment = require('moment'),
+    _ = require('lodash'),
     Q = require("q");
 
 /**
@@ -58,7 +59,7 @@ function FunctionContext(context, model, target) {
       * @type {DataModel}
       */
     this.model = model;
-    if ((typeof context === 'undefined' || context == null) && typeof model !=='undefined' && typeof model != null) {
+    if ((_.isNil(context)) && (typeof model !=='undefined') && (typeof model != null)) {
         //get current context from DataModel.context property
         this.context = model.context;
     }
@@ -274,7 +275,7 @@ FunctionContext.prototype.user = function() {
                 user.id = undefinedUser;
                 return deferred.resolve(undefinedUser);
             }
-            else if (dataCommon.isNullOrUndefined(result)) {
+            else if (_.isNil(result)) {
                 //try to get undefined user
                 parser = types.parsers['parse' + userModel.field('id').type];
                 if (typeof parser === 'function')

@@ -30,6 +30,11 @@
  */
 
 /**
+ * @ignore
+ */
+var _ = require('lodash');
+
+/**
  * @param {string} s
  * @returns {Array}
  * @private
@@ -96,7 +101,7 @@ function DataExpandResolver() {
  * @param {string} s
  */
 DataExpandResolver.prototype.testExpandExpression = function(s) {
-    if (typeof s === 'undefined' || s == null) {
+    if (_.isNil(s)) {
         return [];
     }
     var result = [], reOptions = /(;|^)(\$expand|\$filter|\$levels|\$orderby|\$groupby|\$select|\$top|\$skip|\$search|\$count)=(.*?)(;\$|$)/ig;

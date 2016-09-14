@@ -33,9 +33,9 @@
  * @ignore
  */
 var util = require('util'),
+    _ = require('lodash'),
     async = require('async'),
     qry = require('most-query'),
-    dataCommon = require('./data-common'),
     DataAssociationMapping = require('./types').DataAssociationMapping,
     DataQueryable = require('./data-queryable').DataQueryable;
 
@@ -205,7 +205,7 @@ function HasParentJunction(obj, association) {
             var childField = childModel.field(self.mapping.childField);
             var adapter = self.mapping.associationAdapter;
             baseModel = self.parent.context.model(adapter);
-            if (dataCommon.isNullOrUndefined(baseModel)) {
+            if (_.isNil(baseModel)) {
                 conf.models[adapter] = { name:adapter, title: adapter, sealed:false, hidden:true, type:"hidden", source:adapter, view:adapter, version:'1.0', fields:[
                     { name: "id", type:"Counter", primary: true },
                     { name: 'parentId', nullable:false, type:parentField.type },

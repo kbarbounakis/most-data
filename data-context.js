@@ -32,6 +32,7 @@
  * @ignore
  */
 var util = require('util'),
+    _ = require("lodash"),
     dataCommon = require('./data-common'),
     types = require('./types'),
     cfg = require('./data-configuration');
@@ -96,7 +97,7 @@ function DefaultDataContext()
         var adapterType = self.getConfiguration().adapterTypes[adapter.invariantName];
         //validate data adapter type
         var er;
-        if (typeof adapterType === 'undefined' || adapterType == null) {
+        if (_.isNil(adapterType)) {
             er = new Error('Invalid adapter type.'); er.code = 'EADAPTER';
             throw er;
         }
@@ -146,7 +147,7 @@ DefaultDataContext.prototype.model = function(name) {
     if ((name == null) || (name === undefined))
         return null;
     var obj = self.getConfiguration().model(name);
-    if (typeof obj === 'undefined' || obj==null)
+    if (_.isNil(obj))
         return null;
     var DataModel = require('./data-model').DataModel,
         model = new DataModel(obj);
@@ -214,7 +215,7 @@ function NamedDataContext(name)
         //get data adapter type
         var adapterType = self.getConfiguration().adapterTypes[adapter.invariantName];
         //validate data adapter type
-        if (typeof adapterType === 'undefined' || adapterType == null) {
+        if (_.isNil(adapterType)) {
             er = new Error('Invalid adapter type.'); er.code = 'EADAPTER';
             throw er;
         }
@@ -264,7 +265,7 @@ NamedDataContext.prototype.model = function(name) {
     if ((name == null) || (name === undefined))
         return null;
     var obj = self.getConfiguration().model(name);
-    if (typeof obj === 'undefined' || obj==null)
+    if (_.isNil(obj))
         return null;
     var DataModel = require('./data-model').DataModel;
     var model = new DataModel(obj);

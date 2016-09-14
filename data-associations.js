@@ -34,8 +34,7 @@
 var async = require('async'),
     util = require('util'),
     types = require('./types'),
-    dataCommon = require('./data-common'),
-    dataCache = require('./data-cache');
+    _ = require('lodash');
 
 /**
  * @class DataObjectAssociationListener
@@ -51,7 +50,7 @@ function DataObjectAssociationListener() {
  */
 DataObjectAssociationListener.prototype.beforeSave = function(e, callback) {
     try {
-        if (dataCommon.isNullOrUndefined(e.target)) {
+        if (_.isNil(e.target)) {
             return callback();
         }
         else {
@@ -98,7 +97,7 @@ DataObjectAssociationListener.prototype.beforeSave = function(e, callback) {
                             if (err) {
                                 cb(err);
                             }
-                            else if (dataCommon.isNullOrUndefined(result)) {
+                            else if (_.isNil(result)) {
                                 er = new Error('An associated object cannot be found.');er.code = 'EDATA';er.model = associatedModel.name;
                                 cb(er);
                             }

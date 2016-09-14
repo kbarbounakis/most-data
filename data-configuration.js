@@ -32,6 +32,7 @@
  * @ignore
  */
 var array = require('most-array'),
+    _ = require("lodash"),
     dataCommon = require('./data-common'),
     util = require('util'),
     path = require("path"),
@@ -86,7 +87,7 @@ function DataConfiguration() {
             //get data types from configuration file
             try {
                 dataTypes = require(path.join(process.cwd(), 'config/dataTypes.json'));
-                if (typeof dataTypes === 'undefined' || dataTypes == null) {
+                if (_.isNil(dataTypes)) {
                     dataCommon.log('Data: Application data types are empty. The default data types will be loaded instead.');
                     dataTypes = require('./dataTypes.json');
                 }
@@ -306,7 +307,7 @@ function DataConfiguration() {
     });
      */
     this.setModelDefinition = function(data) {
-        if (typeof data === 'undefined' || data == null) {
+        if (_.isNil(data)) {
             throw new Error("Invalid model definition. Expected object.")
         }
         if (typeof data === 'object') {
@@ -323,7 +324,7 @@ function DataConfiguration() {
      * @returns {DataModel|undefined}
      */
     this.getModelDefinition = function(name) {
-        if (typeof name === 'undefined' || name == null) {
+        if (_.isNil(name)) {
             return;
         }
         if (typeof name === 'string') {
@@ -337,7 +338,7 @@ function DataConfiguration() {
      * @returns {boolean}
      */
     this.hasDataType = function(name) {
-        if (typeof name === 'undefined' || name == null) {
+        if (_.isNil(name)) {
             return false;
         }
         if (typeof name !== 'string') {

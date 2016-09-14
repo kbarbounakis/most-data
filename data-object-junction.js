@@ -33,9 +33,9 @@
  * @ignore
  */
 var util = require('util'),
+    _ = require('lodash'),
     async = require('async'),
     qry = require('most-query'),
-    dataCommon = require('./data-common'),
     types = require('./types'),
     DataQueryable = require('./data-queryable').DataQueryable;
 
@@ -202,7 +202,7 @@ function DataObjectJunction(obj, association) {
             var childField = childModel.field(self.mapping.childField);
             var adapter = self.mapping.associationAdapter;
             baseModel = self.parent.context.model(adapter);
-            if (dataCommon.isNullOrUndefined(baseModel)) {
+            if (_.isNil(baseModel)) {
                 conf.models[self.mapping.associationAdapter] = { name:adapter, title: adapter, source:adapter, type:"hidden", hidden:true, sealed:false, view:adapter, version:'1.0', fields:[
                     { name: "id", type:"Counter", primary: true },
                     { name: "parentId", nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
@@ -255,7 +255,7 @@ DataObjectJunction.prototype.getRelationModel = function()
     var childField = childModel.field(self.mapping.childField);
     var adapter = self.mapping.associationAdapter;
     var relationModel = self.parent.context.model(adapter);
-    if (dataCommon.isNullOrUndefined(relationModel)) {
+    if (_.isNil(relationModel)) {
         var tempModel = { name:adapter, title: adapter, sealed:true, type:"hidden", hidden:true, source:adapter, view:adapter, version:'1.0', fields:[
             { name: "id", type:"Counter", primary: true },
             { name: "parentId", nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },

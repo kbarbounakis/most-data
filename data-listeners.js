@@ -32,6 +32,7 @@
  * @ignore
  */
 var async = require('async'),
+    _ = require('lodash'),
     dataCommon = require('./data-common'),
     moment = require("moment"),
     util = require('util'),
@@ -387,7 +388,7 @@ function DataCachingListener() {
 DataCachingListener.prototype.beforeExecute = function(event, callback) {
     try {
         var cache = require('./data-cache');
-        if (typeof event === 'undefined' || event == null) {
+        if (_.isNil(event)) {
             return callback();
         }
         //validate caching
@@ -762,7 +763,7 @@ DataModelSubTypesListener.prototype.afterUpgrade = function(event, callback) {
             async.eachSeries(result, function(name, cb) {
                 //get model
                 var model = context.model(name);
-                if (typeof model === 'undefined' || model == null) { return cb(); }
+                if (_.isNil(model)) { return cb(); }
                 //if model is sealed do nothing
                 if (model.sealed) { return cb(); }
                 //create event arguments

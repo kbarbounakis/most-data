@@ -32,7 +32,7 @@
 /**
  * @private
  */
-var dataCommon = require("./data-common"),
+var _ = require("lodash"),
     types = require("./types"),
     util = require("util"),
     async = require("async");
@@ -43,12 +43,12 @@ function beforeSave_(attr, event, callback) {
         key = event.model.getPrimaryKey(),
         nestedObj = event.target[name];
     //if attribute is null or undefined do nothing
-    if (dataCommon.isNullOrUndefined(nestedObj)) {
+    if (_.isNil(nestedObj)) {
         return callback();
     }
     //get target model
     var nestedModel = context.model(attr.type);
-    if (dataCommon.isNullOrUndefined(nestedModel)) {
+    if (_.isNil(nestedModel)) {
         return callback();
     }
     if (event.state==1) {
@@ -64,9 +64,9 @@ function beforeSave_(attr, event, callback) {
             .select(key,name)
             .silent()
             .first().then(function( result) {
-                if (dataCommon.isNullOrUndefined(result)) { return callback(new Error('Invalid object state.')); }
+                if (_.isNil(result)) { return callback(new Error('Invalid object state.')); }
             var nestedKey = nestedModel.getPrimaryKey();
-                if (dataCommon.isNullOrUndefined(result[name])) {
+                if (_.isNil(result[name])) {
                     //first of all delete nested object id (for insert)
                     delete nestedObj[nestedKey];
                     //save data
@@ -100,7 +100,7 @@ function beforeSaveMany_(attr, event, callback) {
         key = event.model.getPrimaryKey(),
         nestedObj = event.target[name];
     //if attribute is null or undefined
-    if (dataCommon.isNullOrUndefined(nestedObj)) {
+    if (_.isNil(nestedObj)) {
         //do nothing
         return callback();
     }
@@ -117,7 +117,7 @@ function beforeSaveMany_(attr, event, callback) {
     //get target model
     var nestedModel = context.model(attr.type);
     //if target model cannot be found
-    if (dataCommon.isNullOrUndefined(nestedModel)) {
+    if (_.isNil(nestedModel)) {
         return callback();
     }
     //get nested primary key
@@ -150,7 +150,7 @@ function beforeSaveMany_(attr, event, callback) {
             .first(function(err, result) {
                 if (err) { return callback(err); }
                 //if original object cannot be found, throw an invalid state exception
-                if (dataCommon.isNullOrUndefined(result)) { return callback(new Error('Invalid object state.')); }
+                if (_.isNil(result)) { return callback(new Error('Invalid object state.')); }
                 //get original nested objects
                 var originalNestedObjects = result[name] || [];
                 //enumerate nested objects
@@ -222,11 +222,11 @@ function beforeRemove_(attr, event, callback) {
             name = attr.property || attr.name,
             key = event.model.getPrimaryKey();
         var nestedModel = context.model(attr.type);
-        if (dataCommon.isNullOrUndefined(nestedModel)) { return callback(); }
+        if (_.isNil(nestedModel)) { return callback(); }
         event.model.where(key).equal(event.target[key]).select(key,name).flatten().silent().first(function(err, result) {
             if (err) { return callback(err); }
-            if (dataCommon.isNullOrUndefined(result)) { return callback(); }
-            if (dataCommon.isNullOrUndefined(result[name])) { return callback(); }
+            if (_.isNil(result)) { return callback(); }
+            if (_.isNil(result[name])) { return callback(); }
             nestedModel.remove({id:result[name]}, function(err) {
                 return callback(err);
             });
@@ -244,7 +244,7 @@ function beforeRemoveMany_(attr, event, callback) {
         var context = event.model.context,
             name = attr.property || attr.name;
         var nestedModel = context.model(attr.type);
-        if (dataCommon.isNullOrUndefined(nestedModel)) { return callback(); }
+        if (_.isNil(nestedModel)) { return callback(); }
         //get junction
         var junction = event.target.property(name);
         //select object identifiers (get all objects in silent mode to avoid orphaned objects)
@@ -289,9 +289,6 @@ DataNestedObjectListener.prototype.beforeRemove = function (event, callback) {
 if (typeof exports !== 'undefined')
 {
     module.exports = {
-        /**
-         * @constructs DataNestedObjectListener
-         */
         DataNestedObjectListener:DataNestedObjectListener
     };
 }

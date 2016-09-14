@@ -32,7 +32,8 @@
 /**
  * @ignore
  */
-var util = require("util"),
+var _ = require("lodash"),
+    util = require("util"),
         conf = require("./data-configuration");
 
     /**
@@ -130,7 +131,7 @@ var util = require("util"),
      * @returns {{code: string, message: string, innerMessage: *}|undefined}
      */
     PatternValidator.prototype.validateSync = function(val) {
-        if (typeof val === 'undefined' || val == null) {
+        if (_.isNil(val)) {
             return;
         }
         var valueTo = val;
@@ -224,7 +225,7 @@ var util = require("util"),
      * @returns {{code: string, minLength: number, message:string, innerMessage: string}|undefined}
      */
     MinLengthValidator.prototype.validateSync = function(val) {
-        if (typeof val === 'undefined' || val == null) {
+        if (_.isNil(val)) {
             return;
         }
         if (val.hasOwnProperty('length')) {
@@ -316,7 +317,7 @@ var util = require("util"),
      * @returns {{code: string, maxLength: number, message:string, innerMessage: string}|undefined|*}
      */
     MaxLengthValidator.prototype.validateSync = function(val) {
-        if (typeof val === 'undefined' || val == null) {
+        if (_.isNil(val)) {
             return;
         }
 
@@ -398,7 +399,7 @@ var util = require("util"),
      * @returns {{code: string, maxLength: number, message:string, innerMessage: string}|undefined|*}
      */
     MinValueValidator.prototype.validateSync = function(val) {
-        if (typeof val === 'undefined' || val == null) {
+        if (_.isNil(val)) {
             return;
         }
         if (val<this.minValue) {
@@ -478,7 +479,7 @@ var util = require("util"),
      * @returns {{code: string, maxLength: number, message:string, innerMessage: string}|undefined|*}
      */
     MaxValueValidator.prototype.validateSync = function(val) {
-        if (typeof val === 'undefined' || val == null) {
+        if (_.isNil(val)) {
             return;
         }
         if (val>this.maxValue) {
@@ -561,7 +562,7 @@ var util = require("util"),
      * @returns {{code: string, maxLength: number, message:string, innerMessage: string}|undefined|*}
      */
     RangeValidator.prototype.validateSync = function(val) {
-        if (typeof val === 'undefined' || val == null) {
+        if (_.isNil(val)) {
             return;
         }
         var minValidator, maxValidator, minValidation, maxValidation;
@@ -1067,7 +1068,7 @@ var util = require("util"),
      */
     RequiredValidator.prototype.validateSync = function(val) {
         var invalid = false;
-        if (typeof val === 'undefined' || val == null) {
+        if (_.isNil(val)) {
             invalid=true;
         }
         else if ((typeof val === 'number') && isNaN(val)) {

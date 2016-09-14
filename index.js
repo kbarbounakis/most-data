@@ -33,6 +33,7 @@
  * @ignore
  */
 var model = require('./data-model'),
+    _ = require('lodash'),
     types = require('./types'),
     cfg = require('./data-configuration'),
     validators = require('./data-validator'),
@@ -66,7 +67,7 @@ most.DataObject = require('./data-object').DataObject;
  * @memberOf most-data
  */
 most.createContext = function(name) {
-    if (typeof name === 'undefined' || name == null)
+    if (_.isNil(name))
         return new DefaultDataContext();
     else
         return new NamedDataContext(name);

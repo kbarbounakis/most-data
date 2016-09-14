@@ -32,7 +32,7 @@
  * @ignore
  */
 var util = require('util'),
-    dataCommon = require('./data-common'),
+    _ = require('lodash'),
     types = require('./types'),
     DataField = types.DataField;
 
@@ -91,7 +91,7 @@ function DataModelView(model) {
 DataModelView.prototype.cast = function(obj) {
     var self = this, res;
     var localFields = this.fields.filter(function(y) {
-        return !dataCommon.isNullOrUndefined(self.model.field(y.name));
+        return !_.isNil(self.model.field(y.name));
     });
     if (util.isArray(obj)) {
         var arr = [];

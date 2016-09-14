@@ -34,6 +34,7 @@
  */
 var async=require('async'),
     util = require('util'),
+    _ = require("lodash"),
     dataCommon = require('./data-common'),
     types = require('./types'),
     cfg = require('./data-configuration'),
@@ -67,7 +68,7 @@ DataAttributeResolver.prototype.orderByNestedAttribute = function(attr) {
 DataAttributeResolver.prototype.selecteNestedAttribute = function(attr, alias) {
     var expr = DataAttributeResolver.prototype.resolveNestedAttribute.call(this, attr);
     if (expr) {
-        if (typeof alias === 'undefined' || alias == null)
+        if (_.isNil(alias))
             expr.as(attr.replace(/\//g,'_'));
         else
             expr.as(alias)
@@ -170,18 +171,18 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
         //if the specified member contains '/' e.g. user/name then prepare join
         var arrMember = memberExpr.split('/');
         var attrMember = self.field(arrMember[0]);
-        if (dataCommon.isNullOrUndefined(attrMember)) {
+        if (_.isNil(attrMember)) {
             throw new Error(util.format('The target model does not have an attribute named as %s',arrMember[0]));
         }
         //search for field mapping
         var mapping = self.inferMapping(arrMember[0]);
-        if (dataCommon.isNullOrUndefined(mapping)) {
+        if (_.isNil(mapping)) {
             throw new Error(util.format('The target model does not have an association defined for attribute named %s',arrMember[0]));
         }
         if (mapping.childModel===self.name && mapping.associationType==='association') {
             //get parent model
             var parentModel = self.context.model(mapping.parentModel);
-            if (dataCommon.isNullOrUndefined(parentModel)) {
+            if (_.isNil(parentModel)) {
                 throw new Error(util.format('Association parent model (%s) cannot be found.', mapping.parentModel));
             }
             /**
@@ -204,7 +205,7 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
         }
         else if (mapping.parentModel===self.name && mapping.associationType==='association') {
             var childModel = self.context.model(mapping.childModel);
-            if (dataCommon.isNullOrUndefined(childModel)) {
+            if (_.isNil(childModel)) {
                 throw new Error(util.format('Association child model (%s) cannot be found.', mapping.childModel));
             }
             var res =qry.query('Unknown').select(['*']);
@@ -431,7 +432,7 @@ DataAttributeResolver.prototype.resolveJunctionAttributeJoin = function(attr) {
             else {
                 //get child model
                 var childModel = self.context.model(mapping.childModel);
-                if (dataCommon.isNullOrUndefined(childModel)) {
+                if (_.isNil(childModel)) {
                     throw new types.DataException("EJUNC","The associated model cannot be found.");
                 }
                 //create new join
@@ -468,7 +469,7 @@ DataAttributeResolver.prototype.resolveJunctionAttributeJoin = function(attr) {
             else {
                 //get parent model
                 var parentModel = self.context.model(mapping.parentModel);
-                if (dataCommon.isNullOrUndefined(parentModel)) {
+                if (_.isNil(parentModel)) {
                     throw new types.DataException("EJUNC","The associated model cannot be found.");
                 }
                 //create new join
@@ -682,14 +683,14 @@ DataQueryable.prototype.search = function(text) {
 DataQueryable.prototype.join = function(model)
 {
     var self = this;
-    if (typeof model === 'undefined' || model == null)
+    if (_.isNil(model))
         return this;
     /**
      * @type {DataModel}
      */
     var joinModel = self.model.context.model(model);
     //validate joined model
-    if (typeof joinModel === 'undefined' || joinModel == null)
+    if (_.isNil(joinModel))
         throw new Error(util.format("The %s model cannot be found", model));
     var arr = self.model.attributes.filter(function(x) { return x.type==joinModel.name; });
     if (arr.length==0)
@@ -880,7 +881,7 @@ DataQueryable.prototype.greaterOrEqual = function(obj) {
  *
  */
 DataQueryable.prototype.bit = function(value, result) {
-    if (typeof result === 'undefined' || result == null)
+    if (_.isNil(result))
         this.query.bit(value, value);
     else
         this.query.bit(value, result);
@@ -1295,7 +1296,7 @@ DataQueryable.prototype.select = function(attr) {
             });
         }
     }
-    if (typeof arr === 'undefined' || arr == null) {
+    if (_.isNil(arr)) {
         if (!self.query.hasFields()) {
             //enumerate fields
             var fields = self.model.attributes.filter(function(x) {
@@ -1328,7 +1329,7 @@ DataQueryable.prototype.alsoSelect = function(attr) {
         return self.select(attr);
     }
     else {
-        if (typeof attr === 'undefined' || attr === null)
+        if (_.isNil(attr))
             return self;
         var arr = [];
         if (typeof attr === 'string') {
@@ -1377,14 +1378,14 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
         //get aggregate function
         aggr = matches[1].toLowerCase();
         //test nested attribute aggregation
-        if (dataCommon.isNullOrUndefined(field) && /\//.test(matches[2])) {
+        if (_.isNil(field) && /\//.test(matches[2])) {
             //resolve nested attribute
             var nestedAttr = DataAttributeResolver.prototype.resolveNestedAttribute.call(this, matches[2]);
             //if nested attribute exists
             if (nestedAttr) {
-                if (typeof alias === 'undefined' || alias == null) {
+                if (_.isNil(alias)) {
                     var nestedMatches = /as\s(\w+)$/i.exec(attr);
-                    alias = dataCommon.isNullOrUndefined(nestedMatches) ? aggr.concat('Of_', matches[2].replace(/\//g, "_")) : nestedMatches[1];
+                    alias = _.isNil(nestedMatches) ? aggr.concat('Of_', matches[2].replace(/\//g, "_")) : nestedMatches[1];
                 }
                 /**
                  * @type {Function}
@@ -1396,7 +1397,7 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
         }
         if (typeof  field === 'undefined' || field === null)
             throw new Error(util.format('The specified field %s cannot be found in target model.', matches[2]));
-        if (typeof alias === 'undefined' || alias == null) {
+        if (_.isNil(alias)) {
             matches = /as\s(\w+)$/i.exec(attr);
             if (matches) {
                 alias = matches[1];
@@ -1424,7 +1425,7 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
             aggr = matches[1];
             if (typeof  field === 'undefined' || field === null)
                 throw new Error(util.format('The specified field %s cannot be found in target model.', matches[2]));
-            if (typeof alias === 'undefined' || alias == null) {
+            if (_.isNil(alias)) {
                 matches = /as\s(\w+)$/i.exec(attr);
                 if (matches) {
                     alias = matches[1];
@@ -2667,7 +2668,7 @@ function toArrayCallback(result, callback) {
             if (fields.length==1) {
                 var arr = [];
                 result.forEach(function(x) {
-                    if (typeof x === 'undefined' || x==null)
+                    if (_.isNil(x))
                         return;
                     var key = Object.keys(x)[0];
                     if (x[key])
@@ -2847,7 +2848,7 @@ DataQueryable.prototype.cache = function(value) {
 DataQueryable.prototype.expand = function(attr) {
     var self = this,
         arg = (arguments.length>1) ? Array.prototype.slice.call(arguments): attr;
-    if (typeof arg === 'undefined' || arg===null) {
+    if (_.isNil(arg)) {
         delete self.$expand;
     }
     else {
@@ -2856,7 +2857,7 @@ DataQueryable.prototype.expand = function(attr) {
         if (util.isArray(arg)) {
 
             arg.forEach(function(x) {
-                if (typeof x === 'undefined' || x == null) {
+                if (_.isNil(x)) {
                     return;
                 }
                 if ((typeof x === 'string')
@@ -3251,12 +3252,12 @@ DataQueryable.prototype.toUpperCase = function() {
  * @param {Function} callback
  */
 function valueInternal(callback) {
-    if (dataCommon.isNullOrUndefined(this.query.$select)) {
+    if (_.isNil(this.query.$select)) {
         this.select(this.model.primaryKey);
     }
     firstInternal.call(this, function(err, result) {
         if (err) { return callback(err); }
-        if (dataCommon.isNullOrUndefined(result)) { return callback(); }
+        if (_.isNil(result)) { return callback(); }
         var key = Object.keys(result)[0];
         if (typeof key === 'undefined') { return callback(); }
         callback(null, result[key]);
