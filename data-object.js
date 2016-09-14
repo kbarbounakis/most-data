@@ -704,7 +704,7 @@ DataObject.prototype.remove = function(context, callback) {
         var Q = require('q'), deferred = Q.defer();
         remove_.call(self, context || self.context, function(err) {
             if (err) { return deferred.reject(err); }
-            deferred.resolve(null);
+            deferred.resolve();
         });
         return deferred.promise;
     }
