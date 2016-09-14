@@ -19,19 +19,21 @@
     "name": "Kyriakos Barbounakis",
     "email": "k.barbounakis@gmail.com"
   },
+  "license": "BSD-3-Clause",
   "licenses": [
     {
-      "type": "BSD-3 Clause"
+      "type": "BSD-3-Clause"
     }
   ],
   "dependencies": {
     "async": "0.2.10",
+    "lodash": "^4.15.0",
+    "moment": "2.8.4",
     "most-array": "~1.0.1",
     "most-query": "~0.1.8",
     "node-cache": "^1.1.0",
     "q": "~1.1.1",
-    "string": "1.5.1",
-    "moment": "2.8.4"
+    "string": "1.5.1"
   },
   "main": "index",
   "scripts": {},

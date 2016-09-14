@@ -36,6 +36,7 @@ var util=require('util'),
     qry = require('most-query'),
     async = require('async'),
     types = require('./types'),
+    _ = require("lodash"),
     dataCache = require('./data-cache'),
     common = require('./data-common');
 
@@ -192,12 +193,12 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
     }
     //get user key
     var users = context.model('User'), permissions = context.model('Permission');
-    if (typeof users=== 'undefined' || users===null) {
+    if (_.isNil(users)) {
         //do nothing
         callback();
         return;
     }
-    if (typeof permissions=== 'undefined' || permissions===null) {
+    if (_.isNil(permissions)) {
         //do nothing
         callback();
         return;
@@ -361,7 +362,7 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
                             if (obj.hasOwnProperty(name))
                             {
                                 var mapping = model.inferMapping(name);
-                                if (typeof mapping === 'undefined' || mapping === null) {
+                                if (_.isNil(mapping)) {
                                     field = {};
                                     field[x.name] = { $value: obj[name] };
                                     fields.push(field);
@@ -481,15 +482,14 @@ function anonymousUser(context, callback) {
  */
 function queryUser(context, username, callback) {
     try {
-        if (typeof context === 'undefined' || context == null) {
-            callback();
+        if (_.isNil(context)) {
+            return callback();
         }
         else {
             //get user key
             var users = context.model('User');
-            if (typeof users === 'undefined' || users == null) {
-                callback();
-                return;
+            if (_.isNil(users)) {
+                return callback();
             }
             users.where('name').equal(username).silent().select('id', 'name').first(function(err, result) {
                 if (err) {
@@ -497,9 +497,8 @@ function queryUser(context, username, callback) {
                 }
                 else {
                     //if anonymous user was not found
-                    if (typeof result === 'undefined' || result == null) {
-                        callback();
-                        return;
+                    if (_.isNil(result)) {
+                        return callback();
                     }
                     //get anonymous user object
                     var user = users.convert(result);
@@ -528,10 +527,9 @@ function queryUser(context, username, callback) {
  * @private
  */
 function effectiveAccounts(context, callback) {
-    if (typeof context === 'undefined' || context == null) {
+    if (_.isNil(context)) {
         //push no account
-        callback(null, [ { id: 0 } ]);
-        return;
+        return callback(null, [ { id: 0 } ]);
     }
     /**
      * Gets or sets an object that represents the user of the current data context.
@@ -602,9 +600,8 @@ function effectiveAccounts(context, callback) {
  */
 DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
 {
-    if (typeof e.model==='undefined' || e.model==null) {
-        callback();
-        return;
+    if (_.isNil(e.model)) {
+        return callback();
     }
     //ensure silent query operation
     if (e.emitter && e.emitter.$silent) {
@@ -666,12 +663,12 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
 
         //get user key
         var users = context.model('User'), permissions = context.model('Permission');
-        if (typeof users=== 'undefined' || users===null) {
+        if (_.isNil(users)) {
             //do nothing
             callback(null);
             return;
         }
-        if (typeof permissions=== 'undefined' || permissions===null) {
+        if (_.isNil(permissions)) {
             //do nothing
             callback(null);
             return;
