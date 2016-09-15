@@ -197,7 +197,6 @@ function DataObjectJunction(obj, association) {
             //get parent and child field in order to get junction field types
             var parentModel = self.parent.getModel();
             var parentField = parentModel.field(self.mapping.parentField);
-            //todo::child model is optional (e.g. multiple value fields). Sometimes it needs to be ignored.
             var childModel = self.parent.context.model(self.mapping.childModel);
             var childField = childModel.field(self.mapping.childField);
             var adapter = self.mapping.associationAdapter;
@@ -205,8 +204,8 @@ function DataObjectJunction(obj, association) {
             if (_.isNil(baseModel)) {
                 conf.models[self.mapping.associationAdapter] = { name:adapter, title: adapter, source:adapter, type:"hidden", hidden:true, sealed:false, view:adapter, version:'1.0', fields:[
                     { name: "id", type:"Counter", primary: true },
-                    { name: "parentId", nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
-                    { name: "valueId", nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
+                    { name: "parentId", indexed: true, nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
+                    { name: "valueId", indexed: true, nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
                     "constraints": [
                         {
                             "description": "The relation between two objects must be unique.",
@@ -238,55 +237,20 @@ DataObjectJunction.STR_OBJECT_FIELD = 'parentId';
 DataObjectJunction.STR_VALUE_FIELD = 'valueId';
 
 util.inherits(DataObjectJunction, DataQueryable);
-/**
- * Gets a temporary data model that refers to the current object relation
- * @private
- * @returns {DataModel}
- */
-DataObjectJunction.prototype.getRelationModel = function()
-{
-    var self = this,
-        DataModel = require('./data-model').DataModel;
-    //get parent and child field in order to get junction field types
-    var parentModel = self.parent.getModel();
-    var parentField = parentModel.field(self.mapping.parentField);
-    //todo::child model is optional (e.g. multiple value fields). Sometimes it needs to be ignored.
-    var childModel = self.parent.context.model(self.mapping.childModel);
-    var childField = childModel.field(self.mapping.childField);
-    var adapter = self.mapping.associationAdapter;
-    var relationModel = self.parent.context.model(adapter);
-    if (_.isNil(relationModel)) {
-        var tempModel = { name:adapter, title: adapter, sealed:true, type:"hidden", hidden:true, source:adapter, view:adapter, version:'1.0', fields:[
-            { name: "id", type:"Counter", primary: true },
-            { name: "parentId", nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
-            { name: "valueId", nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
-            constraints: [
-                {
-                    description: "The relation between two objects must be unique.",
-                    type:"unique",
-                    fields: [ "parentId", "valueId" ]
-                }
-            ]};
-        relationModel = new DataModel(tempModel);
-        relationModel.context = self.parent.context;
-    }
-    return relationModel;
-};
+
 /**
  * Migrates the underlying data association adapter.
  * @param callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise.
  */
 DataObjectJunction.prototype.migrate = function(callback) {
-    var model = this.getRelationModel();
+    var model = this.getBaseModel();
     model.migrate(function(err) {
         if (err) {
-            callback(err);
+            return callback(err);
         }
-        else {
-            //migrate related model
-            var relatedModel = self.parent.context.model(self.mapping.childModel);
-            relatedModel.migrate(callback);
-        }
+        //migrate related model
+        var childModel = self.parent.context.model(self.mapping.childModel);
+        return childModel.migrate(callback);
     });
 };
 /**
@@ -403,31 +367,51 @@ DataObjectJunction.prototype.insert = function(obj, callback) {
     }
 };
 
-/**
- * Removes all the associated items
- * @param {Function} callback
- */
-DataObjectJunction.prototype.clear = function(callback) {
+function clear_(callback) {
     var self = this;
     self.migrate(function(err) {
-        if (err)
-            callback(err);
-        else {
-            //get parent id
-            var parentId = self.parent[self.mapping.parentField];
-            //get relation model
-            var relationModel = self.getBaseModel();
-            //validate relation existance
-            relationModel.where(DataObjectJunction.STR_OBJECT_FIELD).equal(parentId).all(function(err, result) {
-                if (err) {
-                    callback(err);
-                }
-                else {
-                    relationModel.remove(result, callback);
-                }
-            });
-        }
+        if (err) { return callback(); }
+        //get parent id
+        var parentId = self.parent[self.mapping.parentField];
+        //get relation model
+        var relationModel = self.getBaseModel();
+        //validate relation existence
+        relationModel.where(DataObjectJunction.STR_OBJECT_FIELD).equal(parentId).all(function(err, result) {
+            if (err) { return callback(); }
+            if (result.length==0) { return callback();  }
+            relationModel.remove(result, callback);
+        });
     });
+}
+
+/**
+ * Removes all associations
+ * @param {Function=} callback
+ * @returns {Promise|*}
+ * @deprecated This method is deprecated. Use DataObjectJunction.removeAll() instead.
+ */
+DataObjectJunction.prototype.clear = function(callback) {
+    return this.removeAll(callback);
+};
+
+/**
+ * Removes all associations
+ * @param {Function=} callback
+ * @returns {Promise|*}
+ */
+DataObjectJunction.prototype.removeAll = function(callback) {
+    var self = this;
+    if (typeof callback !== 'function') {
+        var Q = require('q'), deferred = Q.defer();
+        clear_.call(self, function(err) {
+            if (err) { return deferred.reject(err); }
+            deferred.resolve();
+        });
+        return deferred.promise;
+    }
+    else {
+        return clear_.call(self, callback);
+    }
 };
 
 /**
@@ -480,7 +464,7 @@ DataObjectJunction.prototype.migrate = function(callback)
     //get migration model
     var migrationModel = self.parent.context.model("Migration");
     //get related model
-    var relationModel = self.getRelationModel();
+    var relationModel = self.getBaseModel();
     migrationModel.find({ appliesTo:relationModel.source, version: relationModel.version }).first(function(err, result) {
         if (err) {
             callback(err);
@@ -595,7 +579,7 @@ DataObjectJunction.prototype.remove = function(obj, callback) {
     }
     var parentId = self.parent[self.mapping.parentField], childId = child[self.mapping.childField];
     //get relation model
-    var relationModel = self.getRelationModel();
+    var relationModel = self.getBaseModel();
     relationModel.where(DataObjectJunction.STR_OBJECT_FIELD).equal(parentId).and(DataObjectJunction.STR_VALUE_FIELD).equal(childId).first(function(err, result) {
         if (err) {
             callback(err);

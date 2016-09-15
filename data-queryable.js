@@ -37,7 +37,6 @@ var async=require('async'),
     _ = require("lodash"),
     dataCommon = require('./data-common'),
     types = require('./types'),
-    cfg = require('./data-configuration'),
     qry = require('most-query'),
     Q = require('q');
 
@@ -541,7 +540,7 @@ function DataQueryable(model) {
 }
 /**
  * Clones the current DataQueryable instance.
- * @returns DataQuerable - The cloned object.
+ * @returns {DataQuerable|*} - The cloned object.
  */
 DataQueryable.prototype.clone = function() {
     var result = new DataQueryable(this.model);
@@ -2258,7 +2257,7 @@ DataQueryable.prototype.postExecute = function(result, callback) {
             finalExecuteInternal_.call(self, e, callback);
         }
     });
-};
+}
 
 /**
  * @private
@@ -2305,7 +2304,7 @@ DataQueryable.prototype.postExecute = function(result, callback) {
             });
         }
     });
-};
+}
 
 /**
  * @param {*} result
@@ -2459,6 +2458,15 @@ function afterExecute_(result, callback) {
                             values = junctions.map(function(x) { return x['parentId'] });
                             //get parent model
                             var parentModel = self.model.context.model(mapping.parentModel);
+                            if (_.isString(options['$select'])) {
+                                if (options['$select'] !== "*") {
+                                    var selectOptions = options['$select'].split(",");
+                                    if (selectOptions.indexOf(mapping.parentField)<0) {
+                                        selectOptions.unshift(mapping.parentField);
+                                        options['$select'] = selectOptions.join(",");
+                                    }
+                                }
+                            }
                             //query parent with parent key values
                             parentModel.filter(options, function(err, expandQ) {
                                 if (err) {
@@ -2524,6 +2532,15 @@ function afterExecute_(result, callback) {
                             values = junctions.map(function(x) { return x['valueId'] });
                             //get child model
                             var childModel = self.model.context.model(mapping.childModel);
+                            if (_.isString(options['$select'])) {
+                                if (options['$select'] !== "*") {
+                                    var selectOptions = options['$select'].split(",");
+                                    if (selectOptions.indexOf(mapping.childField)<0) {
+                                        selectOptions.unshift(mapping.childField);
+                                        options['$select'] = selectOptions.join(",");
+                                    }
+                                }
+                            }
                             childModel.filter(options, function(err, expandQ) {
                                 if (err) {
                                     return cb(err);
@@ -2647,7 +2664,7 @@ function afterExecute_(result, callback) {
     else {
         toArrayCallback.call(self, result, callback);
     }
-};
+}
 
 /**
  * @private

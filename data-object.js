@@ -37,7 +37,6 @@ var util = require('util'),
     types = require('./types'),
     DataObjectJunction = require('./data-object-junction').DataObjectJunction,
     DataObjectTag = require('./data-object-tag').DataObjectTag,
-    DataObjectRelation = require('./data-object-relation').DataObjectRelation,
     HasManyAssociation = require('./has-many-association').HasManyAssociation,
     HasOneAssociation = require('./has-one-association').HasOneAssociation,
     HasParentJunction = require('./has-parent-junction').HasParentJunction;
@@ -585,7 +584,9 @@ DataObject.prototype.execute = function(context, fn) {
  */
 DataObject.prototype.query = function(attr)
 {
-    return new DataObjectRelation(this, attr);
+    var mapping = this.getModel().inferMapping(attr);
+    if (_.isNil(mapping)) { new types.DataException('EASSOCIATION','The given attribute does not define an association of any type.'); }
+    return this.property(attr)
 };
 
 /**

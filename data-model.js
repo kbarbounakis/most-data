@@ -31,8 +31,7 @@
 /**
  * @private
  */
-var S = require('string'),
-    _ = require("lodash"),
+var _ = require("lodash"),
     util = require('util'),
     path = require("path"),
     fs = require("fs"),
@@ -77,7 +76,7 @@ function inferTagMapping_(field) {
         return;
     }
     //get associated model name
-    var name = self.name.concat(S(field.name).capitalize());
+    var name = self.name.concat(_.upperFirst(field.name));
     var primaryKey = self.key();
     return new types.DataAssociationMapping({
         "associationType": "junction",
@@ -2103,6 +2102,12 @@ DataModel.prototype.migrate = function(callback)
                 columns: [ x.name ]
             });
         }
+        else if (x.indexed === true) {
+            migration.indexes.push({
+                name: "INDEX_" + migration.appliesTo.toUpperCase() + "_" + x.name.toUpperCase(),
+                columns: [ x.name ]
+            });
+        }
     });
 
     //execute transaction
@@ -2424,7 +2429,7 @@ DataModel.prototype.inferMapping = function(name) {
             if (re.test(field.name) || field.many) {
                 //return a data junction
                 result = new types.DataAssociationMapping({
-                    associationAdapter: self.name.concat(S(field.name).capitalize()),
+                    associationAdapter: self.name.concat(_.upperFirst(field.name)),
                     parentModel: self.name, parentField: self.primaryKey,
                     childModel: associatedModel.name,
                     childField: associatedModel.primaryKey,
