@@ -2367,7 +2367,15 @@ function afterExecute_(result, callback) {
                         })) {
                         return cb();
                     }
-                    if (mapping) { mapping.refersTo = mapping.refersTo || field.name; }
+                    if (mapping) {
+                        mapping.refersTo = mapping.refersTo || field.name;
+                        if (_.isObject(mapping.options)) {
+                            util._extend(options, mapping.options);
+                        }
+                        else if (util.isArray(mapping.select) && mapping.select.length>0) {
+                            options.$select = mapping.select.join(",");
+                        }
+                    }
                 }
             }
             if (options instanceof DataQueryable) {
@@ -2422,6 +2430,9 @@ function afterExecute_(result, callback) {
                                     var key=null,
                                         attr = (field.property || field.name),
                                         selector = function(x) {
+                                            if (!_.isNil(x[attr]) && x[attr].hasOwnProperty(mapping.parentField)) {
+                                                return x[attr][mapping.parentField]==key
+                                            }
                                             return x[attr]==key;
                                         },
                                         iterator = function(x) {
@@ -2872,7 +2883,6 @@ DataQueryable.prototype.expand = function(attr) {
         if (!util.isArray(this.$expand))
             self.$expand=[];
         if (util.isArray(arg)) {
-
             arg.forEach(function(x) {
                 if (_.isNil(x)) {
                     return;
