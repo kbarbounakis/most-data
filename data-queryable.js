@@ -2457,7 +2457,7 @@ function afterExecute_(result, callback) {
                     else if (mapping.childModel==self.model.name && mapping.associationType=='junction') {
                         //create a dummy object
                         var HasParentJunction = require('./has-parent-junction').HasParentJunction;
-                        junction = new HasParentJunction(self.model.convert({}), mapping);
+                        junction = new HasParentJunction(self.model.convert({ }), mapping);
                         //ensure array of results
                         arr = util.isArray(result) ? result : [result];
                         //get array of key values (for childs)
