@@ -872,7 +872,7 @@ DataModel.prototype.take = function(n, callback) {
     n = n || 25;
     var result = new DataQueryable(this);
     if (typeof callback === 'undefined')
-        return result;
+        return result.take(n);
     result.take(n, callback);
 };
 
