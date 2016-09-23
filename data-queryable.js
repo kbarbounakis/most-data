@@ -2324,81 +2324,87 @@ function afterExecute_(result, callback) {
         //get distinct values
         var expands = self.$expand.distinct(function(x) { return x; });
         async.eachSeries(expands, function(expand, cb) {
-            /**
-             * get mapping
-             * @type {DataAssociationMapping|*}
-             */
-            var mapping = null, options = { };
-            if (expand instanceof types.DataAssociationMapping) {
-                mapping = expand;
-                if (typeof expand.select !== 'undefined' && expand.select != null) {
-                    if (typeof expand.select === 'string')
-                        options["$select"] = expand.select;
-                    else if (util.isArray(expand.select))
-                        options["$select"] = expand.select.join(",");
-                }
-                //get expand options
-                if (typeof expand.options !== 'undefined' && expand.options != null) {
-                    util._extend(options, expand.options);
-                }
-            }
-            else {
-                //get mapping from expand attribute
-                var expandAttr;
-                if (typeof expand === 'string') {
-                    //get expand attribute as string
-                    expandAttr = expand;
-                }
-                else if ((typeof expand === 'object') && expand.hasOwnProperty('name')) {
-                    //get expand attribute from Object.name property
-                    expandAttr = expand.name;
+
+            try {
+                /**
+                 * get mapping
+                 * @type {DataAssociationMapping|*}
+                 */
+                var mapping = null, options = { };
+                if (expand instanceof types.DataAssociationMapping) {
+                    mapping = expand;
+                    if (typeof expand.select !== 'undefined' && expand.select != null) {
+                        if (typeof expand.select === 'string')
+                            options["$select"] = expand.select;
+                        else if (util.isArray(expand.select))
+                            options["$select"] = expand.select.join(",");
+                    }
                     //get expand options
                     if (typeof expand.options !== 'undefined' && expand.options != null) {
-                        options = expand.options;
+                        util._extend(options, expand.options);
                     }
                 }
                 else {
-                    //invalid expand parameter
-                    return callback(new Error("Invalid expand option. Expected string or a named object."));
-                }
-                field = self.model.field(expandAttr);
-                if (typeof field === 'undefined')
-                    field = self.model.attributes.find(function(x) { return x.type==expandAttr });
-                if (field) {
-                    mapping = self.model.inferMapping(field.name);
-                    if (expands.find(function(x) {
-                            return (x.parentField === mapping.parentField) &&
-                                (x.parentModel === mapping.parentModel) &&
-                                (x.childField === mapping.childField) &&
-                                (x.childModel === mapping.childModel)
-                        })) {
-                        return cb();
+                    //get mapping from expand attribute
+                    var expandAttr;
+                    if (typeof expand === 'string') {
+                        //get expand attribute as string
+                        expandAttr = expand;
                     }
-                    if (mapping) {
-                        mapping.refersTo = mapping.refersTo || field.name;
-                        if (_.isObject(mapping.options)) {
-                            util._extend(options, mapping.options);
+                    else if ((typeof expand === 'object') && expand.hasOwnProperty('name')) {
+                        //get expand attribute from Object.name property
+                        expandAttr = expand.name;
+                        //get expand options
+                        if (typeof expand.options !== 'undefined' && expand.options != null) {
+                            options = expand.options;
                         }
-                        else if (util.isArray(mapping.select) && mapping.select.length>0) {
-                            options['$select'] = mapping.select.join(",");
+                    }
+                    else {
+                        //invalid expand parameter
+                        return callback(new Error("Invalid expand option. Expected string or a named object."));
+                    }
+                    field = self.model.field(expandAttr);
+                    if (typeof field === 'undefined')
+                        field = self.model.attributes.find(function(x) { return x.type==expandAttr });
+                    if (field) {
+                        mapping = self.model.inferMapping(field.name);
+                        if (expands.find(function(x) {
+                                return (x.parentField === mapping.parentField) &&
+                                    (x.parentModel === mapping.parentModel) &&
+                                    (x.childField === mapping.childField) &&
+                                    (x.childModel === mapping.childModel)
+                            })) {
+                            return cb();
+                        }
+                        if (mapping) {
+                            mapping.refersTo = mapping.refersTo || field.name;
+                            if (_.isObject(mapping.options)) {
+                                util._extend(options, mapping.options);
+                            }
+                            else if (util.isArray(mapping.select) && mapping.select.length>0) {
+                                options['$select'] = mapping.select.join(",");
+                            }
+                        }
+                    }
+                }
+                if (options instanceof DataQueryable) {
+                    // do nothing
+                }
+                else {
+                    //set default $top option to -1 (backward compatibility issue)
+                    if (!options.hasOwnProperty("$top")) {
+                        options["$top"] = -1;
+                    }
+                    //set default $levels option to 1 (backward compatibility issue)
+                    if (!options.hasOwnProperty("$levels")) {
+                        if (typeof self.$levels === 'number') {
+                            options["$levels"] = self.getLevels() - 1;
                         }
                     }
                 }
             }
-            if (options instanceof DataQueryable) {
-                // do nothing
-            }
-            else {
-                //set default $top option to -1 (backward compatibility issue)
-                if (!options.hasOwnProperty("$top")) {
-                    options["$top"] = -1;
-                }
-                //set default $levels option to 1 (backward compatibility issue)
-                if (!options.hasOwnProperty("$levels")) {
-                    if (typeof self.$levels === 'number') {
-                        options["$levels"] = self.getLevels() - 1;
-                    }
-                }
+            catch(e) {
+                return cb(e);
             }
 
             if (mapping) {

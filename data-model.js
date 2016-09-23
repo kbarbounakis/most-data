@@ -2059,7 +2059,9 @@ DataModel.prototype.migrate = function(callback)
     if ((fields==null) || (fields.length==0))
         throw new Error("Migration is not valid for this model. The model has no fields.");
     var migration = new types.DataModelMigration();
-    migration.add = fields;
+    migration.add = _.map(fields, function(x) {
+        return _.assign({ }, x);
+    });
     migration.version = self.version!=null ? self.version : '0.0';
     migration.appliesTo = self.sourceAdapter;
     migration.model = self.name;
@@ -2085,7 +2087,7 @@ DataModel.prototype.migrate = function(callback)
         models.push(baseModel);
     }
     //validate associated models
-    fields.forEach(function(x) {
+    migration.add.forEach(function(x) {
         //validate mapping
         var mapping = self.inferMapping(x.name);
         if (mapping && mapping.associationType === 'association') {
