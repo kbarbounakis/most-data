@@ -2096,7 +2096,13 @@ DataModel.prototype.migrate = function(callback)
                 var parentModel = self.context.model(mapping.parentModel),
                     attr = parentModel.getAttribute(mapping.parentField);
                 if (attr) {
-                        x.type = attr.type;
+                        if (attr.type === 'Counter') {
+                            x.type = 'Integer';
+                        }
+                        else {
+                            x.type = attr.type;
+                        }
+
                 }
             }
             migration.indexes.push({
