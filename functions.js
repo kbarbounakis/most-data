@@ -273,6 +273,9 @@ FunctionContext.prototype.user = function() {
                     undefinedUser = parser(null);
                 //set id for next calls
                 user.id = undefinedUser;
+                if (_.isNil(context.user)) {
+                    context.user = user;
+                }
                 return deferred.resolve(undefinedUser);
             }
             else if (_.isNil(result)) {
@@ -282,6 +285,9 @@ FunctionContext.prototype.user = function() {
                     undefinedUser = parser(null);
                 //set id for next calls
                 user.id = undefinedUser;
+                if (_.isNil(context.user)) {
+                    context.user = user;
+                }
                 return deferred.resolve(undefinedUser);
             }
             else {
