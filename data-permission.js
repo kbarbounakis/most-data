@@ -248,8 +248,14 @@ DataPermissionEventListener.prototype.validate = function(e, callback) {
                             //get permission and exit
                             cancel=true;
                             e.result = true;
-                            cb(null);
-                            return;
+                            return cb();
+                        }
+                        else if (item.hasOwnProperty("account")) {
+                            if (accounts.findIndex(function(x) { return x.name === item.account })>=0) {
+                                cancel=true;
+                                e.result = true;
+                                return cb();
+                            }
                         }
                     }
                     //try to find user has global permissions assigned

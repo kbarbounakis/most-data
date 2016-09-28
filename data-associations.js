@@ -132,23 +132,23 @@ DataObjectAssociationListener.prototype.beforeSave = function(e, callback) {
 
 /**
  *
- * @param {DataEventArgs} e
+ * @param {DataEventArgs} event
  * @param {function(Error=)} callback
  */
-DataObjectAssociationListener.prototype.afterSave = function(e, callback) {
+DataObjectAssociationListener.prototype.afterSave = function(event, callback) {
     try {
-        if (typeof e.target === 'undefined' || e.target==null) {
+        if (typeof event.target === 'undefined' || event.target==null) {
             callback(null);
         }
         else {
-            var keys = Object.keys(e.target);
+            var keys = Object.keys(event.target);
             var mappings = [];
             keys.forEach(function(x) {
-                if (e.target.hasOwnProperty(x)) {
+                if (event.target.hasOwnProperty(x)) {
                     /**
                      * @type DataAssociationMapping
                      */
-                    var mapping = e.model.inferMapping(x);
+                    var mapping = event.model.inferMapping(x);
                     if (mapping)
                         if (mapping.associationType=='junction') {
                             mappings.push({ name:x, mapping:mapping });
@@ -162,36 +162,43 @@ DataObjectAssociationListener.prototype.afterSave = function(e, callback) {
                  */
                 function(x, cb) {
                     if (x.mapping.associationType=='junction') {
-                        var obj = e.model.convert(e.target);
+                        var obj = event.model.convert(event.target);
                         /**
                          * @type {*|{deleted:Array}}
                          */
                         var childs = obj[x.name], junction;
                         if (!util.isArray(childs)) { return cb(); }
-                        if (x.mapping.childModel===e.model.name) {
+                        if (x.mapping.childModel===event.model.name) {
                             var HasParentJunction = require('./has-parent-junction').HasParentJunction;
                             junction = new HasParentJunction(obj, x.mapping);
-                            if (e.model.$silent) {
+                            if (event.model.$silent) {
                                 junction.getBaseModel().silent();
                             }
-                            if (e.state==1 || e.state==2) {
-                                junction.insert(childs, function(err) {
+                            if (event.state==1 || event.state==2) {
+                                var toBeRemoved = [], toBeInserted = [];
+                                _.forEach(childs, function(x) {
+                                    if (x.$state == 4) {
+                                        toBeRemoved.push(x);
+                                    }
+                                    else {
+                                        toBeInserted.push(x);
+                                    }
+                                });
+                                junction.insert(toBeInserted, function(err) {
                                     if (err) { return cb(err); }
-                                    if (!util.isArray(childs.deleted)) { return cb(); }
-                                    junction.remove(childs.deleted, function(err) {
+                                    junction.remove(toBeRemoved, function(err) {
                                         if (err) { return cb(err); }
-                                        delete childs.deleted;
-                                        cb();
+                                        return cb();
                                     });
                                 });
                             }
                             else  {
-                                cb(null);
+                                return cb();
                             }
                         }
-                        else if (x.mapping.parentModel===e.model.name) {
+                        else if (x.mapping.parentModel===event.model.name) {
 
-                            if (e.state==1 || e.state==2) {
+                            if (event.state==1 || event.state==2) {
                                 var DataObjectJunction = require('./data-object-junction').DataObjectJunction,
                                     DataObjectTag = require('./data-object-tag').DataObjectTag;
 
@@ -200,7 +207,7 @@ DataObjectAssociationListener.prototype.afterSave = function(e, callback) {
                                      * @type {DataObjectTag}
                                      */
                                     var tags = new DataObjectTag(obj, x.mapping);
-                                    if (e.model.$silent) { tags.getBaseModel().silent(); }
+                                    if (event.model.$silent) { tags.getBaseModel().silent(); }
                                     return tags.silent().all().then(function(result) {
                                         var toBeRemoved = result.filter(function(x) { return childs.indexOf(x)<0; });
                                         var toBeInserted = childs.filter(function(x) { return result.indexOf(x)<0; });
@@ -224,14 +231,24 @@ DataObjectAssociationListener.prototype.afterSave = function(e, callback) {
                                 }
                                 else {
                                     junction = new DataObjectJunction(obj, x.mapping);
-                                    if (e.model.$silent) { junction.getBaseModel().silent(); }
+                                    if (event.model.$silent) { junction.getBaseModel().silent(); }
                                     junction.insert(childs, function(err) {
                                         if (err) { return cb(err); }
-                                        if (!util.isArray(childs.deleted)) { return cb(); }
-                                        junction.remove(childs.deleted, function(err) {
+                                        var toBeRemoved = [], toBeInserted = [];
+                                        _.forEach(childs, function(x) {
+                                            if (x.$state == 4) {
+                                                toBeRemoved.push(x);
+                                            }
+                                            else {
+                                                toBeInserted.push(x);
+                                            }
+                                        });
+                                        junction.insert(toBeInserted, function(err) {
                                             if (err) { return cb(err); }
-                                            delete childs.deleted;
-                                            cb();
+                                            junction.remove(toBeRemoved, function(err) {
+                                                if (err) { return cb(err); }
+                                                return cb();
+                                            });
                                         });
                                     });
                                 }
@@ -252,8 +269,8 @@ DataObjectAssociationListener.prototype.afterSave = function(e, callback) {
                 });
         }
     }
-    catch (e) {
-        callback(e);
+    catch (err) {
+        callback(err);
     }
 };
 
