@@ -82,7 +82,6 @@ FunctionContext.prototype.eval = function(expr, callback) {
     var match = re.exec(expr1);
     if (match) {
         var expr2eval;
-        //todo::validate function name and execute sync functions without callback (e.g. randomIntSync(1,10))
         //check parameters (match[3])
         if (match[3].length==0) {
             expr2eval = expr1.replace(/(fn:)\s?(.*?)\s?\((.*?)\)/, "(function() { return this.$2(); });");
@@ -185,10 +184,6 @@ FunctionContext.prototype.newGuid = function() {
     return deferred.promise;
 };
 
-
-function randomIntSync (min, max) {
-    return Math.floor(Math.random()*max) + min;
-}
 /**
  * Generates a random integer value between the given minimum and maximum value
  * @param {number} min
@@ -199,7 +194,7 @@ FunctionContext.prototype.int = function(min, max) {
     var deferred = Q.defer();
     process.nextTick(function() {
         try {
-            return deferred.resolve(randomIntSync(min, max));
+            return deferred.resolve(_.random(min, max));
         }
         catch (err) {
             deferred.reject(err);
@@ -208,6 +203,37 @@ FunctionContext.prototype.int = function(min, max) {
     });
     return deferred.promise;
 };
+
+/**
+ * Generates a random sequence of numeric characters
+ * @param {number} length - A integer which represents the length of the sequence
+ * @returns {Promise|*}
+ */
+FunctionContext.prototype.numbers = function(length) {
+    var deferred = Q.defer();
+    process.nextTick(function() {
+        try {
+            length = length || 8;
+            if (length<0) {
+                return deferred.reject(new Error("Number sequence length must be greater than zero."));
+            }
+            if (length>255) {
+                return deferred.reject(new Error("Number sequence length exceeds the maximum of 255 characters."));
+            }
+            var times = Math.ceil(length / 10);
+            var res = '';
+            _.times(times, function() {
+                 res += _.random(1000000000, 9000000000)
+            });
+            return deferred.resolve(res.substr(0,length));
+        }
+        catch (err) {
+            deferred.reject(err);
+        }
+    });
+    return deferred.promise;
+};
+
 /**
  * @param {number} length
  * @returns {Promise|*}
@@ -221,7 +247,7 @@ FunctionContext.prototype.chars = function(length) {
             var chars = "abcdefghkmnopqursuvwxz2456789ABCDEFHJKLMNPQURSTUVWXYZ";
             var str = "";
             for(var i = 0; i < length; i++) {
-                str += chars.substr(randomIntSync(0, chars.length-1),1);
+                str += chars.substr(_.random(0, chars.length-1),1);
             }
             deferred.resolve(str);
         }
@@ -243,7 +269,7 @@ FunctionContext.prototype.password = function(length) {
             var chars = "abcdefghkmnopqursuvwxz2456789ABCDEFHJKLMNPQURSTUVWXYZ",
                 str = "";
             for(var i = 0; i < length; i++) {
-                str += chars.substr(randomIntSync(0, chars.length-1),1);
+                str += chars.substr(_.random(0, chars.length-1),1);
             }
             deferred.resolve('{clear}' + str);
         }
@@ -358,7 +384,7 @@ functions.user = function(e, callback) {
         return callback(null, user['id']);
     }
     var userModel = e.model.context.model('User');
-    userModel.where('name').equal(user.name).silent().select(['id','name']).first(function(err, result) {
+    userModel.where('name').equal(user.name).silent().select('id','name').first(function(err, result) {
         if (err) {
             console.log(err);
             callback();

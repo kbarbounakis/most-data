@@ -35,7 +35,8 @@
     /**
      * @ignore
      */
-    var util = require('util');
+    var util = require('util'),
+        _ = require('lodash');
     /**
      * Load native object extensions
      */
@@ -253,7 +254,7 @@
      * @param {number} max
      */
     dataCommon.randomInt = function(min, max) {
-        return Math.floor(Math.random()*max) + min;
+        return _.random(min, max);
     };
 
     /**
