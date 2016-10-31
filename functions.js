@@ -406,5 +406,4 @@ functions.user = function(e, callback) {
         }
     });
 };
-
 module.exports = functions;

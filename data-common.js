@@ -301,7 +301,6 @@
         return md5.digest('hex');
     };
 
-
     module.exports = dataCommon;
 
 })(this);
