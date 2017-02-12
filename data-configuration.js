@@ -57,10 +57,14 @@ function DataConfigurationAuth() {
  * @classdesc Holds the configuration of data modeling infrastructure
  * @class
  * @constructor
+ * @param {string=} configPath - The root directory of configuration files. The default directory is the ./config under current working directory
  * @property {DataConfigurationAuth} auth
  *
  */
-function DataConfiguration() {
+function DataConfiguration(configPath) {
+
+    configPath = configPath || path.join(process.cwd(),'config');
+
     /**
      * Model caching object (e.g. cfg.models.Migration, cfg.models.User etc)
      * @type {*}
@@ -86,7 +90,7 @@ function DataConfiguration() {
                 return dataTypes;
             //get data types from configuration file
             try {
-                dataTypes = require(path.join(process.cwd(), 'config/dataTypes.json'));
+                dataTypes = require(path.join(configPath, 'dataTypes.json'));
                 if (_.isNil(dataTypes)) {
                     dataCommon.log('Data: Application data types are empty. The default data types will be loaded instead.');
                     dataTypes = require('./dataTypes.json');
@@ -133,13 +137,13 @@ function DataConfiguration() {
     var config;
     try {
         var env = process.env['NODE_ENV'] || 'production';
-        config = require(path.join(process.cwd(), 'config/app.' + env + '.json'));
+        config = require(path.join(configPath, 'app.' + env + '.json'));
     }
     catch (e) {
         if (e.code === 'MODULE_NOT_FOUND') {
             dataCommon.log('Data: The environment specific configuration cannot be found or is inaccesible.');
             try {
-                config = require(path.join(process.cwd(), 'config/app.json'));
+                config = require(path.join(configPath, 'app.json'));
             }
             catch(e) {
                 if (e.code === 'MODULE_NOT_FOUND') {
@@ -263,7 +267,7 @@ function DataConfiguration() {
         }
     };
     
-    var path_ = path.join(process.cwd(),'config', 'models');
+    var path_ = path.join(configPath,'models');
 
     /**
      * Gets a string which represents the path where schemas exist. The default location is the config/models folder. 
@@ -436,6 +440,18 @@ Object.defineProperty(cfg, 'current', {
  */
 cfg.getCurrent = function() {
     return this.current;
+};
+/**
+ * Sets the current data configuration
+ * @param {DataConfiguration} configuration
+ * @returns DataConfiguration - An instance of DataConfiguration class which represents the current data configuration
+ */
+cfg.setCurrent = function(configuration) {
+    if (configuration instanceof DataConfiguration) {
+        cfg_ = configuration;
+        return cfg_;
+    }
+    throw new TypeError('Invalid argument. Expected an instance of DataConfiguration class.');
 };
 /**
  * Creates an instance of DataConfiguration class
