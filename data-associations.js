@@ -167,7 +167,7 @@ DataObjectAssociationListener.prototype.afterSave = function(event, callback) {
                          * @type {*|{deleted:Array}}
                          */
                         var childs = obj[x.name], junction;
-                        if (!util.isArray(childs)) { return cb(); }
+                        if (!_.isArray(childs)) { return cb(); }
                         if (x.mapping.childModel===event.model.name) {
                             var HasParentJunction = require('./has-parent-junction').HasParentJunction;
                             junction = new HasParentJunction(obj, x.mapping);

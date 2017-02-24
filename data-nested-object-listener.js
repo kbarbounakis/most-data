@@ -33,8 +33,7 @@
  * @private
  */
 var _ = require("lodash"),
-    types = require("./types"),
-    util = require("util"),
+    types = require("./types")
     async = require("async");
 
 function beforeSave_(attr, event, callback) {
@@ -105,7 +104,7 @@ function beforeSaveMany_(attr, event, callback) {
         return callback();
     }
     //if nested object is not an array
-    if (!util.isArray(nestedObj)) {
+    if (!_.isArray(nestedObj)) {
         //throw exception
         return callback(new types.DataException("EJUNCT","Invalid argument type. Expected array.",null, event.model.name, name));
     }

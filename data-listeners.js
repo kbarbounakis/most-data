@@ -32,6 +32,7 @@
  * @ignore
  */
 var async = require('async'),
+    sprintf = require('sprintf'),
     _ = require('lodash'),
     dataCommon = require('./data-common'),
     moment = require("moment"),
@@ -250,7 +251,7 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
     //get function context
     var functions = require('./functions'),
         functionContext = functions.createContext();
-    util._extend(functionContext, e);
+    _.assign(functionContext, e);
     functionContext.context = e.model.context;
     //find all attributes that have a default value
     var attrs = e.model.attributes.filter(function(x) { return (x.calculation!==undefined); });
@@ -435,7 +436,7 @@ DataCachingListener.prototype.beforeExecute = function(event, callback) {
                     //log execution time (debug)
                     try {
                         if (process.env.NODE_ENV==='development') {
-                            dataCommon.log(util.format('Cache (Execution Time:%sms):%s', (new Date()).getTime()-logTime, key));
+                            dataCommon.log(sprintf.sprintf('Cache (Execution Time:%sms):%s', (new Date()).getTime()-logTime, key));
                         }
                     }
                     catch(err) { }
@@ -543,7 +544,7 @@ DefaultValueListener.prototype.beforeSave = function(e, callback) {
     else {
         //get function context
         var functions = require('./functions'), functionContext = functions.createContext();
-        util._extend(functionContext, e);
+        _.assign(functionContext, e);
         //find all attributes that have a default value
         var attrs = e.model.attributes.filter(function(x) { return (x.value!==undefined); });
         async.eachSeries(attrs, function(attr, cb) {
@@ -709,7 +710,7 @@ DataModelSeedListener.prototype.afterUpgrade = function(event, callback) {
          */
         var items = self['seed'];
         //if model has an array of items to be seeded
-        if (util.isArray(items)) {
+        if (_.isArray(items)) {
             if (items.length==0) {
                 //if seed array is empty exit
                 return callback();

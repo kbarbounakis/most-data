@@ -203,10 +203,10 @@
             console.log(data);
         }
         else {
-            util.log(data);
+            console.log(data);
         }
         if (data.stack) {
-            util.log(data.stack);
+            console.log(data.stack);
         }
     };
     /**
@@ -215,7 +215,7 @@
      */
     dataCommon.debug = function(data) {
         if (process.env.NODE_ENV==='development')
-            util.log(data);
+            console.log(data);
     };
 
     /**

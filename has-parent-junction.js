@@ -165,7 +165,7 @@ function HasParentJunction(obj, association) {
         if (association instanceof DataAssociationMapping)
             self.mapping = association;
         else
-            self.mapping = util._extend(new DataAssociationMapping(), association);
+            self.mapping = _.assign(new DataAssociationMapping(), association);
     }
 
     var relatedModel = this.parent.context.model(self.mapping.parentModel);
@@ -278,7 +278,7 @@ function insertSingleObject_(obj, callback) {
 function insert_(obj, callback) {
     var self = this;
     var arr = [];
-    if (util.isArray(obj))
+    if (_.isArray(obj))
         arr = obj;
     else {
         arr.push(obj);
@@ -396,7 +396,7 @@ function removeSingleObject_(obj, callback) {
 
 function remove_(obj, callback) {
     var self = this, arr = [];
-    if (util.isArray(obj))
+    if (_.isArray(obj))
         arr = obj;
     else {
         arr.push(obj);

@@ -32,6 +32,7 @@
  * @ignore
  */
 var types = require('./types'),
+    sprintf = require('sprintf'),
     util = require('util'),
     dataCommon = require('./data-common'),
     moment = require('moment'),
@@ -109,7 +110,7 @@ FunctionContext.prototype.eval = function(expr, callback) {
         }
     }
     else {
-        util.log(util.format('Cannot evaluate %s.', expr1));
+        console.log(sprintf.sprintf('Cannot evaluate %s.', expr1));
         callback(new Error('Cannot evaluate expression.'));
     }
 

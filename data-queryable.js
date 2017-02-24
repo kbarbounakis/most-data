@@ -33,7 +33,7 @@
  * @ignore
  */
 var async=require('async'),
-    util = require('util'),
+    sprintf = require('sprintf'),
     _ = require("lodash"),
     dataCommon = require('./data-common'),
     mappingExtensions = require('./data-mapping-extensions'),
@@ -131,12 +131,12 @@ DataAttributeResolver.prototype.resolveNestedAttribute = function(attr) {
             }
             else {
                 arr = [];
-                if (!util.isArray(self.query.$expand)) {
+                if (!_.isArray(self.query.$expand)) {
                     arr.push(self.query.$expand);
                     this.query.$expand = arr;
                 }
                 arr = [];
-                if (util.isArray(expr))
+                if (_.isArray(expr))
                     arr.push.apply(arr, expr);
                 else
                     arr.push(expr);
@@ -172,18 +172,18 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
         var arrMember = memberExpr.split('/');
         var attrMember = self.field(arrMember[0]);
         if (_.isNil(attrMember)) {
-            throw new Error(util.format('The target model does not have an attribute named as %s',arrMember[0]));
+            throw new Error(sprintf.sprintf('The target model does not have an attribute named as %s',arrMember[0]));
         }
         //search for field mapping
         var mapping = self.inferMapping(arrMember[0]);
         if (_.isNil(mapping)) {
-            throw new Error(util.format('The target model does not have an association defined for attribute named %s',arrMember[0]));
+            throw new Error(sprintf.sprintf('The target model does not have an association defined for attribute named %s',arrMember[0]));
         }
         if (mapping.childModel===self.name && mapping.associationType==='association') {
             //get parent model
             var parentModel = self.context.model(mapping.parentModel);
             if (_.isNil(parentModel)) {
-                throw new Error(util.format('Association parent model (%s) cannot be found.', mapping.parentModel));
+                throw new Error(sprintf.sprintf('Association parent model (%s) cannot be found.', mapping.parentModel));
             }
             /**
              * store temp query expression
@@ -206,7 +206,7 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
         else if (mapping.parentModel===self.name && mapping.associationType==='association') {
             var childModel = self.context.model(mapping.childModel);
             if (_.isNil(childModel)) {
-                throw new Error(util.format('Association child model (%s) cannot be found.', mapping.childModel));
+                throw new Error(sprintf.sprintf('Association child model (%s) cannot be found.', mapping.childModel));
             }
             var res =qry.query('Unknown').select(['*']);
             var expr = qry.query().where(qry.fields.select(mapping.parentField).from(self.viewAdapter)).equal(qry.fields.select(mapping.childField).from(arrMember[0]));
@@ -215,7 +215,7 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
             return res.$expand;
         }
         else {
-            throw new Error(util.format('The association type between %s and %s model is not supported for filtering, grouping or sorting data.', mapping.parentModel , mapping.childModel));
+            throw new Error(sprintf.sprintf('The association type between %s and %s model is not supported for filtering, grouping or sorting data.', mapping.parentModel , mapping.childModel));
         }
     }
 };
@@ -556,7 +556,7 @@ DataQueryable.prototype.clone = function() {
     //set expand property
     result.$expand = this.$expand;
     //set query
-    util._extend(result.query, this.query);
+    _.assign(result.query, this.query);
     return result;
 };
 
@@ -691,10 +691,10 @@ DataQueryable.prototype.join = function(model)
     var joinModel = self.model.context.model(model);
     //validate joined model
     if (_.isNil(joinModel))
-        throw new Error(util.format("The %s model cannot be found", model));
+        throw new Error(sprintf.sprintf("The %s model cannot be found", model));
     var arr = self.model.attributes.filter(function(x) { return x.type==joinModel.name; });
     if (arr.length==0)
-        throw new Error(util.format("An internal error occured. The association between %s and %s cannot be found", this.model.name ,model));
+        throw new Error(sprintf.sprintf("An internal error occured. The association between %s and %s cannot be found", this.model.name ,model));
     var mapping = self.model.inferMapping(arr[0].name);
     var expr = qry.query();
     expr.where(self.fieldOf(mapping.childField)).equal(joinModel.fieldOf(mapping.parentField));
@@ -1255,14 +1255,14 @@ DataQueryable.prototype.select = function(attr) {
                 }
             }
         }
-        if (util.isArray(arr)) {
+        if (_.isArray(arr)) {
             if (arr.length==0)
                 arr = null;
         }
     }
     else {
         //get array of attributes
-        if (util.isArray(arg)) {
+        if (_.isArray(arg)) {
             arr = [];
             //check if field is a model dataview
             if (arg.length == 1 && typeof arg[0] === 'string') {
@@ -1335,7 +1335,7 @@ DataQueryable.prototype.alsoSelect = function(attr) {
         if (typeof attr === 'string') {
             arr.push(attr);
         }
-        else if (util.isArray(attr)) {
+        else if (_.isArray(attr)) {
             arr = attr.slice(0);
         }
         else if (typeof attr === 'object') {
@@ -1344,7 +1344,7 @@ DataQueryable.prototype.alsoSelect = function(attr) {
         var $select = self.query.$select;
         arr.forEach(function(x) {
             var field = self.fieldOf(x);
-            if (util.isArray($select[self.model.viewAdapter]))
+            if (_.isArray($select[self.model.viewAdapter]))
                 $select[self.model.viewAdapter].push(field);
 
         });
@@ -1396,7 +1396,7 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
             }
         }
         if (typeof  field === 'undefined' || field === null)
-            throw new Error(util.format('The specified field %s cannot be found in target model.', matches[2]));
+            throw new Error(sprintf.sprintf('The specified field %s cannot be found in target model.', matches[2]));
         if (_.isNil(alias)) {
             matches = /as\s(\w+)$/i.exec(attr);
             if (matches) {
@@ -1424,7 +1424,7 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
             field = this.model.field(matches[2]);
             aggr = matches[1];
             if (typeof  field === 'undefined' || field === null)
-                throw new Error(util.format('The specified field %s cannot be found in target model.', matches[2]));
+                throw new Error(sprintf.sprintf('The specified field %s cannot be found in target model.', matches[2]));
             if (_.isNil(alias)) {
                 matches = /as\s(\w+)$/i.exec(attr);
                 if (matches) {
@@ -1441,7 +1441,7 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
             if (matches) {
                 field = this.model.field(matches[1]);
                 if (typeof  field === 'undefined' || field === null)
-                    throw new Error(util.format('The specified field %s cannot be found in target model.', attr));
+                    throw new Error(sprintf.sprintf('The specified field %s cannot be found in target model.', attr));
                 alias = matches[2];
                 prop = alias || field.property || field.name;
                 return qry.fields.select(field.name).from(this.model.viewAdapter).as(prop);
@@ -1450,7 +1450,7 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
                 //try to match field with expression [field] as [alias] or [nested]/[field] as [alias]
                 field = this.model.field(attr);
                 if (typeof  field === 'undefined' || field === null)
-                    throw new Error(util.format('The specified field %s cannot be found in target model.', attr));
+                    throw new Error(sprintf.sprintf('The specified field %s cannot be found in target model.', attr));
                 var f = qry.fields.select(field.name).from(this.model.viewAdapter);
                 if (field.property)
                     return f.as(field.property);
@@ -1503,7 +1503,7 @@ DataQueryable.prototype.orderBy = function(attr) {
 DataQueryable.prototype.groupBy = function(attr) {
     var arr = [],
         arg = (arguments.length>1) ? Array.prototype.slice.call(arguments): attr;
-    if (util.isArray(arg)) {
+    if (_.isArray(arg)) {
         for (var i = 0; i < arg.length; i++) {
             var x = arg[i];
             if (DataAttributeResolver.prototype.testNestedAttribute.call(this,x)) {
@@ -1860,7 +1860,7 @@ function listInternal(callback) {
  */
 DataQueryable.prototype.countOf = function(name, alias) {
     alias = alias || 'countOf'.concat(name);
-    var res = this.fieldOf(util.format('count(%s)', name));
+    var res = this.fieldOf(sprintf.sprintf('count(%s)', name));
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
@@ -1874,7 +1874,7 @@ DataQueryable.prototype.countOf = function(name, alias) {
  */
 DataQueryable.prototype.maxOf = function(name, alias) {
     alias = alias || 'maxOf'.concat(name);
-    var res = this.fieldOf(util.format('max(%s)', name));
+    var res = this.fieldOf(sprintf.sprintf('max(%s)', name));
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
@@ -1888,7 +1888,7 @@ DataQueryable.prototype.maxOf = function(name, alias) {
  */
 DataQueryable.prototype.minOf = function(name, alias) {
     alias = alias || 'minOf'.concat(name);
-    var res = this.fieldOf(util.format('min(%s)', name));
+    var res = this.fieldOf(sprintf.sprintf('min(%s)', name));
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
@@ -1902,7 +1902,7 @@ DataQueryable.prototype.minOf = function(name, alias) {
  */
 DataQueryable.prototype.averageOf = function(name, alias) {
     alias = alias || 'avgOf'.concat(name);
-    var res = this.fieldOf(util.format('avg(%s)', name));
+    var res = this.fieldOf(sprintf.sprintf('avg(%s)', name));
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
@@ -1914,7 +1914,7 @@ DataQueryable.prototype.averageOf = function(name, alias) {
  */
 DataQueryable.prototype.sumOf = function(name, alias) {
     alias = alias || 'sumOf'.concat(name);
-    var res = this.fieldOf(util.format('sum(%s)', name));
+    var res = this.fieldOf(sprintf.sprintf('sum(%s)', name));
     if (typeof alias !== 'undefined' && alias!=null)
         res.as(alias);
     return res;
@@ -1943,7 +1943,7 @@ function countInternal(callback) {
     execute_.call(self, function(err, result) {
         if (err) { callback.call(self, err, result); return; }
         var value = null;
-        if (util.isArray(result)) {
+        if (_.isArray(result)) {
             //get first value
             if (result.length>0)
                 value = result[0][field.name];
@@ -2182,7 +2182,7 @@ DataQueryable.prototype.postExecute = function(result, callback) {
             var expandables = self.model.attributes.filter(function(x) { return x.expandable; });
             //get selected fields
             var selected = self.query.$select[self.model.viewAdapter];
-            if (util.isArray(selected)) {
+            if (_.isArray(selected)) {
                 //remove hidden fields
                 var hiddens = self.model.attributes.filter(function(x) { return x.hidden; });
                 if (hiddens.length>0) {
@@ -2243,7 +2243,7 @@ DataQueryable.prototype.postExecute = function(result, callback) {
                         e.query.$group = q.query.$group;
                     //add order fields
                     if (q.query.$order) {
-                        if (util.isArray(e.query.$order)) {
+                        if (_.isArray(e.query.$order)) {
                             q.query.$order.forEach(function(x) { e.query.$order.push(x); });
                         }
                         else {
@@ -2336,12 +2336,12 @@ function afterExecute_(result, callback) {
                     if (typeof expand.select !== 'undefined' && expand.select != null) {
                         if (typeof expand.select === 'string')
                             options["$select"] = expand.select;
-                        else if (util.isArray(expand.select))
+                        else if (_.isArray(expand.select))
                             options["$select"] = expand.select.join(",");
                     }
                     //get expand options
                     if (typeof expand.options !== 'undefined' && expand.options != null) {
-                        util._extend(options, expand.options);
+                        _.assign(options, expand.options);
                     }
                 }
                 else {
@@ -2379,9 +2379,9 @@ function afterExecute_(result, callback) {
                         if (mapping) {
                             mapping.refersTo = mapping.refersTo || field.name;
                             if (_.isObject(mapping.options)) {
-                                util._extend(options, mapping.options);
+                                _.assign(options, mapping.options);
                             }
-                            else if (util.isArray(mapping.select) && mapping.select.length>0) {
+                            else if (_.isArray(mapping.select) && mapping.select.length>0) {
                                 options['$select'] = mapping.select.join(",");
                             }
                         }
@@ -2450,7 +2450,7 @@ function afterExecute_(result, callback) {
                 }
             }
             else {
-                console.log(util.format('Data assocication mapping (%s) for %s cannot be found or the association between these two models defined more than once.', expand, self.model.title));
+                console.log(sprintf.sprintf('Data assocication mapping (%s) for %s cannot be found or the association between these two models defined more than once.', expand, self.model.title));
                 return cb(null);
             }
         }, function(err) {
@@ -2480,7 +2480,7 @@ function toArrayCallback(result, callback) {
                 return callback(null, result);
             }
             var fields = self.query.fields();
-            if (util.isArray(fields)==false) {
+            if (_.isArray(fields)==false) {
                 return callback(null, result);
             }
             if (fields.length==1) {
@@ -2670,9 +2670,9 @@ DataQueryable.prototype.expand = function(attr) {
         delete self.$expand;
     }
     else {
-        if (!util.isArray(this.$expand))
+        if (!_.isArray(this.$expand))
             self.$expand=[];
-        if (util.isArray(arg)) {
+        if (_.isArray(arg)) {
             arg.forEach(function(x) {
                 if (_.isNil(x)) {
                     return;

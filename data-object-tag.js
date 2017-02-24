@@ -153,7 +153,7 @@ function DataObjectTag(obj, association) {
         if (association instanceof types.DataAssociationMapping)
             self.mapping = association;
         else
-            self.mapping = util._extend(new types.DataAssociationMapping(), association);
+            self.mapping = _.assign(new types.DataAssociationMapping(), association);
     }
     //validate mapping
     var baseModel_;
@@ -250,7 +250,7 @@ DataObjectTag.prototype.execute = function(callback) {
 
 function insert_(obj, callback) {
     var self = this, arr = [];
-    if (util.isArray(obj))
+    if (_.isArray(obj))
         arr = obj;
     else {
         arr.push(obj);
@@ -361,7 +361,7 @@ DataObjectTag.prototype.removeAll = function(callback) {
 function remove_(obj, callback) {
     var self = this;
     var arr = [];
-    if (util.isArray(obj))
+    if (_.isArray(obj))
         arr = obj;
     else {
         arr.push(obj);

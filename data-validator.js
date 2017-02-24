@@ -32,9 +32,10 @@
 /**
  * @ignore
  */
-var _ = require("lodash"),
-    util = require("util"),
-        conf = require("./data-configuration");
+var _ = require('lodash'),
+    sprintf = require('sprintf'),
+    util = require('util'),
+        conf = require('./data-configuration');
 
     /**
      * @module most-data/data-validator
@@ -231,10 +232,10 @@ var _ = require("lodash"),
         if (val.hasOwnProperty('length')) {
             if (val.length<this.minLength) {
 
-                var innerMessage = null, message = util.format(this.message || MinLengthValidator.DefaultMessage, this.minLength);
+                var innerMessage = null, message = sprintf.sprintf(this.message || MinLengthValidator.DefaultMessage, this.minLength);
                 if (this.getContext() && (typeof this.getContext().translate === 'function')) {
                     innerMessage = message;
-                    message = util.format(this.getContext().translate(this.message || MinLengthValidator.DefaultMessage), this.minLength);
+                    message = sprintf.sprintf(this.getContext().translate(this.message || MinLengthValidator.DefaultMessage), this.minLength);
                 }
 
                 return {
@@ -321,10 +322,10 @@ var _ = require("lodash"),
             return;
         }
 
-        var innerMessage = null, message = util.format(this.message || MaxLengthValidator.DefaultMessage, this.maxLength);
+        var innerMessage = null, message = sprintf.sprintf(this.message || MaxLengthValidator.DefaultMessage, this.maxLength);
         if (this.getContext() && (typeof this.getContext().translate === 'function')) {
             innerMessage = message;
-            message = util.format(this.getContext().translate(this.message || MaxLengthValidator.DefaultMessage), this.maxLength);
+            message = sprintf.sprintf(this.getContext().translate(this.message || MaxLengthValidator.DefaultMessage), this.maxLength);
         }
 
         if (val.hasOwnProperty('length')) {
@@ -404,10 +405,10 @@ var _ = require("lodash"),
         }
         if (val<this.minValue) {
 
-            var innerMessage = null, message = util.format(this.message || MinValueValidator.DefaultMessage, this.minValue);
+            var innerMessage = null, message = sprintf.sprintf(this.message || MinValueValidator.DefaultMessage, this.minValue);
             if (this.getContext() && (typeof this.getContext().translate === 'function')) {
                 innerMessage = message;
-                message = util.format(this.getContext().translate(this.message || MinValueValidator.DefaultMessage), this.minValue);
+                message = sprintf.sprintf(this.getContext().translate(this.message || MinValueValidator.DefaultMessage), this.minValue);
             }
 
             return {
@@ -484,10 +485,10 @@ var _ = require("lodash"),
         }
         if (val>this.maxValue) {
 
-            var innerMessage = null, message = util.format(this.message || MaxValueValidator.DefaultMessage , this.maxValue);
+            var innerMessage = null, message = sprintf.sprintf(this.message || MaxValueValidator.DefaultMessage , this.maxValue);
             if (this.getContext() && (typeof this.getContext().translate === 'function')) {
                 innerMessage = message;
-                message = util.format(this.getContext().translate(this.message || MaxValueValidator.DefaultMessage), this.maxValue);
+                message = sprintf.sprintf(this.getContext().translate(this.message || MaxValueValidator.DefaultMessage), this.maxValue);
             }
 
             return {
@@ -575,10 +576,10 @@ var _ = require("lodash"),
             maxValidation = maxValidator.validateSync(val);
         }
         if (minValidator && maxValidator && (minValidation || maxValidation)) {
-            var innerMessage = null, message = util.format(this.message || RangeValidator.DefaultMessage, this.minValue, this.maxValue);
+            var innerMessage = null, message = sprintf.sprintf(this.message || RangeValidator.DefaultMessage, this.minValue, this.maxValue);
             if (this.getContext() && (typeof this.getContext().translate === 'function')) {
                 innerMessage = message;
-                message = util.format(this.getContext().translate(this.message || RangeValidator.DefaultMessage), this.minValue, this.maxValue);
+                message = sprintf.sprintf(this.getContext().translate(this.message || RangeValidator.DefaultMessage), this.minValue, this.maxValue);
             }
             return {
                 code:"ERANGE",
@@ -966,7 +967,7 @@ var _ = require("lodash"),
         if (result<=5) {
             return callback(null, {
                 code:"EPRICE",
-                "message":util.format("You have already 5 products with price lower than %s.", val)
+                "message":sprintf.sprintf("You have already 5 products with price lower than %s.", val)
             });
         }
         return callback();

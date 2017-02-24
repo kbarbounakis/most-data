@@ -32,7 +32,6 @@
  * @private
  */
 var util=require('util'),
-    array = require('most-array'),
     qry = require('most-query'),
     async = require('async'),
     types = require('./types'),
@@ -583,12 +582,12 @@ function effectiveAccounts(context, callback) {
                 var arr = [ ];
                 if (user) {
                     arr.push({ "id": user.id, "name": user.name });
-                    if (util.isArray(user.groups))
+                    if (_.isArray(user.groups))
                         user.groups.forEach(function(x) { arr.push({ "id": x.id, "name": x.name }); });
                 }
                 if (anonymous) {
                     arr.push({ "id": anonymous.id, "name": "anonymous" });
-                    if (util.isArray(anonymous.groups))
+                    if (_.isArray(anonymous.groups))
                         anonymous.groups.forEach(function(x) { arr.push({ "id": x.id, "name": x.name }); });
                 }
                 if (arr.length==0)

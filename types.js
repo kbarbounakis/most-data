@@ -33,6 +33,7 @@
  * @ignore
   */
 var events = require('events'),
+    sprintf = require('sprintf'),
     _ = require('lodash'),
     util = require('util'),
     async = require('async'),
@@ -660,35 +661,35 @@ DataQueryableField.prototype.toString = function() {
  * @returns {string}
  */
 DataQueryableField.prototype.max = function() {
-    return util.format('max(%s)', this.name) + this._as();
+    return sprintf.sprintf('max(%s)', this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.min = function() {
-    return util.format('min(%s)', this.name) + this._as();
+    return sprintf.sprintf('min(%s)', this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.count = function() {
-    return util.format('count(%s)', this.name) + this._as();
+    return sprintf.sprintf('count(%s)', this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.average = function() {
-    return util.format('avg(%s)', this.name) + this._as();
+    return sprintf.sprintf('avg(%s)', this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.length = function() {
-    return util.format('length(%s)', this.name) + this._as();
+    return sprintf.sprintf('length(%s)', this.name) + this._as();
 };
 
 ///**
@@ -696,7 +697,7 @@ DataQueryableField.prototype.length = function() {
 // * @returns {string}
 // */
 //DataQueryableField.prototype.indexOf = function(s) {
-//    return util.format('indexof(%s,%s)', this.name, qry.escape(s)) + this._as();
+//    return sprintf.sprintf('indexof(%s,%s)', this.name, qry.escape(s)) + this._as();
 //};
 
 /**
@@ -705,70 +706,70 @@ DataQueryableField.prototype.length = function() {
  * @returns {string}
  */
 DataQueryableField.prototype.substr = function(pos, length) {
-    return util.format('substring(%s,%s,%s)',this.name, pos, length) + this._as();
+    return sprintf.sprintf('substring(%s,%s,%s)',this.name, pos, length) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.floor = function() {
-    return util.format('floor(%s)',this.name) + this._as();
+    return sprintf.sprintf('floor(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.round = function() {
-    return util.format('round(%s)',this.name) + this._as();
+    return sprintf.sprintf('round(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getYear = function() {
-    return util.format('year(%s)',this.name) + this._as();
+    return sprintf.sprintf('year(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getDay = function() {
-    return util.format('day(%s)',this.name) + this._as();
+    return sprintf.sprintf('day(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getMonth = function() {
-    return util.format('month(%s)',this.name) + this._as();
+    return sprintf.sprintf('month(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getMinutes = function() {
-    return util.format('minute(%s)',this.name) + this._as();
+    return sprintf.sprintf('minute(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getHours = function() {
-    return util.format('hour(%s)',this.name) + this._as();
+    return sprintf.sprintf('hour(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getSeconds = function() {
-    return util.format('second(%s)',this.name) + this._as();
+    return sprintf.sprintf('second(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getDate = function() {
-    return util.format('date(%s)',this.name) + this._as();
+    return sprintf.sprintf('date(%s)',this.name) + this._as();
 };
 
 ///**
@@ -782,35 +783,35 @@ DataQueryableField.prototype.getDate = function() {
  * @returns {string}
  */
 DataQueryableField.prototype.toLocaleLowerCase = function() {
-    return util.format('tolower(%s)',this.name) + this._as();
+    return sprintf.sprintf('tolower(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.toLowerCase = function() {
-    return util.format('tolower(%s)',this.name) + this._as();
+    return sprintf.sprintf('tolower(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.toLocaleUpperCase = function() {
-    return util.format('toupper(%s)',this.name) + this._as();
+    return sprintf.sprintf('toupper(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.toUpperCase = function() {
-    return util.format('toupper(%s)',this.name) + this._as();
+    return sprintf.sprintf('toupper(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.trim = function() {
-    return util.format('trim(%s)',this.name) + this._as();
+    return sprintf.sprintf('trim(%s)',this.name) + this._as();
 };
 
 /** native extensions **/
@@ -923,7 +924,7 @@ DataModelBatch.prototype.prepare = function(obj) {
     var key = self.model.key();
     if (!obj)
         return;
-    var items = util.isArray(obj) ? obj : [obj];
+    var items = _.isArray(obj) ? obj : [obj];
     array(items).each(function(x) {
         if (x[key.name]!=null) {
             //state is modified
@@ -1036,7 +1037,7 @@ function DataAssociationMapping(obj) {
     this.cascade = 'none';
     this.associationType = 'association';
     //this.select = [];
-    if (typeof obj === 'object') { util._extend(this, obj); }
+    if (typeof obj === 'object') { _.assign(this, obj); }
 }
 
 

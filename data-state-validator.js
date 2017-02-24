@@ -34,8 +34,7 @@
 var dataCommon = require("./data-common"),
     _ = require("lodash"),
     types = require("./types"),
-    async = require("async"),
-    util = require("util");
+    async = require("async");
 
 /**
  * @class
@@ -120,7 +119,7 @@ function mapKey_(obj, callback) {
                 else
                     q = self.where(attr).equal(value);
             };
-            if (util.isArray(constraint.fields)) {
+            if (_.isArray(constraint.fields)) {
                 for (var i = 0; i < constraint.fields.length; i++) {
                     var attr = constraint.fields[i];
                     if (!obj.hasOwnProperty(attr)) {

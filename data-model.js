@@ -33,8 +33,8 @@
  */
 var _ = require("lodash"),
     util = require('util'),
+    sprintf = require('sprintf'),
     path = require("path"),
-    fs = require("fs"),
     async = require('async'),
     events = require('events'),
     qry = require('most-query'),
@@ -265,7 +265,7 @@ function DataModel(obj) {
     if (obj)
     {
         if (typeof obj === 'object')
-            util._extend(this, obj);
+            _.assign(this, obj);
     }
 
     /**
@@ -357,9 +357,9 @@ function DataModel(obj) {
                     //clone field
                     clone = { };
                     //get all inherited properties
-                    util._extend(clone, field);
+                    _.assign(clone, field);
                     //get all overriden properties
-                    util._extend(clone, x);
+                    _.assign(clone, x);
                     //set field model
                     clone.model = field.model;
                     //set cloned attribute
@@ -413,7 +413,7 @@ function DataModel(obj) {
     }, enumerable: false, configurable: false});
     Object.defineProperty(this, 'constraintCollection' , { get: function() {
         var arr = [];
-        if (util.isArray(self.constraints)) {
+        if (_.isArray(self.constraints)) {
             //apend constraints to collection
             self.constraints.forEach(function(x) {
                 arr.push(x);
@@ -424,7 +424,7 @@ function DataModel(obj) {
         if (baseModel) {
             //get base model constraints
             var baseArr = baseModel.constraintCollection;
-            if (util.isArray(baseArr)) {
+            if (_.isArray(baseArr)) {
                 //apend to collection
                 baseArr.forEach(function(x) {
                     arr.push(x);
@@ -651,7 +651,7 @@ DataModel.prototype.filter = function(params, callback) {
                 }
                 if (expr) {
                     var arrExpr = [];
-                    if (util.isArray(expr))
+                    if (_.isArray(expr))
                         arrExpr.push.apply(arrExpr, expr);
                     else
                         arrExpr.push(expr);
@@ -687,8 +687,8 @@ DataModel.prototype.filter = function(params, callback) {
 
     if ((params instanceof DataQueryable) && (self.name === params.model.name)) {
         var q = new DataQueryable(self);
-        util._extend(q, params);
-        util._extend(q.query, params.query);
+        _.assign(q, params);
+        _.assign(q.query, params.query);
         return callback(null, q);
     }
 
@@ -1181,17 +1181,17 @@ DataModel.prototype.convert = function(obj, typeConvert)
      */
     var DataObjectClass = getDataObjectClass_.call(self);
 
-    if (util.isArray(obj)) {
+    if (_.isArray(obj)) {
         var arr = [], src;
         obj.forEach(function(x) {
             if (typeof x !== 'undefined' && x!=null) {
                 var o = new DataObjectClass();
                 if (typeof x === 'object') {
-                    util._extend(o, x);
+                    _.assign(o, x);
                 }
                 else {
                     src = {}; src[self.primaryKey] = x;
-                    util._extend(o, src);
+                    _.assign(o, src);
                 }
                 if (typeConvert)
                     convertInternal_.call(self, o);
@@ -1205,11 +1205,11 @@ DataModel.prototype.convert = function(obj, typeConvert)
     else {
         var result = new DataObjectClass();
         if (typeof obj === 'object') {
-            util._extend(result, obj);
+            _.assign(result, obj);
         }
         else {
             src = {}; src[self.primaryKey] = obj;
-            util._extend(result, src);
+            _.assign(result, src);
         }
         if (typeConvert)
             convertInternal_.call(self, result);
@@ -1464,7 +1464,7 @@ function save_(obj, callback) {
         if (err) { callback(err); return; }
         //do save
         var arr = [];
-        if (util.isArray(obj)) {
+        if (_.isArray(obj)) {
             for (var i = 0; i < obj.length; i++)
                 arr.push(obj[i]);
         }
@@ -1552,7 +1552,7 @@ function saveBaseObject_(obj, callback) {
     callback = callback || function() {};
     var self = this, base = self.base();
     //if obj is an array of objects throw exception (invoke callback with error)
-    if (util.isArray(obj)) {
+    if (_.isArray(obj)) {
         callback.call(self, new Error('Invalid argument. Base object cannot be an array.'));
         return 0;
     }
@@ -1584,7 +1584,7 @@ function saveBaseObject_(obj, callback) {
         callback.call(self);
         return;
     }
-    if (util.isArray(obj)) {
+    if (_.isArray(obj)) {
         callback.call(self, new Error('Invalid argument. Source object cannot be an array.'));
         return 0;
     }
@@ -1628,7 +1628,7 @@ function saveBaseObject_(obj, callback) {
                 //if result is defined
                 if (result!==undefined)
                 //sync original object
-                    util._extend(e.target, result);
+                    _.assign(e.target, result);
                 //get db context
                 var db = self.context.db;
                 //create insert query
@@ -1764,7 +1764,7 @@ function update_(obj, callback) {
         callback.call(self, null);
     }
     //set state
-    if (util.isArray(obj)) {
+    if (_.isArray(obj)) {
         obj.forEach(function(x) {x['$state'] = 2; })
     }
     else {
@@ -1807,7 +1807,7 @@ function insert_(obj, callback) {
         callback.call(self, null);
     }
     //set state
-    if (util.isArray(obj)) {
+    if (_.isArray(obj)) {
         obj.forEach(function(x) {x['$state'] = 1; })
     }
     else {
@@ -1854,7 +1854,7 @@ function remove_(obj, callback) {
     self.migrate(function(err) {
         if (err) { callback(err); return; }
         var arr = [];
-        if (util.isArray(obj)) {
+        if (_.isArray(obj)) {
             for (var i = 0; i < obj.length; i++)
                 arr.push(obj[i]);
         }
@@ -1925,7 +1925,7 @@ DataModel.prototype.remove = function(obj, callback)
         callback.call(self);
         return;
     }
-    if (util.isArray(obj)) {
+    if (_.isArray(obj)) {
         callback.call(self, new Error('Invalid argument. Object cannot be an array.'));
         return 0;
     }
@@ -1960,7 +1960,7 @@ DataModel.prototype.remove = function(obj, callback)
                     return callback(err);
                 }
                 if (typeof result !== 'undefined' && result != null) {
-                    util._extend(e.target, result);
+                    _.assign(e.target, result);
                 }
                 //execute after remove events
                 self.emit('after.remove',e, function(err) {
@@ -1983,7 +1983,7 @@ function removeBaseObject_(obj, callback) {
     callback = callback || function() {};
     var self = this, base = self.base();
     //if obj is an array of objects throw exception (invoke callback with error)
-    if (util.isArray(obj)) {
+    if (_.isArray(obj)) {
         callback.call(self, new Error('Invalid argument. Object cannot be an array.'));
         return 0;
     }
@@ -2065,7 +2065,7 @@ DataModel.prototype.migrate = function(callback)
     migration.version = self.version!=null ? self.version : '0.0';
     migration.appliesTo = self.sourceAdapter;
     migration.model = self.name;
-    migration.description = util.format('%s migration (version %s)', this.title, migration.version);
+    migration.description = sprintf.sprintf('%s migration (version %s)', this.title, migration.version);
     if (context==null)
         throw new Error("The underlying data context cannot be empty.");
 
@@ -2215,7 +2215,7 @@ DataModel.prototype.dataviews = function(name) {
     var view = self.views.filter(function(x) { return re.test(x.name);})[0];
     if (_.isNil(view))
         return;
-    return util._extend(new DataModelView(self), view);
+    return _.assign(new DataModelView(self), view);
 };
 
 /**
@@ -2232,7 +2232,7 @@ DataModel.prototype.getDataView = function(name) {
     var view = self.views.filter(function(x) { return re.test(x.name);})[0];
     if (_.isNil(view))
     {
-        return util._extend(new DataModelView(self), {
+        return _.assign(new DataModelView(self), {
             "name":"default",
             "title":"Default View",
             "fields": self.attributes.map(function(x) {
@@ -2240,7 +2240,7 @@ DataModel.prototype.getDataView = function(name) {
             })
         });
     }
-    return util._extend(new DataModelView(self), view);
+    return _.assign(new DataModelView(self), view);
 };
 
 
@@ -2261,7 +2261,7 @@ DataModel.prototype.getDataView = function(name) {
             cachedField = this.attributes.find(function(x) { return x.name === field.name });
             if (cachedField) {
                 //add overriden field
-                cachedModel.fields.push(util._extend({ }, cachedField));
+                cachedModel.fields.push(_.assign({ }, cachedField));
                 cachedField = cachedModel.fields[cachedModel.fields.length-1];
                 //clear attributes
                 this._clearAttributes();
@@ -2364,7 +2364,7 @@ DataModel.prototype.inferMapping = function(name) {
             //and return
             return field.mapping;
         }
-        result = util._extend(new types.DataAssociationMapping(), field.mapping);
+        result = _.assign(new types.DataAssociationMapping(), field.mapping);
         //cache mapping
         conf.mappings_[name] = result;
         //and return
@@ -2533,12 +2533,12 @@ function validate_(obj, state, callback) {
                 }
             }
             catch (e) {
-                dataCommon.debug(util.format("Data validator module (%s) cannot be loaded", attr.validation.type));
+                dataCommon.debug(sprintf.sprintf("Data validator module (%s) cannot be loaded", attr.validation.type));
                 dataCommon.debug(e);
                 return cb(e);
             }
             if (typeof validatorModule.createInstance !== 'function') {
-                dataCommon.debug(util.format("Data validator module (%s) does not export createInstance() method.", attr.validation.type));
+                dataCommon.debug(sprintf.sprintf("Data validator module (%s) does not export createInstance() method.", attr.validation.type));
                 return cb(new Error("Invalid data validator type."));
             }
             arrValidators.push(validatorModule.createInstance(attr));
@@ -2594,7 +2594,7 @@ function validate_(obj, state, callback) {
                 });
             }
             else {
-                dataCommon.debug(util.format("Data validator (%s) does not have either validate() or validateSync() methods.", attr.validation.type));
+                dataCommon.debug(sprintf.sprintf("Data validator (%s) does not have either validate() or validateSync() methods.", attr.validation.type));
                 return cb(new Error("Invalid data validator type."));
             }
         }, function(err) {

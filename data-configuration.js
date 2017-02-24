@@ -31,8 +31,8 @@
 /**
  * @ignore
  */
-var array = require('most-array'),
-    _ = require("lodash"),
+var _ = require("lodash"),
+    sprintf = require('sprintf'),
     dataCommon = require('./data-common'),
     util = require('util'),
     path = require("path"),
@@ -186,7 +186,7 @@ function DataConfiguration(configPath) {
     var adapterTypes = { };
 
     if (config.adapterTypes) {
-        if (util.isArray(config.adapterTypes)) {
+        if (_.isArray(config.adapterTypes)) {
             config.adapterTypes.forEach(function(x) {
                 //first of all validate module
                 x.invariantName = x.invariantName || 'unknown';
@@ -200,14 +200,14 @@ function DataConfiguration(configPath) {
                         }
                         else {
                             //adapter type does not export a createInstance(options) function
-                            console.log(util.log("The specified data adapter type (%s) does not have the appropriate constructor. Adapter type cannot be loaded.", x.invariantName));
+                            console.log(sprintf.sprintf("The specified data adapter type (%s) does not have the appropriate constructor. Adapter type cannot be loaded.", x.invariantName));
                         }
                     }
                     catch(e) {
                         //catch error
                         console.log(e);
                         //and log a specific error for this adapter type
-                        console.log(util.log("The specified data adapter type (%s) cannot be instantiated. Adapter type cannot be loaded.", x.invariantName));
+                        console.log(sprintf.sprintf("The specified data adapter type (%s) cannot be instantiated. Adapter type cannot be loaded.", x.invariantName));
                     }
                     if (valid) {
                         //register adapter
@@ -219,7 +219,7 @@ function DataConfiguration(configPath) {
                     }
                 }
                 else {
-                    console.log(util.log("The specified data adapter type (%s) does not have a type defined. Adapter type cannot be loaded.", x.invariantName));
+                    console.log(sprintf.sprintf("The specified data adapter type (%s) does not have a type defined. Adapter type cannot be loaded.", x.invariantName));
                 }
             });
         }

@@ -33,6 +33,7 @@
  * @ignore
  */
 var util = require('util'),
+    sprintf = require('sprintf'),
     _ = require("lodash"),
     types = require('./types'),
     DataObjectJunction = require('./data-object-junction').DataObjectJunction,
@@ -156,7 +157,7 @@ function DataObject(type, obj)
     });
 
     if (typeof obj !== 'undefined' && obj != null) {
-        util._extend(this, obj);
+        _.assign(this, obj);
     }
 
     /**
@@ -499,7 +500,7 @@ DataObject.prototype.attr = function(name, callback)
                 }
                 else {
                     if (model.constraints.length==0) {
-                        callback(new Error( util.format('The value of property [%s] cannot be retrieved. The target data model has no constraints defined.', name)));
+                        callback(new Error( sprintf.sprintf('The value of property [%s] cannot be retrieved. The target data model has no constraints defined.', name)));
                     }
                     else {
                         var arr = model.constraints.filter(function(x) {
@@ -516,7 +517,7 @@ DataObject.prototype.attr = function(name, callback)
                             return valid;
                         });
                         if (arr.length==0) {
-                            callback(new Error( util.format('The value of property [%s] cannot be retrieved. The target data model has constraints but the required properties are missing.', name)));
+                            callback(new Error( sprintf.sprintf('The value of property [%s] cannot be retrieved. The target data model has constraints but the required properties are missing.', name)));
                         }
                         else {
                             //get first constraint

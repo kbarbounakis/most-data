@@ -31,8 +31,7 @@
 /**
  * @ignore
  */
-var util = require('util'),
-    _ = require('lodash'),
+var _ = require('lodash'),
     types = require('./types'),
     DataField = types.DataField;
 
@@ -68,15 +67,15 @@ function DataModelView(model) {
             var attrs = [];
             self.fields.forEach(function(x) {
                 if (self.model) {
-                    var field = util._extend(new DataField(), self.model.field(x.name));
+                    var field = _.assign(new DataField(), self.model.field(x.name));
                     if (field)
-                        attrs.push(util._extend(field, x));
+                        attrs.push(_.assign(field, x));
                     else
-                        attrs.push(util._extend({}, x));
+                        attrs.push(_.assign({}, x));
                 }
                 else
                 //unbound view (?)
-                    attrs.push(util._extend({}, x));
+                    attrs.push(_.assign({}, x));
 
             });
             return attrs;
@@ -93,7 +92,7 @@ DataModelView.prototype.cast = function(obj) {
     var localFields = this.fields.filter(function(y) {
         return !_.isNil(self.model.field(y.name));
     });
-    if (util.isArray(obj)) {
+    if (_.isArray(obj)) {
         var arr = [];
         obj.forEach(function(x) {
             res = {};

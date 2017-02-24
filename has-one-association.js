@@ -33,6 +33,7 @@
  * @ignore
  */
 var util = require('util'),
+    _ = require('lodash'),
     qry = require('most-query'),
     DataAssociationMapping = require('./types').DataAssociationMapping,
     DataQueryable = require('./data-queryable').DataQueryable;
@@ -117,7 +118,7 @@ function HasOneAssociation(obj, association)
         if (association instanceof DataAssociationMapping)
             self.mapping = association;
         else
-            self.mapping = util._extend(new DataAssociationMapping(), association);
+            self.mapping = _.assign(new DataAssociationMapping(), association);
     }
 
     var q = null;
