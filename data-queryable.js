@@ -2176,7 +2176,7 @@ DataQueryable.prototype.postExecute = function(result, callback) {
     self.migrate(function(err) {
         if (err) { callback(err); return; }
         var e = { model:self.model, query:self.query, type:'select' };
-        var flatten = self.$flatten || (self.getLevels()==0);
+        var flatten = self.$flatten || (self.getLevels()===0);
         if (!flatten) {
             //get expandable fields
             var expandables = self.model.attributes.filter(function(x) { return x.expandable; });
@@ -2190,7 +2190,7 @@ DataQueryable.prototype.postExecute = function(result, callback) {
                         var x = selected[i];
                         var hiddenField = hiddens.find(function(y) {
                             var f = x instanceof qry.classes.QueryField ? x : new qry.classes.QueryField(x);
-                            return f.name() == y.name;
+                            return f.name() === y.name;
                         });
                         if (hiddenField) {
                             selected.splice(i, 1);
@@ -2204,7 +2204,7 @@ DataQueryable.prototype.postExecute = function(result, callback) {
                         //get field
                         var field = expandables.find(function(y) {
                             var f = x instanceof qry.classes.QueryField ? x : new qry.classes.QueryField(x);
-                            return f.name() == y.name;
+                            return f.name() === y.name;
                         });
                         //add expandable models
                         if (field) {
@@ -2283,7 +2283,7 @@ DataQueryable.prototype.postExecute = function(result, callback) {
                 var result = e['result'];
                 afterExecute_.call(self, result, function(err, result) {
                     if (err) { callback(err); return; }
-                    if (afterListenerCount==0) { callback(null, result); return; }
+                    if (afterListenerCount===0) { callback(null, result); return; }
                     //raise after execute event
                     self.model.emit('after.execute', e, function(err) {
                         if (err) { callback(err); return; }
@@ -2296,7 +2296,7 @@ DataQueryable.prototype.postExecute = function(result, callback) {
                 if (err) { callback(err); return; }
                 afterExecute_.call(self, result, function(err, result) {
                     if (err) { callback(err); return; }
-                    if (afterListenerCount==0) { callback(null, result); return; }
+                    if (afterListenerCount===0) { callback(null, result); return; }
                     //raise after execute event
                     e.result = result;
                     self.model.emit('after.execute', e, function(err) {
@@ -2333,14 +2333,14 @@ function afterExecute_(result, callback) {
                 var mapping = null, options = { };
                 if (expand instanceof types.DataAssociationMapping) {
                     mapping = expand;
-                    if (typeof expand.select !== 'undefined' && expand.select != null) {
+                    if (typeof expand.select !== 'undefined' && expand.select !== null) {
                         if (typeof expand.select === 'string')
                             options["$select"] = expand.select;
                         else if (_.isArray(expand.select))
                             options["$select"] = expand.select.join(",");
                     }
                     //get expand options
-                    if (typeof expand.options !== 'undefined' && expand.options != null) {
+                    if (typeof expand.options !== 'undefined' && expand.options !== null) {
                         _.assign(options, expand.options);
                     }
                 }
@@ -2355,7 +2355,7 @@ function afterExecute_(result, callback) {
                         //get expand attribute from Object.name property
                         expandAttr = expand.name;
                         //get expand options
-                        if (typeof expand.options !== 'undefined' && expand.options != null) {
+                        if (typeof expand.options !== 'undefined' && expand.options !== null) {
                             options = expand.options;
                         }
                     }
@@ -2365,7 +2365,7 @@ function afterExecute_(result, callback) {
                     }
                     field = self.model.field(expandAttr);
                     if (typeof field === 'undefined')
-                        field = self.model.attributes.find(function(x) { return x.type==expandAttr });
+                        field = self.model.attributes.find(function(x) { return x.type===expandAttr });
                     if (field) {
                         mapping = self.model.inferMapping(field.name);
                         if (expands.find(function(x) {
@@ -2411,8 +2411,8 @@ function afterExecute_(result, callback) {
                 //clone mapping
                 var thisMapping = _.assign({}, mapping);
                 thisMapping.options = options;
-                if (mapping.associationType=='association' || mapping.associationType=='junction') {
-                    if ((mapping.parentModel==self.model.name) && (mapping.associationType=='association')) {
+                if (mapping.associationType==='association' || mapping.associationType==='junction') {
+                    if ((mapping.parentModel===self.model.name) && (mapping.associationType==='association')) {
                         return mappingExtensions.extend(thisMapping).for(self).getAssociatedChilds_v1(result)
                             .then(function() {
                                 return cb();
@@ -2420,7 +2420,7 @@ function afterExecute_(result, callback) {
                                 return cb(err);
                             });
                     }
-                    else if (mapping.childModel==self.model.name && mapping.associationType=='junction') {
+                    else if (mapping.childModel===self.model.name && mapping.associationType==='junction') {
                         return mappingExtensions.extend(thisMapping).for(self).getParents_v1(result)
                             .then(function() {
                                 return cb();
@@ -2428,7 +2428,7 @@ function afterExecute_(result, callback) {
                            return cb(err);
                         });
                     }
-                    else if (mapping.parentModel==self.model.name && mapping.associationType=='junction') {
+                    else if (mapping.parentModel===self.model.name && mapping.associationType==='junction') {
                         return mappingExtensions.extend(thisMapping).for(self).getChilds_v1(result)
                             .then(function() {
                                 return cb();
@@ -2436,7 +2436,7 @@ function afterExecute_(result, callback) {
                                 return cb(err);
                             });
                     }
-                    else if ((mapping.childModel==self.model.name) && (mapping.associationType=='association')) {
+                    else if ((mapping.childModel===self.model.name) && (mapping.associationType==='association')) {
                         return mappingExtensions.extend(thisMapping).for(self).getAssociatedParents_v1(result)
                             .then(function() {
                                 return cb();

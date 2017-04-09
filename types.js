@@ -325,9 +325,12 @@ EventEmitter2.prototype.emit = function(event, args, callback)
     //ensure callback
     callback = callback || function() {};
     //get listeners
+    if (typeof this.listeners !== 'function') {
+        console.log('undefined listeners');
+    }
     var listeners = this.listeners(event);
     //validate listeners
-    if (listeners.length==0) {
+    if (listeners.length===0) {
         //exit emitter
         callback.call(self, null);
         return;

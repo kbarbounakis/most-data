@@ -87,7 +87,7 @@ function DefaultDataContext()
         var adapter = self.getConfiguration().adapters.find(function(x) {
             return x["default"];
         });
-        if (typeof adapter ==='undefined' || adapter==null) {
+        if (typeof adapter ==='undefined' || adapter===null) {
             er = new Error('The default data adapter is missing.'); er.code = 'EADAPTER';
             throw er;
         }
@@ -144,7 +144,7 @@ DefaultDataContext.prototype.getConfiguration = function() {
  */
 DefaultDataContext.prototype.model = function(name) {
     var self = this;
-    if ((name == null) || (name === undefined))
+    if ((name === null) || (name === undefined))
         return null;
     var obj = self.getConfiguration().model(name);
     if (_.isNil(obj))

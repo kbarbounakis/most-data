@@ -527,36 +527,44 @@ DataModel.prototype.clone = function(context) {
     //}
     //register configuration listeners
     if (this.eventListeners) {
+        var listenerModulePath;
         for (var i = 0; i < this.eventListeners.length; i++) {
             var listener = this.eventListeners[i];
             //get listener type (e.g. type: require('./custom-listener.js'))
             if (listener.type && !listener.disabled)
             {
+                listenerModulePath = listener.type;
+                if (/^\./.test(listener.type)) {
+                    listenerModulePath = path.resolve(process.cwd(),listener.type);
+                }
+                else if (/^\//.test(listener.type)) {
+                    listenerModulePath = path.join(process.cwd(), listener.type);
+                }
                 /**
                  * Load event listener from the defined type
                  * @type DataEventListener
                  */
-                var m = listener.type.indexOf('/')==0 ? require(path.join(process.cwd(), listener.type)) : require(listener.type);
+                var m = require(listenerModulePath);
                 //if listener exports beforeSave function then register this as before.save event listener
-                if (typeof m.beforeSave == 'function')
+                if (typeof m.beforeSave === 'function')
                     this.on('before.save', m.beforeSave);
                 //if listener exports afterSave then register this as after.save event listener
-                if (typeof m.afterSave == 'function')
+                if (typeof m.afterSave === 'function')
                     this.on('after.save', m.afterSave);
                 //if listener exports beforeRemove then register this as before.remove event listener
-                if (typeof m.beforeRemove == 'function')
+                if (typeof m.beforeRemove === 'function')
                     this.on('before.remove', m.beforeRemove);
                 //if listener exports afterRemove then register this as after.remove event listener
-                if (typeof m.afterRemove == 'function')
+                if (typeof m.afterRemove === 'function')
                     this.on('after.remove', m.afterRemove);
                 //if listener exports beforeExecute then register this as before.execute event listener
-                if (typeof m.beforeExecute == 'function')
+                if (typeof m.beforeExecute === 'function')
                     this.on('before.execute', m.beforeExecute);
                 //if listener exports afterExecute then register this as after.execute event listener
-                if (typeof m.afterExecute == 'function')
+                if (typeof m.afterExecute === 'function')
                     this.on('after.execute', m.afterExecute);
                 //if listener exports afterUpgrade then register this as after.upgrade event listener
-                if (typeof m.afterUpgrade == 'function')
+                if (typeof m.afterUpgrade === 'function')
                     this.on('after.upgrade', m.afterUpgrade);
             }
         }
@@ -619,10 +627,10 @@ DataModel.prototype.asQueryable = function() {
 DataModel.prototype.filter = function(params, callback) {
     var self = this;
     var parser = qry.openData.createParser(), $joinExpressions = [], view;
-    if (typeof params !== 'undefined' && params != null && typeof params.$select === 'string') {
+    if (typeof params !== 'undefined' && params !== null && typeof params.$select === 'string') {
         //split select
         var arr = params.$select.split(',');
-        if (arr.length==1) {
+        if (arr.length===1) {
             //try to get data view
             view = self.dataviews(arr[0]);
         }
@@ -1557,7 +1565,7 @@ function saveBaseObject_(obj, callback) {
         return 0;
     }
     //if current model does not have a base model
-    if (base==null) {
+    if (base===null) {
         //exit operation
         callback.call(self, null);
     }
@@ -2042,7 +2050,7 @@ DataModel.prototype.migrate = function(callback)
     var conf = self.context.getConfiguration();
     conf.cache = conf.cache || {};
     conf.cache[self.name] = conf.cache[self.name] || { };
-    if (conf.cache[self.name].version==self.version) {
+    if (conf.cache[self.name].version===self.version) {
         //model has already been migrated, so do nothing
         return callback();
     }
@@ -2053,20 +2061,20 @@ DataModel.prototype.migrate = function(callback)
     var context = self.context;
     //do migration
     var fields = self.attributes.filter(function(x) {
-        return (self.name == x.model) && (!x.many);
+        return (self.name === x.model) && (!x.many);
     });
 
-    if ((fields==null) || (fields.length==0))
+    if ((fields===null) || (fields.length===0))
         throw new Error("Migration is not valid for this model. The model has no fields.");
     var migration = new types.DataModelMigration();
     migration.add = _.map(fields, function(x) {
         return _.assign({ }, x);
     });
-    migration.version = self.version!=null ? self.version : '0.0';
+    migration.version = self.version!==null ? self.version : '0.0';
     migration.appliesTo = self.sourceAdapter;
     migration.model = self.name;
     migration.description = sprintf.sprintf('%s migration (version %s)', this.title, migration.version);
-    if (context==null)
+    if (context===null)
         throw new Error("The underlying data context cannot be empty.");
 
     //get all related models
@@ -2083,7 +2091,7 @@ DataModel.prototype.migrate = function(callback)
     // });
     var db = context.db;
     var baseModel = self.base();
-    if (baseModel!=null) {
+    if (baseModel!==null) {
         models.push(baseModel);
     }
     //validate associated models
@@ -2120,7 +2128,7 @@ DataModel.prototype.migrate = function(callback)
 
     //execute transaction
     db.executeInTransaction(function(tr) {
-        if (models.length==0) {
+        if (models.length===0) {
             self.emit('before.upgrade', { model:self }, function(err) {
                 if (err) { return tr(err); }
                 db.migrate(migration, function(err) {
@@ -2177,7 +2185,7 @@ DataModel.prototype.migrate = function(callback)
  */
 DataModel.prototype.key = function()
 {
-    return this.attributes.find(function(x) { return x.primary==true; });
+    return this.attributes.find(function(x) { return x.primary===true; });
 };
 /**
  * Gets an instance of DataField class based on the given name.
@@ -2188,7 +2196,7 @@ DataModel.prototype.field = function(name)
 {
     if (typeof name !== 'string')
         return null;
-    return this.attributes.find(function(x) { return (x.name==name) || (x.property==name); });
+    return this.attributes.find(function(x) { return (x.name===name) || (x.property===name); });
 };
 /**
  *

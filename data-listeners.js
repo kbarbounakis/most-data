@@ -60,15 +60,15 @@ NotNullConstraintListener.prototype.beforeSave = function(e, callback) {
         function(x) {
             return !x.primary && !(typeof x.nullable === 'undefined' ? true: x.nullable);
         });
-    if (attrs.length==0) {
+    if (attrs.length===0) {
         callback(null);
         return 0;
     }
     async.eachSeries(attrs, function(attr, cb)
     {
         var name = attr.property || attr.name, value = e.target[name];
-        if ((((value == null) || (value===undefined))  && (e.state==1))
-            || ((value == null) && (typeof value!=='undefined') && (e.state == 2)))
+        if ((((value === null) || (value===undefined))  && (e.state===1))
+            || ((value === null) && (typeof value!=='undefined') && (e.state === 2)))
         {
             var er = new types.NotNullException('A value is required.', null, e.model.name, attr.name);
             if (process.env.NODE_ENV==='development') { dataCommon.log(er); }
@@ -97,7 +97,7 @@ function UniqueContraintListener() {
 UniqueContraintListener.prototype.beforeSave = function(e, callback) {
 
     //there are no constraints
-    if (e.model.constraints==null)
+    if (e.model.constraints===null)
     {
         //do nothing
         callback(null);
@@ -107,7 +107,7 @@ UniqueContraintListener.prototype.beforeSave = function(e, callback) {
     var constraints = e.model.constraints.filter(function(x) {
         return (x.type=='unique');
     });
-    if (constraints.length==0) {
+    if (constraints.length===0) {
         //do nothing
         callback(null);
         return;
@@ -156,9 +156,9 @@ UniqueContraintListener.prototype.beforeSave = function(e, callback) {
                 }
                 else {
                     var objectExists = true;
-                    if (e.state==2) {
+                    if (e.state===2) {
                         //validate object id (check if target object is the same with the returned object)
-                        objectExists = (result[e.model.primaryKey]!= e.target[e.model.primaryKey]);
+                        objectExists = (result[e.model.primaryKey]!== e.target[e.model.primaryKey]);
                     }
                     //if object already exists
                     if (objectExists) {
@@ -263,15 +263,15 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
             return cb();
         }
         //check javascript: keyword for code evaluation
-        if (expr.indexOf('javascript:')==0) {
+        if (expr.indexOf('javascript:')===0) {
             //get expression
             var fnstr = expr.substring('javascript:'.length);
             //if expression starts with function add parenthesis (fo evaluation)
-            if (fnstr.indexOf('function')==0) {
+            if (fnstr.indexOf('function')===0) {
                 fnstr = '('.concat(fnstr,')');
             }
             //if expression starts with return then normalize expression (surround with function() {} keyword)
-            else if (fnstr.indexOf('return')==0) {
+            else if (fnstr.indexOf('return')===0) {
                 fnstr = '(function() { '.concat(fnstr,'})');
             }
             var value = eval(fnstr);
@@ -279,7 +279,7 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
             if (typeof value === 'function') {
                 //then call function against the target object
                 var value1 = value.call(functionContext);
-                if (typeof value1 !== 'undefined' && value1 !=null && typeof value1.then === 'function') {
+                if (typeof value1 !== 'undefined' && value1 !==null && typeof value1.then === 'function') {
                     //we have a promise, so we need to wait for answer
                     value1.then(function(result) {
                         //otherwise set result
@@ -294,7 +294,7 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
                     return cb();
                 }
             }
-            else if (typeof value !== 'undefined' && value !=null && typeof value.then === 'function') {
+            else if (typeof value !== 'undefined' && value !==null && typeof value.then === 'function') {
                 //we have a promise, so we need to wait for answer
                 value.then(function(result) {
                     //otherwise set result
@@ -310,7 +310,7 @@ CalculatedValueListener.prototype.beforeSave = function(e, callback) {
                 return cb();
             }
         }
-        else if (expr.indexOf('fn:')==0) {
+        else if (expr.indexOf('fn:')===0) {
            return cb(new Error ('fn: syntax is deprecated.'));
         }
         else {
