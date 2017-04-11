@@ -168,6 +168,10 @@ function DataObject(type, obj)
         return this.$$id;
     };
 
+    this.silent = function(value) {
+        return this.getModel().silent(value);
+    }
+
 }
 util.inherits(DataObject, types.EventEmitter2);
 
@@ -372,13 +376,13 @@ DataObject.prototype.property = function(name) {
         };
     }
     //validate field association
-    if (mapping.associationType=='association') {
-        if (mapping.parentModel==model.name)
+    if (mapping.associationType==='association') {
+        if (mapping.parentModel===model.name)
             return new HasManyAssociation(self, mapping);
         else
             return new HasOneAssociation(self, mapping);
     }
-    else if (mapping.associationType=='junction') {
+    else if (mapping.associationType==='junction') {
         if (mapping.parentModel===model.name) {
             if (typeof mapping.childModel === 'undefined') {
                 return new DataObjectTag(self, mapping);
