@@ -80,12 +80,6 @@ function DefaultDataContext()
     };
     var self = this;
 
-    self.getDataAdapter = function() {
-        return _.find(self.getConfiguration().adapters, function(x) {
-            return x["default"];
-        });
-    };
-
     self.getDb = function() {
 
         if (db_)
@@ -206,12 +200,6 @@ function NamedDataContext(name)
     };
     //set the name specified
     var self = this, name_ = name;
-
-    self.getDataAdapter = function() {
-        return _.find(self.getConfiguration().adapters, function(x) {
-            return x.name === name;
-        });
-    };
 
     self.getDb = function() {
         if (db_)
