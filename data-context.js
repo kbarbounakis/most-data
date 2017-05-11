@@ -80,14 +80,22 @@ function DefaultDataContext()
     };
     var self = this;
 
-    self.getDb = function() {
-        if (db_)
-            return db_;
-        //otherwise load database options from configuration
-        var adapter = self.getConfiguration().adapters.find(function(x) {
+    self.getDataAdapter = function() {
+        return _.find(self.getConfiguration().adapters, function(x) {
             return x["default"];
         });
-        if (typeof adapter ==='undefined' || adapter===null) {
+    };
+
+    self.getDb = function() {
+
+        if (db_)
+            return db_;
+        var er;
+        //otherwise load database options from configuration
+        var adapter = _.find(self.getConfiguration().adapters, function(x) {
+            return x["default"];
+        });
+        if (_.isNil(adapter)) {
             er = new Error('The default data adapter is missing.'); er.code = 'EADAPTER';
             throw er;
         }
@@ -96,7 +104,6 @@ function DefaultDataContext()
          */
         var adapterType = self.getConfiguration().adapterTypes[adapter.invariantName];
         //validate data adapter type
-        var er;
         if (_.isNil(adapterType)) {
             er = new Error('Invalid adapter type.'); er.code = 'EADAPTER';
             throw er;
@@ -200,15 +207,21 @@ function NamedDataContext(name)
     //set the name specified
     var self = this, name_ = name;
 
+    self.getDataAdapter = function() {
+        return _.find(self.getConfiguration().adapters, function(x) {
+            return x.name === name;
+        });
+    };
+
     self.getDb = function() {
         if (db_)
             return db_;
         //otherwise load database options from configuration
         var adapter = self.getConfiguration().adapters.find(function(x) {
-            return x.name == name_;
+            return x.name === name_;
         });
         var er;
-        if (typeof adapter ==='undefined' || adapter==null) {
+        if (typeof adapter ==='undefined' || adapter===null) {
             er = new Error('The specified data adapter is missing.'); er.code = 'EADAPTER';
             throw er;
         }
@@ -262,7 +275,7 @@ util.inherits(NamedDataContext, types.DataContext);
  */
 NamedDataContext.prototype.model = function(name) {
     var self = this;
-    if ((name == null) || (name === undefined))
+    if ((name === null) || (name === undefined))
         return null;
     var obj = self.getConfiguration().model(name);
     if (_.isNil(obj))

@@ -2440,9 +2440,9 @@ DataModel.prototype.inferMapping = function(name) {
         }
         else {
 
-            //validate pluralize
-            var re = new RegExp(DataModel.PluralExpression.source);
-            if (re.test(field.name) || field.many) {
+            var re = new RegExp(DataModel.PluralExpression.source),
+                many = _.isBoolean(field.many) ? field.many : re.test(field.name);
+            if (many) {
                 //return a data junction
                 result = new types.DataAssociationMapping({
                     associationAdapter: self.name.concat(_.upperFirst(field.name)),
@@ -2744,6 +2744,24 @@ DataModel.prototype.getTypedItems = function() {
 };
 
 /**
+ * Gets a collection of DataObject instances by executing the defined query.
+ * @returns {Promise|*}
+ */
+DataModel.prototype.getItems = function() {
+    var self = this,
+        d = Q.defer();
+    process.nextTick(function() {
+        var q = new DataQueryable(self);
+        q.getItems().then(function (result) {
+            return d.resolve(result);
+        }).catch(function(err) {
+            return d.reject(err);
+        });
+    });
+    return d.promise;
+};
+
+/**
  * Gets a result set that contains a collection of DataObject instances by executing the defined query.
  * @returns {Promise|*}
  */
@@ -2753,6 +2771,24 @@ DataModel.prototype.getTypedList = function() {
     process.nextTick(function() {
         var q = new DataQueryable(self);
         q.getTypedList().then(function (result) {
+            return d.resolve(result);
+        }).catch(function(err) {
+            return d.reject(err);
+        });
+    });
+    return d.promise;
+};
+
+/**
+ * Gets a result set that contains a collection of DataObject instances by executing the defined query.
+ * @returns {Promise|*}
+ */
+DataModel.prototype.getList = function() {
+    var self = this,
+        d = Q.defer();
+    process.nextTick(function() {
+        var q = new DataQueryable(self);
+        q.list().then(function (result) {
             return d.resolve(result);
         }).catch(function(err) {
             return d.reject(err);
