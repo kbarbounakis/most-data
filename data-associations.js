@@ -57,7 +57,7 @@ DataObjectAssociationListener.prototype.beforeSave = function(e, callback) {
             var keys = Object.keys(e.target);
             var mappings = [];
             keys.forEach(function(x) {
-                if (e.target.hasOwnProperty(x) && typeof e.target[x] === 'object' && e.target[x] != null) {
+                if (e.target.hasOwnProperty(x) && typeof e.target[x] === 'object' && e.target[x] !== null) {
                         //try to find field mapping, if any
                         var mapping = e.model.inferMapping(x);
                         if (mapping && mapping.associationType==='association' && mapping.childModel===e.model.name)
@@ -101,7 +101,7 @@ DataObjectAssociationListener.prototype.beforeSave = function(e, callback) {
                                 er = new Error('An associated object cannot be found.');er.code = 'EDATA';er.model = associatedModel.name;
                                 cb(er);
                             }
-                            else if (result.total==0) {
+                            else if (result.total===0) {
                                 er = new Error('An associated object cannot be found.');er.code = 'EDATA';er.model = associatedModel.name;
                                 cb(er);
                             }
@@ -137,7 +137,7 @@ DataObjectAssociationListener.prototype.beforeSave = function(e, callback) {
  */
 DataObjectAssociationListener.prototype.afterSave = function(event, callback) {
     try {
-        if (typeof event.target === 'undefined' || event.target==null) {
+        if (typeof event.target === 'undefined' || event.target===null) {
             callback(null);
         }
         else {
@@ -150,7 +150,7 @@ DataObjectAssociationListener.prototype.afterSave = function(event, callback) {
                      */
                     var mapping = event.model.inferMapping(x);
                     if (mapping)
-                        if (mapping.associationType=='junction') {
+                        if (mapping.associationType==='junction') {
                             mappings.push({ name:x, mapping:mapping });
                         }
                 }
@@ -161,7 +161,7 @@ DataObjectAssociationListener.prototype.afterSave = function(event, callback) {
                  * @param {function(Error=)} cb
                  */
                 function(x, cb) {
-                    if (x.mapping.associationType=='junction') {
+                    if (x.mapping.associationType==='junction') {
                         var obj = event.model.convert(event.target);
                         /**
                          * @type {*|{deleted:Array}}
@@ -174,10 +174,10 @@ DataObjectAssociationListener.prototype.afterSave = function(event, callback) {
                             if (event.model.$silent) {
                                 junction.getBaseModel().silent();
                             }
-                            if (event.state==1 || event.state==2) {
+                            if (event.state===1 || event.state===2) {
                                 var toBeRemoved = [], toBeInserted = [];
                                 _.forEach(childs, function(x) {
-                                    if (x.$state == 4) {
+                                    if (x.$state === 4) {
                                         toBeRemoved.push(x);
                                     }
                                     else {
@@ -198,7 +198,7 @@ DataObjectAssociationListener.prototype.afterSave = function(event, callback) {
                         }
                         else if (x.mapping.parentModel===event.model.name) {
 
-                            if (event.state==1 || event.state==2) {
+                            if (event.state===1 || event.state===2) {
                                 var DataObjectJunction = require('./data-object-junction').DataObjectJunction,
                                     DataObjectTag = require('./data-object-tag').DataObjectTag;
 
@@ -213,7 +213,7 @@ DataObjectAssociationListener.prototype.afterSave = function(event, callback) {
                                         var toBeInserted = childs.filter(function(x) { return result.indexOf(x)<0; });
                                         if (toBeRemoved.length>0) {
                                             return tags.remove(toBeRemoved).then(function() {
-                                                if (toBeInserted.length==0) { return cb(); }
+                                                if (toBeInserted.length===0) { return cb(); }
                                                 return tags.insert(toBeInserted).then(function() {
                                                     return cb();
                                                 });
@@ -221,7 +221,7 @@ DataObjectAssociationListener.prototype.afterSave = function(event, callback) {
                                                 return cb(err);
                                             });
                                         }
-                                        if (toBeInserted.length==0) { return cb(); }
+                                        if (toBeInserted.length===0) { return cb(); }
                                         return tags.insert(toBeInserted).then(function() {
                                             return cb();
                                         });
@@ -236,7 +236,7 @@ DataObjectAssociationListener.prototype.afterSave = function(event, callback) {
                                         if (err) { return cb(err); }
                                         var toBeRemoved = [], toBeInserted = [];
                                         _.forEach(childs, function(x) {
-                                            if (x.$state == 4) {
+                                            if (x.$state === 4) {
                                                 toBeRemoved.push(x);
                                             }
                                             else {

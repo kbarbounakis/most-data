@@ -33,7 +33,7 @@
  * @private
  */
 var _ = require("lodash"),
-    types = require("./types")
+    types = require("./types"),
     async = require("async");
 
 function beforeSave_(attr, event, callback) {
@@ -50,13 +50,13 @@ function beforeSave_(attr, event, callback) {
     if (_.isNil(nestedModel)) {
         return callback();
     }
-    if (event.state==1) {
+    if (event.state===1) {
         //save nested object
         nestedModel.silent().save(nestedObj, function(err) {
             callback(err);
         });
     }
-    else if (event.state == 2) {
+    else if (event.state === 2) {
         //first of all get original address from db
         event.model.where(key)
             .equal(event.target[key])
@@ -109,7 +109,7 @@ function beforeSaveMany_(attr, event, callback) {
         return callback(new types.DataException("EJUNCT","Invalid argument type. Expected array.",null, event.model.name, name));
     }
     //if nested array does not have any data
-    if (nestedObj.length==0) {
+    if (nestedObj.length===0) {
         //do nothing
         return callback();
     }
@@ -122,7 +122,7 @@ function beforeSaveMany_(attr, event, callback) {
     //get nested primary key
     var nestedKey = nestedModel.getPrimaryKey();
     //on insert
-    if (event.state==1) {
+    if (event.state===1) {
         //enumerate nested objects and set state to new
         nestedObj.forEach(function(x) {
             //delete identifier
@@ -139,7 +139,7 @@ function beforeSaveMany_(attr, event, callback) {
         });
     }
         //on update
-    else if (event.state == 2) {
+    else if (event.state === 2) {
         //first of all get original associated object, if any
         event.model.where(key)
             .equal(event.target[key])
@@ -153,10 +153,9 @@ function beforeSaveMany_(attr, event, callback) {
                 //get original nested objects
                 var originalNestedObjects = result[name] || [];
                 //enumerate nested objects
-                nestedObj.forEach(function(x) {
-                    //search in original nested objects
-                    var obj = originalNestedObjects.find(function(y) { return y[nestedKey] == x[nestedKey]; });
-                    //if object already exists
+
+                _.forEach(nestedObj, function(x) {
+                    var obj = _.find(originalNestedObjects, function(y) { return y[nestedKey] === x[nestedKey]; });
                     if (obj) {
                         //force state to update ($state=2)
                         x.$state = 2;
@@ -168,10 +167,24 @@ function beforeSaveMany_(attr, event, callback) {
                         x.$state = 1;
                     }
                 });
+
+                _.forEach(originalNestedObjects, function(x) {
+                    var obj = _.find(nestedObj, function(y) {
+                        return y[nestedKey] === x[nestedKey];
+                    });
+                    if (_.isNil(obj)) {
+                        //force state to delete ($state=4)
+                        x.$state = 4;
+                        nestedObj.push(x);
+                    }
+                });
+
                 //and finally save objects
                 nestedModel.silent().save(nestedObj, function(err) {
                     //remove $state attribute
-                    nestedObj.forEach(function(x) { delete x.$state; });
+                    _.forEach(nestedObj, function(x) {
+                        delete x.$state;
+                    });
                     if (err) { return callback(err); }
                     return callback();
                 });
@@ -202,8 +215,11 @@ DataNestedObjectListener.prototype.beforeSave = function (event, callback) {
             return x.nested && (x.model === event.model.name);
         });
         //if there are no attribute defined as nested do nothing
-        if (nested.length == 0) { return callback(); }
+        if (nested.length === 0) { return callback(); }
         async.eachSeries(nested, function(attr, cb) {
+            if (attr.many===true) {
+                return beforeSaveMany_(attr, event, cb);
+            }
             return beforeSave_(attr, event, cb);
         }, function(err) {
             return callback(err);
@@ -273,7 +289,7 @@ DataNestedObjectListener.prototype.beforeRemove = function (event, callback) {
             return x.nested && (x.model === event.model.name);
         });
         //if there are no attribute defined as nested, do nothing and exit
-        if (nested.length == 0) { return callback(); }
+        if (nested.length === 0) { return callback(); }
         async.eachSeries(nested, function(attr, cb) {
             return beforeRemove_(attr, event, cb);
         }, function(err) {

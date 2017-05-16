@@ -503,24 +503,24 @@ DataObject.prototype.attr = function(name, callback)
                     });
                 }
                 else {
-                    if (model.constraints.length==0) {
+                    if (model.constraints.length===0) {
                         callback(new Error( sprintf.sprintf('The value of property [%s] cannot be retrieved. The target data model has no constraints defined.', name)));
                     }
                     else {
                         var arr = model.constraints.filter(function(x) {
                             var valid = true;
-                            if (x.fields.length==0)
+                            if (x.fields.length===0)
                                 return false;
                             for (var i = 0; i < x.fields.length; i++) {
                                 var field = x.fields[i];
-                                if (self.hasOwnProperty(field)==false) {
+                                if (self.hasOwnProperty(field)===false) {
                                     valid = false;
                                     break;
                                 }
                             }
                             return valid;
                         });
-                        if (arr.length==0) {
+                        if (arr.length===0) {
                             callback(new Error( sprintf.sprintf('The value of property [%s] cannot be retrieved. The target data model has constraints but the required properties are missing.', name)));
                         }
                         else {
@@ -529,7 +529,7 @@ DataObject.prototype.attr = function(name, callback)
                             for (var i = 0; i < constraint.fields.length; i++) {
                                 var attr = constraint.fields[i];
                                 var value = self[attr];
-                                if (q==null)
+                                if (q===null)
                                     q = model.where(attr).equal(value);
                                 else
                                     q.and(attr).equal(value);
