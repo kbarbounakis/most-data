@@ -474,7 +474,7 @@ function anonymousUser(context, callback) {
             callback(err);
         }
         else {
-            callback(null, result || { id:0, name:'anonymous', groups:[], enabled:false});
+            callback(null, result || { id:null, name:'anonymous', groups:[], enabled:false});
         }
     });
 };
