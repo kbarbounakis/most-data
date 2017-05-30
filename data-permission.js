@@ -534,7 +534,7 @@ function queryUser(context, username, callback) {
 function effectiveAccounts(context, callback) {
     if (_.isNil(context)) {
         //push no account
-        return callback(null, [ { id: 0 } ]);
+        return callback(null, [ { id: null } ]);
     }
     /**
      * Gets or sets an object that represents the user of the current data context.
@@ -563,7 +563,7 @@ function effectiveAccounts(context, callback) {
                     result.groups.forEach(function(x) { arr.push({ "id": x.id, "name": x.name }); });
                 }
                 if (arr.length==0)
-                    arr.push({ id: 0 });
+                    arr.push({ id: null });
                 callback(null, arr);
             }
         });
@@ -591,7 +591,7 @@ function effectiveAccounts(context, callback) {
                         anonymous.groups.forEach(function(x) { arr.push({ "id": x.id, "name": x.name }); });
                 }
                 if (arr.length==0)
-                    arr.push({ id: 0 });
+                    arr.push({ id: null });
                 callback(null, arr);
             });
         });
