@@ -166,7 +166,7 @@ DataAttributeResolver.prototype.resolveNestedAttribute = function(attr) {
  * @returns {*} - An object that represents a query join expression
  */
 DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr) {
-    var self = this;
+    var self = this, childField, parentField;
     if (/\//.test(memberExpr)) {
         //if the specified member contains '/' e.g. user/name then prepare join
         var arrMember = memberExpr.split('/');
@@ -185,12 +185,20 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
             if (_.isNil(parentModel)) {
                 throw new Error(sprintf.sprintf('Association parent model (%s) cannot be found.', mapping.parentModel));
             }
+            childField = self.field(mapping.childField);
+            if (_.isNil(childField)) {
+                throw new Error(sprintf.sprintf('Association field (%s) cannot be found.', mapping.childField));
+            }
+            parentField = parentModel.field(mapping.parentField);
+            if (_.isNil(parentField)) {
+                throw new Error(sprintf.sprintf('Referenced field (%s) cannot be found.', mapping.parentField));
+            }
             /**
              * store temp query expression
              * @type QueryExpression
              */
             var res =qry.query(self.viewAdapter).select(['*']);
-            var expr = qry.query().where(qry.fields.select(mapping.childField).from(self._alias || self.viewAdapter)).equal(qry.fields.select(mapping.parentField).from(mapping.childField));
+            var expr = qry.query().where(qry.fields.select(childField.name).from(self._alias || self.viewAdapter)).equal(qry.fields.select(mapping.parentField).from(mapping.childField));
             var entity = qry.entity(parentModel.viewAdapter).as(mapping.childField).left();
             res.join(entity).with(expr);
             if (arrMember.length>2) {
@@ -208,8 +216,16 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
             if (_.isNil(childModel)) {
                 throw new Error(sprintf.sprintf('Association child model (%s) cannot be found.', mapping.childModel));
             }
+            childField = childModel.field(mapping.childField);
+            if (_.isNil(childField)) {
+                throw new Error(sprintf.sprintf('Association field (%s) cannot be found.', mapping.childField));
+            }
+            parentField = self.field(mapping.parentField);
+            if (_.isNil(parentField)) {
+                throw new Error(sprintf.sprintf('Referenced field (%s) cannot be found.', mapping.parentField));
+            }
             var res =qry.query('Unknown').select(['*']);
-            var expr = qry.query().where(qry.fields.select(mapping.parentField).from(self.viewAdapter)).equal(qry.fields.select(mapping.childField).from(arrMember[0]));
+            var expr = qry.query().where(qry.fields.select(parentField.name).from(self.viewAdapter)).equal(qry.fields.select(childField.name).from(arrMember[0]));
             var entity = qry.entity(childModel.viewAdapter).as(arrMember[0]).left();
             res.join(entity).with(expr);
             return res.$expand;
