@@ -39,9 +39,6 @@ var events = require('events'),
     async = require('async'),
     qry = require('most-query');
 
-/**
- * @module most-data/types
- * */
 var types = { };
 
 /**
@@ -519,14 +516,16 @@ var FloatRegex =/^[+-]?\d+(\.\d+)?$/g;
  * @param {string=} innerMessage - The error inner message
  * @param {string=} model - The target model
  * @param {string=} field - The target field
+ * @param {*} additionalData - Additional data associated with this error
  * @constructor
  * @property {string} code - A string that represents an error code e.g. EDATA
  * @property {string} message -  The error message.
  * @property {string} innerMessage - The error inner message.
  * @property {number} status - A number that represents an error status. This error status may be used for throwing the approriate HTTP error.
+ * @property {*} additionalData - Additional data associated with this error
  * @augments Error
  */
-function DataException(code, message, innerMessage, model, field) {
+function DataException(code, message, innerMessage, model, field, additionalData) {
     this.code  = code || 'EDATA';
     if (model)
         this.model = model;
@@ -535,6 +534,7 @@ function DataException(code, message, innerMessage, model, field) {
     this.message = message || 'A general data error occured.';
     if (innerMessage)
         this.innerMessage = innerMessage;
+    this.additionalData = additionalData;
 }
 util.inherits(DataException, Error);
 
@@ -1081,6 +1081,10 @@ function DataField() {
     this.virtual = false;
     this.editable = true;
 }
+
+DataField.prototype.getName = function() {
+  return this.property || this.name;
+};
 
 /**
  * @class

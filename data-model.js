@@ -39,12 +39,14 @@ var _ = require("lodash"),
     events = require('events'),
     qry = require('most-query'),
     types = require('./types'),
+    DataAssociationMapping = require('./types').DataAssociationMapping,
     functions = require('./functions'),
     dataCommon = require('./data-common'),
     dataListeners = require('./data-listeners'),
     validators = require('./data-validator'),
     dataAssociations = require('./data-associations'),
     DataNestedObjectListener = require("./data-nested-object-listener").DataNestedObjectListener,
+    DataReferencedObjectListener = require("./data-ref-object-listener").DataReferencedObjectListener,
     DataQueryable = require('./data-queryable').DataQueryable,
     DataAttributeResolver = require('./data-queryable').DataAttributeResolver,
     DataObjectAssociationListener = dataAssociations.DataObjectAssociationListener,
@@ -78,7 +80,7 @@ function inferTagMapping_(field) {
     //get associated model name
     var name = self.name.concat(_.upperFirst(field.name));
     var primaryKey = self.key();
-    return new types.DataAssociationMapping({
+    return new DataAssociationMapping({
         "associationType": "junction",
         "associationAdapter": name,
         "cascade": "delete",
@@ -808,40 +810,65 @@ DataModel.prototype.find = function(obj) {
         result.where(self.primaryKey).equal(null);
         return result;
     }
-    //cast object
-    var find = {};
-    self.attributeNames.forEach(function(x)
-    {
-        if (obj.hasOwnProperty(x))
-        {
-            find[x] = obj[x];
+    var find = { }, findSet = false;
+    if (_.isObject(obj)) {
+        if (obj.hasOwnProperty(self.primaryKey)) {
+            find[self.primaryKey] = obj[self.primaryKey];
+            findSet = true;
         }
-    });
-
-    if (find.hasOwnProperty(self.primaryKey)) {
-        result = new DataQueryable(this);
-        return result.where(self.primaryKey).equal(find[self.primaryKey]);
-    }
-    else {
-        result = new DataQueryable(this);
-        var bQueried = false;
-        //enumerate properties and build query
-        for(var key in find) {
-            if (find.hasOwnProperty(key)) {
-                if (!bQueried) {
-                    result.where(key).equal(find[key]);
-                    bQueried = true;
+        else {
+            //get unique constraint
+            var constraint = _.find(self.constraints, function(x) {
+                return x.type === 'unique';
+            });
+            //find by constraint
+            if (_.isObject(constraint) && _.isArray(constraint.fields)) {
+                //search for all constrained fields
+                var findAttrs = {}, constrained = true;
+                _.forEach(constraint.fields, function(x) {
+                   if (obj.hasOwnProperty(x)) {
+                       findAttrs[x] = obj[x];
+                   }
+                   else {
+                       constrained = false;
+                   }
+                });
+                if (constrained) {
+                    _.assign(find, findAttrs);
+                    findSet = true;
                 }
-                else
-                    result.and(key).equal(find[key]);
             }
         }
-        if (!bQueried) {
-            //there is no query defined a dummy one (e.g. primary key is null)
-            result.where(self.primaryKey).equal(null);
-        }
-        return result;
     }
+    else {
+        find[self.primaryKey] = obj;
+        findSet = true;
+    }
+    if (!findSet) {
+        _.forEach(self.attributeNames, function(x) {
+            if (obj.hasOwnProperty(x)) {
+                find[x] = obj[x];
+            }
+        });
+    }
+    result = new DataQueryable(this);
+    findSet = false;
+    //enumerate properties and build query
+    for(var key in find) {
+        if (find.hasOwnProperty(key)) {
+            if (!findSet) {
+                result.where(key).equal(find[key]);
+                findSet = true;
+            }
+            else
+                result.and(key).equal(find[key]);
+        }
+    }
+    if (!findSet) {
+        //there is no query defined a dummy one (e.g. primary key is null)
+        result.where(self.primaryKey).equal(null);
+    }
+    return result;
 };
 
 /**
@@ -1944,8 +1971,8 @@ DataModel.prototype.remove = function(obj, callback)
     };
     //register nested objects listener
     self.once('before.remove', DataNestedObjectListener.prototype.beforeRemove);
-    //register data association listener
-    self.once('before.remove', DataObjectAssociationListener.prototype.afterSave);
+    //register data referenced object listener
+    self.once('before.remove', DataReferencedObjectListener.prototype.beforeRemove);
     //execute before update events
     self.emit('before.remove', e, function(err) {
         //if an error occurred
@@ -2281,198 +2308,196 @@ DataModel.prototype.getDataView = function(name) {
     }
 }
 
+
+function inferDefaultMapping_(conf, name) {
+      var self = this,
+          field = self.field(name);
+    //get field model type
+    var associatedModel = self.context.model(field.type);
+    if ((typeof associatedModel === 'undefined') || (associatedModel === null))
+    {
+        if (typeof field.many === 'boolean' && field.many) {
+            //validate primitive type mapping
+            var tagMapping = inferTagMapping_.call(self, field);
+            if (tagMapping) {
+                //apply data association mapping to definition
+                var definitionField = conf.fields.find(function(x) {
+                    return x.name === field.name;
+                });
+                definitionField.mapping = field.mapping = tagMapping;
+                return new DataAssociationMapping(definitionField.mapping);
+            }
+        }
+        return null;
+    }
+    //in this case we have two possible associations. Junction or Foreign Key association
+    //try to find a field that belongs to the associated model and holds the foreign key of this model.
+    var associatedField = associatedModel.attributes.find(function(x) {
+        return x.type === self.name;
+    });
+    if (associatedField)
+    {
+        if (associatedField.many)
+        {
+            //return a data relation (parent model is the associated model)
+            return new DataAssociationMapping({
+                parentModel:associatedModel.name,
+                parentField:associatedModel.primaryKey,
+                childModel:self.name,
+                childField:field.name,
+                associationType:'association',
+                cascade:'none'
+            });
+        }
+        else
+        {
+            //return a data relation (parent model is the current model)
+            return new DataAssociationMapping({
+                parentModel:self.name,
+                parentField:self.primaryKey,
+                childModel:associatedModel.name,
+                childField:associatedField.name,
+                associationType:'association',
+                cascade:'none',
+                refersTo:field.property || field.name
+            });
+        }
+    }
+    else {
+
+        var re = new RegExp(DataModel.PluralExpression.source),
+            many = _.isBoolean(field.many) ? field.many : re.test(field.name);
+        if (many) {
+            //return a data junction
+            return new DataAssociationMapping({
+                associationAdapter: self.name.concat(_.upperFirst(field.name)),
+                parentModel: self.name, parentField: self.primaryKey,
+                childModel: associatedModel.name,
+                childField: associatedModel.primaryKey,
+                associationType: 'junction',
+                cascade: 'none'
+            });
+        }
+        else {
+            return new DataAssociationMapping({
+                parentModel: associatedModel.name,
+                parentField: associatedModel.primaryKey,
+                childModel: self.name,
+                childField: field.name,
+                associationType: 'association',
+                cascade: 'none'
+            });
+        }
+    }
+}
+
 /**
  * Gets a field association mapping based on field attributes, if any. Otherwise returns null.
  * @param {string} name - The name of the field
- * @returns {DataAssociationMapping|undefined}
+ * @returns {DataAssociationMapping|*}
  */
 DataModel.prototype.inferMapping = function(name) {
+
     var self = this;
     //ensure model cached mappings
     var conf = self.context.getConfiguration().model(self.name);
-    if (typeof conf === "undefined" || conf == null) {
+    if (typeof conf === "undefined" || conf === null) {
         return;
     }
-    if (typeof conf.mappings_ === 'undefined') {
+    if (_.isNil(conf.mappings_)) {
         conf.mappings_ = { };
     }
-    if (typeof conf.mappings_[name] !== 'undefined') {
-        if (conf.mappings_[name] instanceof types.DataAssociationMapping)
+
+    if (_.isObject(conf.mappings_[name])) {
+        if (conf.mappings_[name] instanceof DataAssociationMapping)
             return conf.mappings_[name];
         else
-            return  new types.DataAssociationMapping(conf.mappings_[name]);
+            return  new DataAssociationMapping(conf.mappings_[name]);
     }
-    var field = self.field(name), result;
-    if (!field)
-        return null;
-    if (field.mapping) {
-        //if field model is different than the current model
-        if (field.model !== self.name) {
-            //if field mapping is already associated with the current model
-            // (child or parent model is equal to the current model)
-            if ((field.mapping.childModel===self.name) || (field.mapping.parentModel===self.name)) {
-                //cache mapping
-                conf.mappings_[name] = new types.DataAssociationMapping(field.mapping);
-                //do nothing and return field mapping
-                return conf.mappings_[name];
-            }
-            //get super types
-            var superTypes = self.getSuperTypes();
-            //map an inherited association
-            //1. super model has a foreign key association with another model
-            //(where super model is the child or the parent model)
-            if (field.mapping.associationType === 'association') {
-                //create a new cloned association
-                result = new types.DataAssociationMapping(field.mapping);
-                //check super types
-                if (superTypes.indexOf(field.mapping.childModel)>=0) {
-                    //set child model equal to current model
-                    result.childModel = self.name;
-                }
-                else if (superTypes.indexOf(field.mapping.parentModel)>=0) {
-                    //set child model equal to current model
-                    result.childModel = self.name;
-                }
-                else {
-                    //this is an exception
-                    throw new types.DataException("EMAP","An inherited data association cannot be mapped.");
-                }
-                //cache mapping
-                conf.mappings_[name] = result;
-                //and finally return the newly created DataAssociationMapping object
-                return result;
-            }
-            //2. super model has a junction (many-to-many association) with another model
-            //(where super model is the child or the parent model)
-            else if (field.mapping.associationType === 'junction') {
-                //create a new cloned association
-                result = new types.DataAssociationMapping(field.mapping);
-                if (superTypes.indexOf(field.mapping.childModel)>=0) {
-                    //set child model equal to current model
-                    result.childModel = self.name;
-                }
-                else if (superTypes.indexOf(field.mapping.parentModel)>=0) {
-                    //set parent model equal to current model
-                    result.parentModel = self.name;
-                }
-                else {
-                    //this is an exception
-                    throw new types.DataException("EMAP","An inherited data association cannot be mapped.");
-                }
-                //cache mapping
-                conf.mappings_[name] = result;
-                //and finally return the newly created DataAssociationMapping object
-                return result;
-            }
-        }
-        //in any other case return the assocation mapping object
-        if (field.mapping instanceof types.DataAssociationMapping) {
-            //cache mapping
-            conf.mappings_[name] = field.mapping;
-            //and return
-            return field.mapping;
-        }
-        result = _.assign(new types.DataAssociationMapping(), field.mapping);
-        //cache mapping
-        conf.mappings_[name] = result;
-        //and return
-        return result;
-    }
-    else {
-        //get field model type
-        var associatedModel = self.context.model(field.type);
-        if ((typeof associatedModel === 'undefined') || (associatedModel == null))
-        {
-            if (typeof field.many === 'boolean' && field.many) {
-                //validate primitive type mapping
-                var tagMapping = inferTagMapping_.call(self, field);
-                if (tagMapping) {
-                    //apply data association mapping to definition
-                    var definitionField = conf.fields.find(function(x) {
-                        return x.name === field.name;
-                    });
-                    definitionField.mapping = field.mapping = tagMapping;
-                    return new types.DataAssociationMapping(definitionField.mapping);
-                }
-            }
-            return null;
-        }
-        //in this case we have two possible associations. Junction or Foreign Key association
-        //try to find a field that belongs to the associated model and holds the foreign key of this model.
-        var associatedField = associatedModel.attributes.find(function(x) {
-           return x.type === self.name;
-        });
-        if (associatedField)
-        {
-            if (associatedField.many)
-            {
-                //return a data relation (parent model is the associated model)
-                result = new types.DataAssociationMapping({
-                    parentModel:associatedModel.name,
-                    parentField:associatedModel.primaryKey,
-                    childModel:self.name,
-                    childField:field.name,
-                    associationType:'association',
-                    cascade:'null'
-                });
-                //cache mapping
-                conf.mappings_[name] = result;
-                //and finally return mapping
-                return result;
-            }
-            else
-            {
-                //return a data relation (parent model is the current model)
-                result = new types.DataAssociationMapping({
-                    parentModel:self.name,
-                    parentField:self.primaryKey,
-                    childModel:associatedModel.name,
-                    childField:associatedField.name,
-                    associationType:'association',
-                    cascade:'null',
-                    refersTo:field.property || field.name
-                });
-                //cache mapping
-                conf.mappings_[name] = result;
-                //and finally return mapping
-                return result;
-            }
-        }
-        else {
 
-            var re = new RegExp(DataModel.PluralExpression.source),
-                many = _.isBoolean(field.many) ? field.many : re.test(field.name);
-            if (many) {
-                //return a data junction
-                result = new types.DataAssociationMapping({
-                    associationAdapter: self.name.concat(_.upperFirst(field.name)),
-                    parentModel: self.name, parentField: self.primaryKey,
-                    childModel: associatedModel.name,
-                    childField: associatedModel.primaryKey,
-                    associationType: 'junction',
-                    cascade: 'delete'
-                });
-                //cache mapping
-                conf.mappings_[name] = result;
-                //and finally return mapping
-                return result;
+    var field = self.field(name), result;
+    if (_.isNil(field))
+        return null;
+    //get default mapping
+    var defaultMapping = inferDefaultMapping_.bind(this)(conf, name);
+    if (_.isNil(defaultMapping)) {
+        conf.mappings_[name] = defaultMapping;
+        return defaultMapping;
+    }
+    //extend default mapping attributes
+    var mapping = _.assign(defaultMapping, field.mapping);
+    //if field model is different than the current model
+    if (field.model !== self.name) {
+        //if field mapping is already associated with the current model
+        // (child or parent model is equal to the current model)
+        if ((mapping.childModel===self.name) || (mapping.parentModel===self.name)) {
+            //cache mapping
+            conf.mappings_[name] = new DataAssociationMapping(mapping);
+            //do nothing and return field mapping
+            return conf.mappings_[name];
+        }
+        //get super types
+        var superTypes = self.getSuperTypes();
+        //map an inherited association
+        //1. super model has a foreign key association with another model
+        //(where super model is the child or the parent model)
+        if (mapping.associationType === 'association') {
+            //create a new cloned association
+            result = new DataAssociationMapping(mapping);
+            //check super types
+            if (superTypes.indexOf(mapping.childModel)>=0) {
+                //set child model equal to current model
+                result.childModel = self.name;
+            }
+            else if (superTypes.indexOf(mapping.parentModel)>=0) {
+                //set child model equal to current model
+                result.parentModel = self.name;
             }
             else {
-                result = new types.DataAssociationMapping({
-                    parentModel: associatedModel.name,
-                    parentField: associatedModel.primaryKey,
-                    childModel: self.name,
-                    childField: field.name,
-                    associationType: 'association',
-                    cascade: 'null'
-                });
-                //cache mapping
-                conf.mappings_[name] = result;
-                //and finally return mapping
-                return result;
+                //this is an exception
+                throw new types.DataException("EMAP","An inherited data association cannot be mapped.");
             }
+            //cache mapping
+            conf.mappings_[name] = result;
+            //and finally return the newly created DataAssociationMapping object
+            return result;
+        }
+        //2. super model has a junction (many-to-many association) with another model
+        //(where super model is the child or the parent model)
+        else if (mapping.associationType === 'junction') {
+            //create a new cloned association
+            result = new DataAssociationMapping(mapping);
+            if (superTypes.indexOf(mapping.childModel)>=0) {
+                //set child model equal to current model
+                result.childModel = self.name;
+            }
+            else if (superTypes.indexOf(mapping.parentModel)>=0) {
+                //set parent model equal to current model
+                result.parentModel = self.name;
+            }
+            else {
+                //this is an exception
+                throw new types.DataException("EMAP","An inherited data association cannot be mapped.");
+            }
+            //cache mapping
+            conf.mappings_[name] = result;
+            //and finally return the newly created DataAssociationMapping object
+            return result;
         }
     }
+    //in any other case return the association mapping object
+    if (mapping instanceof DataAssociationMapping) {
+        //cache mapping
+        conf.mappings_[name] = mapping;
+        //and return
+        return mapping;
+    }
+    result = _.assign(new DataAssociationMapping(), mapping);
+    //cache mapping
+    conf.mappings_[name] = result;
+    //and return
+    return result;
+
 };
 
 
@@ -2715,6 +2740,53 @@ DataModel.prototype.getSubTypes = function () {
     });
     return d.promise;
 };
+/**
+ * @param {boolean=} deep
+ * @returns {Promise<T>}
+ */
+DataModel.prototype.getReferenceMappings = function (deep) {
+    var self = this,
+        context = self.context;
+    deep = (typeof deep === 'undefined') ? true : types.parsers.parseBoolean(deep);
+    var d = Q.defer();
+    process.nextTick(function() {
+        var referenceMappings = [], name = self.name, attributes;
+        var migrations = self.context.model("Migration");
+        if (_.isNil(migrations)) {
+            return d.resolve([]);
+        }
+        migrations.silent()
+            .select("model")
+            .groupBy("model")
+            .all().then(function(result) {
+            _.forEach(result, function(x) {
+                var m = context.model(x.model);
+                if (_.isNil(m)) {
+                    return;
+                }
+                if (deep) {
+                    attributes = m.attributes;
+                } else {
+                    attributes = _.filter(m.attributes, function(a) {
+                        return a.model === m.name;
+                    });
+                }
+                _.forEach(attributes, function(y) {
+                    var mapping = m.inferMapping(y.name);
+                    if (mapping && ((mapping.parentModel === name) || (mapping.childModel === name && mapping.associationType === 'junction'))) {
+                        referenceMappings.push(_.assign(mapping, { refersTo:y.name }));
+                    }
+                });
+            });
+            return d.resolve(referenceMappings);
+        }).catch(function(err) {
+            return d.reject(err)
+        });
+    });
+    return d.promise;
+};
+
+
 /**
  * Gets an attribute of this data model.
  * @param {string} name

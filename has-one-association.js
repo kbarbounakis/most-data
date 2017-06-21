@@ -107,13 +107,13 @@ function HasOneAssociation(obj, association)
     if (typeof association === 'string') {
         //infer mapping from field name
         //set relation mapping
-        if (self.parent!=null) {
+        if (self.parent!==null) {
             var model = self.parent.getModel();
-            if (model!=null)
+            if (model!==null)
                 self.mapping = model.inferMapping(association);
         }
     }
-    else if (typeof association === 'object' && association !=null) {
+    else if (typeof association === 'object' && association !==null) {
         //get the specified mapping
         if (association instanceof DataAssociationMapping)
             self.mapping = association;
@@ -126,13 +126,20 @@ function HasOneAssociation(obj, association)
     Object.defineProperty(this, 'query', {
         get:function() {
             //if query is already defined
-            if (q!=null)
+            if (q!==null)
             //return this query
                 return q;
-            if (typeof self.mapping === 'undefined' || self.mapping==null)
+            if (typeof self.mapping === 'undefined' || self.mapping===null)
                 throw new Error('Data association mapping cannot be empty at this context.');
             //prepare query by selecting the foreign key of the related object
-            q = qry.query(self.model.viewAdapter).where(self.mapping.parentField).equal(self.parent[self.mapping.childField]).prepare();
+            var associatedObject = self.parent[self.mapping.childField], associatedValue;
+            if (associatedObject.hasOwnProperty(self.mapping.parentField)) {
+                associatedValue = associatedObject[self.mapping.parentField];
+            }
+            else {
+                associatedValue = associatedObject;
+            }
+            q = qry.query(self.model.viewAdapter).where(self.mapping.parentField).equal(associatedValue).prepare();
             return q;
         }, configurable:false, enumerable:false
     });
@@ -142,7 +149,7 @@ function HasOneAssociation(obj, association)
     Object.defineProperty(this, 'model', {
         get:function() {
             //if query is already defined
-            if (m!=null)
+            if (m!==null)
             //return this query
                 return m;
             m = self.parent.context.model(self.mapping.parentModel);

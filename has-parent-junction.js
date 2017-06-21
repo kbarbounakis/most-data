@@ -156,11 +156,11 @@ function HasParentJunction(obj, association) {
     if (typeof association === 'string') {
         if (parent_) {
             model_ = parent_.getModel();
-            if (model_!=null)
+            if (model_!==null)
                 self.mapping = model_.inferMapping(association);
         }
     }
-    else if (typeof association === 'object' && association !=null) {
+    else if (typeof association === 'object' && association !== null) {
         //get the specified mapping
         if (association instanceof DataAssociationMapping)
             self.mapping = association;
@@ -208,8 +208,8 @@ function HasParentJunction(obj, association) {
             if (_.isNil(baseModel)) {
                 conf.models[adapter] = { name:adapter, title: adapter, sealed:false, hidden:true, type:"hidden", source:adapter, view:adapter, version:'1.0', fields:[
                     { name: "id", type:"Counter", primary: true },
-                    { name: 'parentId', indexed: true, nullable:false, type: (parentField.type=='Counter') ? 'Integer' : parentField.type },
-                    { name: 'valueId', indexed: true, nullable:false, type: (childField.type=='Counter') ? 'Integer' : childField.type } ],
+                    { name: 'parentId', indexed: true, nullable:false, type: (parentField.type==='Counter') ? 'Integer' : parentField.type },
+                    { name: 'valueId', indexed: true, nullable:false, type: (childField.type==='Counter') ? 'Integer' : childField.type } ],
                     constraints: [
                         {
                             description: "The relation between two objects must be unique.",
@@ -234,6 +234,18 @@ function HasParentJunction(obj, association) {
         return this.baseModel;
     }
 
+    this.getChildField = function() {
+        return _.find(this.getBaseModel().attributes, function(x) {
+            return x.name === 'valueId';
+        });
+    };
+
+    this.getParentField = function() {
+        return _.find(this.getBaseModel().attributes, function(x) {
+            return x.name === 'parentId';
+        });
+    };
+
 }
 util.inherits(HasParentJunction, DataQueryable);
 
@@ -252,7 +264,7 @@ function insertSingleObject_(obj, callback) {
         parent[self.mapping.parentField] = obj;
     }
     var parentId = parent[self.mapping.parentField], childId = self.parent[self.mapping.childField];
-    //validate relation existance
+    //validate relation existence
     self.baseModel.where('parentId').equal(parentId).and('valueId').equal(childId).first(function(err, result) {
         if (err) {
             //on error exit with error
@@ -261,7 +273,7 @@ function insertSingleObject_(obj, callback) {
         else {
             if (result) {
                 //if relation already exists, do nothing
-                return callback(null);
+                return callback();
             }
             else {
                 //otherwise create new item
@@ -293,7 +305,7 @@ function insert_(obj, callback) {
                     parent = {};
                     parent[self.mapping.parentField] = item;
                 }
-                //validate if child identifierr exists
+                //validate if child identifier exists
                 if (parent.hasOwnProperty(self.mapping.parentField)) {
                     insertSingleObject_.call(self, parent, function(err) {
                         cb(err);
@@ -469,6 +481,21 @@ HasParentJunction.prototype.remove = function(obj, callback) {
         return remove_.call(self, obj, callback);
     }
 };
+/**
+ * @memberOf HasParentJunction
+ * @param {Function} callback
+ * @private
+ */
+function removeAll_(callback) {
+    var self = this;
+    self.migrate(function(err) {
+        if (err) {
+            return callback(err);
+        }
+
+    });
+}
+
 
 HasParentJunction.prototype.migrate = function(callback) {
     this.baseModel.migrate(callback);

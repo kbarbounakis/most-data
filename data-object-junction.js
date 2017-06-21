@@ -229,7 +229,19 @@ function DataObjectJunction(obj, association) {
      */
     this.getBaseModel = function() {
         return this.baseModel;
-    }
+    };
+
+    this.getChildField = function() {
+        return _.find(this.getBaseModel().attributes, function(x) {
+           return x.name === DataObjectJunction.STR_VALUE_FIELD;
+        });
+    };
+
+    this.getParentField = function() {
+        return _.find(this.getBaseModel().attributes, function(x) {
+            return x.name === DataObjectJunction.STR_OBJECT_FIELD;
+        });
+    };
 
 
 }
