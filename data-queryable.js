@@ -1314,17 +1314,16 @@ DataQueryable.prototype.select = function(attr) {
     }
     if (_.isNil(arr)) {
         if (!self.query.hasFields()) {
-            //enumerate fields
-            var fields = self.model.attributes.filter(function(x) {
-                return !(x.many || (x.mapping && x.mapping.associationType === 'junction'));
-            }).map(function(x) {
-                var f = qry.fields.select(x.name).from(self.model.viewAdapter);
-                if (x.property)
-                    f.as(x.property);
-                return f;
+            // //enumerate fields
+            var fields = _.map(_.filter(self.model.attributes, function(x) {
+                return (x.many === false) || (_.isNil(x.many)) || ((x.expandable === true) && (self.getLevels()>0));
+            }), function(x) {
+              return x.property || x.name;
             });
-            //and select fields
-            self.select(fields);
+            if (_.isNil(fields)) {
+                return this;
+            }
+            return self.select.apply(self, fields);
         }
     }
     else {
