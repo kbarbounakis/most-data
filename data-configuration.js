@@ -238,7 +238,7 @@ function DataConfiguration(configPath) {
         {
             try {
                 if (auth) { return auth; }
-                if (typeof config.settings === 'undefined' || config.settings== null) {
+                if (typeof config.settings === 'undefined' || config.settings=== null) {
                     auth = config.auth || {};
                     return auth;
                 }
@@ -415,9 +415,6 @@ DataConfiguration.prototype.model = function(name)
  */
 var namedConfiguations_ = { };
 
-/**
- * @exports most-data/data-configuration
- */
 var cfg = {
 
 };
@@ -471,7 +468,7 @@ cfg.getNamedConfiguration = function(name) {
     if (typeof name !== 'string') {
         throw new Error("Invalid configuration name. Expected string.");
     }
-    if (name.length == 0) {
+    if (name.length === 0) {
         throw new Error("Invalid argument. Configuration name may not be empty string.");
     }
     if (/^current$/i.test(name)) {
