@@ -1290,8 +1290,12 @@ DataQueryable.prototype.select = function(attr) {
                 if (typeof x === 'string') {
                     field = self.model.field(x);
                     if (field) {
-                        if (field.many || (field.mapping && field.mapping.associationType === 'junction'))
-                            self.expand(field.name);
+                        if (field.many || (field.mapping && field.mapping.associationType === 'junction')) {
+                            self.expand({
+                                "name":field.name,
+                                "options":field.options
+                            });
+                        }
                         else
                             arr.push(self.fieldOf(field.name));
                     }
@@ -2337,7 +2341,21 @@ function afterExecute_(result, callback) {
     var field, parentField, junction;
     if (self.$expand) {
         //get distinct values
-        var expands = self.$expand.distinct(function(x) { return x; });
+
+        var expands = _.intersectionBy(self.$expand, function(x) {
+           if (typeof x === 'string') {
+               return x;
+           }
+           else if (x instanceof types.DataAssociationMapping) {
+                return x;
+           }
+           else if (typeof x.name === "string") {
+               return x.name;
+           }
+           return x;
+        });
+
+        //expands = self.$expand.distinct(function(x) { return x; });
         async.eachSeries(expands, function(expand, cb) {
 
             try {

@@ -43,10 +43,6 @@ var model = require('./data-model'),
     DefaultDataContext = require('./data-context').DefaultDataContext,
     NamedDataContext = require('./data-context').NamedDataContext;
 
-/**
- *
- * @exports most-data
- */
 var most = { };
 
 most.cfg = cfg;
@@ -64,7 +60,6 @@ most.DataObject = require('./data-object').DataObject;
  * Creates an instance of DataContext class which represents the default data context. If parameter [name] is specified, returns the named data context specified in application configuration.
  * @param {string=} name
  * @returns {DataContext}
- * @memberOf most-data
  */
 most.createContext = function(name) {
     if (_.isNil(name))
