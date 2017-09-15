@@ -59,34 +59,51 @@
         "type": "object",
         "properties": {
           "@id": {
-            "type": "string"
+            "type": "string",
+            "description":"A string which represents a literal unique identifier for this attribute e.g. https://example.com/models/attributes/name"
           },
           "name": {
-            "type": "string"
+            "type": "string",
+            "description":"A string which represents the name of this attribute e.g. title, description, dateCreated etc"
           },
           "title": {
-            "type": "string"
+            "type": "string",
+            "description":"A string which represents a short description for this attribute"
           },
           "type": {
-            "type": "string"
+            "type": "string",
+            "description":"A string which represents the type of this attribute e.g. Counter, Integer, Number, Text etc"
           },
           "size": {
-            "type": "number"
+            "type": "number",
+            "description":"A number which represents the maximum size for this attribute e.g. the size of a text field etc"
           },
           "nullable": {
-            "type": "boolean"
+            "default":true,
+            "type": "boolean",
+            "description": "A boolean which indicates whether this attribute is nullable or not."
           },
           "primary": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "A boolean which indicates whether this attribute is a key column or not."
+          },
+          "indexed": {
+            "default":false,
+            "type": "boolean",
+            "description": "A boolean which indicates whether this attribute is an indexed column or not."
           },
           "property": {
-            "type": "string"
+            "type": "string",
+            "description":"A string which optionally represents the name of this attribute in object mapping. This name may defer from the name of the database field."
           },
           "many": {
-            "type": "boolean"
+            "type": "boolean",
+            "description": "A boolean value which indicates whether this attribute represents an one-to-many or many-to-many association between two models."
           },
           "expandable": {
-            "type": "boolean"
+            "default":false,
+            "type": "boolean",
+            "description": "A boolean value which indicates whether the associated object(s) will be automatically expanded or not."
           },
           "mapping": {
             "type": "object",
