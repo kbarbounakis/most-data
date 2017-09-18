@@ -2342,7 +2342,7 @@ function afterExecute_(result, callback) {
     if (self.$expand) {
         //get distinct values
 
-        var expands = _.intersectionBy(self.$expand, function(x) {
+        var expands = _.intersectionBy(_.reverse(self.$expand), function(x) {
            if (typeof x === 'string') {
                return x;
            }
