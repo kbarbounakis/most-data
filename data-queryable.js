@@ -2697,34 +2697,81 @@ DataQueryable.prototype.cache = function(value) {
 }
  */
 DataQueryable.prototype.expand = function(attr) {
+
     var self = this,
-        arg = (arguments.length>1) ? Array.prototype.slice.call(arguments): attr;
+        arg = (arguments.length>1) ? Array.prototype.slice.call(arguments): [attr];
+    var expanded;
     if (_.isNil(arg)) {
         delete self.$expand;
     }
     else {
         if (!_.isArray(this.$expand))
             self.$expand=[];
-        if (_.isArray(arg)) {
-            arg.forEach(function(x) {
-                if (_.isNil(x)) {
-                    return;
-                }
-                if ((typeof x === 'string')
-                    || (typeof x === 'object' && x.hasOwnProperty('name'))) {
-                    self.$expand.push(x);
+        _.forEach(arg,function(x) {
+            if (_.isNil(x)) {
+                return;
+            }
+            if ((typeof x === 'string') || (x instanceof types.DataAssociationMapping)
+                || (typeof x === 'object' && x.hasOwnProperty('name'))) {
+                expanded = self.hasExpand(x);
+                if (expanded) {
+                    //expandable already exists
+                    if (_.isObject(x.options)) {
+                        if (typeof expanded === 'string') {
+                            //remove expand as string
+                            var ix = self.$expand.indexOf(expanded);
+                            self.$expand.splice(ix,1);
+                            //push expand as object with options
+                            self.$expand.push(x);
+                        }
+                        else if (typeof expanded === 'object') {
+                            //ensure expand options
+                            expanded.options = expanded.options || {};
+                            //assign options to expand.options
+                            _.assign(expanded.options, x.options);
+                        }
+                    }
                 }
                 else {
-                    throw new Error("Expand option may be a string or a named object.")
+                    self.$expand.push(x);
                 }
-            });
-        }
-        else {
-            self.$expand.push(arg);
-        }
+            }
+            else {
+                throw new Error("Expand option may be a string or a named object.")
+            }
+        });
     }
     return self;
 };
+
+DataQueryable.prototype.hasExpand = function(attr) {
+    if (_.isNil(this.$expand)) {
+        return false;
+    }
+
+    var expand = attr;
+    if (typeof attr === 'string') {
+        expand == attr;
+    }
+    else if (typeof attr.name === "string") {
+        expand = attr.name;
+    }
+
+
+    return  _.find(this.$expand, function(x) {
+        if (typeof x === 'string') {
+            return x === expand;
+        }
+        else if (x instanceof types.DataAssociationMapping) {
+            return x === expand;
+        }
+        else if (typeof x.name === "string") {
+            return x.name === expand;
+        }
+        return false;
+    });
+};
+
 /**
  * Disables expandable fields
  * @param {boolean=} value - If the value is true the result will contain only flat objects -without any nested associated object-,

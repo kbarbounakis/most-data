@@ -62,10 +62,11 @@ function beforeRemoveAssociatedObjects(event, mapping, callback) {
     var context = event.model.context;
     var parentModel = event.model,
         silent = event.model.$silent,
+        target = event.model.convert(event.target),
         childModel = context.model(mapping.childModel),
         parentField = event.model.getAttribute(mapping.parentField),
         childField = childModel.getAttribute(mapping.childField);
-    parentModel.where(parentModel.primaryKey).equal(event.target[parentModel.primaryKey])
+    parentModel.where(parentModel.primaryKey).equal(target[parentModel.primaryKey])
         .select(parentField.name).silent().flatten().value()
         .then(function(parentKey) {
             if (_.isNil(parentKey)) {
@@ -78,7 +79,7 @@ function beforeRemoveAssociatedObjects(event, mapping, callback) {
                         return callback(new DataException('EFKEY','Cannot delete this object since it is being referenced by another entity.',null,childModel.name, childField.name));
                     }
                     else if (mapping.cascade === 'null' || mapping.cascade === 'default') {
-                        return childModel.where(mapping.childField).equal(event.target[mapping.parentField])
+                        return childModel.where(mapping.childField).equal(target[mapping.parentField])
                             .select(childModel.primaryKey, childModel.childField)
                             .silent()
                             .flatten()
@@ -98,7 +99,7 @@ function beforeRemoveAssociatedObjects(event, mapping, callback) {
                             });
                     }
                     else if (mapping.cascade === 'delete') {
-                        return childModel.where(mapping.childField).equal(event.target[mapping.parentField])
+                        return childModel.where(mapping.childField).equal(target[mapping.parentField])
                             .select(childModel.primaryKey)
                             .silent()
                             .flatten()
@@ -135,9 +136,10 @@ function beforeRemoveParentConnectedObjects(event, mapping, callback) {
     }
     var childModel = event.model,
         silent = event.model.$silent,
+        target = event.model.convert(event.target),
         childField = childModel.getAttribute(mapping.childField);
-    var junction = new DataObjectJunction(event.target, mapping);
-    return childModel.where(childModel.primaryKey).equal(event.target.getId())
+    var junction = new DataObjectJunction(target, mapping);
+    return childModel.where(childModel.primaryKey).equal(target.getId())
         .select(childField.name).silent().flatten().value()
         .then(function(childKey) {
             if (_.isNil(childKey)) {
@@ -186,10 +188,11 @@ function beforeRemoveChildConnectedObjects(event, mapping, callback) {
     }
     var childModel = context.model(mapping.childModel),
         silent = event.model.$silent,
+        target = event.model.convert(event.target),
         parentModel =  event.model,
         parentField = parentModel.getAttribute(mapping.parentField);
-    var junction = new HasParentJunction(event.target, mapping);
-    return parentModel.where(parentModel.primaryKey).equal(event.target.getId())
+    var junction = new HasParentJunction(target, mapping);
+    return parentModel.where(parentModel.primaryKey).equal(target.getId())
         .select(parentField.name).silent().flatten().value()
         .then(function(parentKey) {
             if (_.isNil(parentKey)) {
