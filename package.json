@@ -1,6 +1,6 @@
 {
   "name": "most-data",
-  "version": "1.8.22",
+  "version": "1.8.25",
   "description": "Most Web Framework ORM Module",
   "homepage": "http://www.most-framework.com/",
   "repository": {
@@ -30,8 +30,10 @@
     "lodash": "^4.15.0",
     "moment": "2.8.4",
     "most-query": "~0.1.8",
+    "most-xml":"^0.3.4",
     "node-cache": "^1.1.0",
-    "q": "~1.1.1",
+    "pluralize": "^7.0.0",
+    "q": "^1.4.1",
     "sprintf": "^0.1.5",
     "symbol": "^0.3.1"
   },
