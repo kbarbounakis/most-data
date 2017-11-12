@@ -928,6 +928,14 @@ DataModel.prototype.list = function(callback) {
 };
 
 /**
+ * @returns {Promise|*}
+ */
+DataModel.prototype.getList = function() {
+    var result = new DataQueryable(this);
+    return result.list();
+};
+
+/**
  * Returns the first item of the current model.
  * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
  * @returns {Promise<T>|*} If callback parameter is missing then returns a Promise object.

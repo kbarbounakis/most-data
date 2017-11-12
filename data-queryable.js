@@ -1808,6 +1808,14 @@ DataQueryable.prototype.list = function(callback) {
 };
 
 /**
+ * Executes current query and returns a result set based on the specified paging parameters.
+ * @returns {Promise|*}
+ */
+DataQueryable.prototype.getList = function() {
+    return this.list();
+};
+
+/**
  * Executes the specified query and returns an array of objects which satisfy the specified criteria.
  * @returns {Promise|*}
  */

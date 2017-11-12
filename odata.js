@@ -21,7 +21,6 @@ var DataModel = require('./data-model').DataModel;
 var DataContext = require('./types').DataContext;
 var XDocument = require('most-xml').XDocument;
 
-var nameProperty = Symbol('name');
 // noinspection JSUnusedLocalSymbols
 var entityTypesProperty = Symbol('entityTypes');
 // noinspection JSUnusedLocalSymbols
@@ -282,11 +281,16 @@ util.inherits(FunctionConfiguration, ProcedureConfiguration);
  * @class
  * @param {string} name
  * @constructor
+ * @property {string} name - Gets the name of this entity type
  */
 function EntityTypeConfiguration(name) {
 
     Args.notString(name, 'Entity type name');
-    this[nameProperty] = name;
+    Object.defineProperty(this, 'name', {
+        get:function() {
+            return name;
+        }
+    });
     this.property = [];
     this.ignoredProperty = [];
     this.navigationProperty = [];
@@ -294,9 +298,6 @@ function EntityTypeConfiguration(name) {
     this.functions = [];
 
 }
-EntityTypeConfiguration.prototype.name = function() {
-        return this[nameProperty];
-    };
 // noinspection JSUnusedGlobalSymbols
     /**
      * @param {string} name
@@ -549,7 +550,23 @@ function EntitySetConfiguration(builder, entityType, name) {
             }
             return this[builderProperty].getEntity(this[entityTypeProperty]);
         }
-    })
+    });
+
+    this.hasContextLink(function(context) {
+        var thisBuilder = this.getBuilder();
+        if (_.isNil(thisBuilder)) {
+            return;
+        }
+        if (typeof thisBuilder.getContextLink !== 'function') {
+            return;
+        }
+        //get builder context link
+        var builderContextLink = thisBuilder.getContextLink(context);
+        if (builderContextLink) {
+            //add hash for entity set
+            return builderContextLink + "#" + this.name;
+        }
+    });
 
 }
 // noinspection JSUnusedGlobalSymbols
@@ -714,6 +731,56 @@ EntitySetConfiguration.prototype.getUrl = function() {
 // noinspection JSUnusedGlobalSymbols
         this.getEditLink = editLinkFunc;
     };
+/**
+ * @param {*} context
+ * @param {*} any
+ */
+EntitySetConfiguration.prototype.mapInstance = function(context, any) {
+    if (_.isNil(any)) {
+        return;
+    }
+    if (context) {
+        var contextLink = this.getContextLink(context);
+        if (contextLink) {
+            return _.assign({
+                "@odata.context":contextLink + '/$entity'
+            }, any);
+        }
+    }
+    return any;
+};
+
+EntitySetConfiguration.prototype.mapInstanceSet = function(context, any) {
+    if (_.isNil(any)) {
+        return;
+    }
+    var result = {};
+    if (context) {
+        var contextLink = this.getContextLink(context);
+        if (contextLink) {
+            result["@odata.context"] = contextLink;
+        }
+    }
+    //search for total property for backward compatibility issues
+    if (any.hasOwnProperty("total") && /^\+?\d+$/.test(any["total"])) {
+        result["@odata.count"] = parseInt(any["total"]);
+    }
+    if (any.hasOwnProperty("count") && /^\+?\d+$/.test(any["count"])) {
+        result["@odata.count"] = parseInt(any["count"]);
+    }
+    result["value"] = [];
+    if (_.isArray(any)) {
+        result["value"] = any;
+    }
+    //search for records property for backward compatibility issues
+    else if (_.isArray(any.records)) {
+        result["value"] = any.records;
+    }
+    else if (_.isArray(any.value)) {
+        result["value"] = any.value;
+    }
+    return result;
+};
 
 
 /**
@@ -746,7 +813,28 @@ function ODataModelBuilder(configuration) {
     this.defaultNamespace = SchemaDefaultNamespace;
     this.getConfiguration = function() {
         return configuration;
-    }
+    };
+    var serviceRoot_;
+    var self = this;
+    Object.defineProperty(this,'serviceRoot', {
+      get:function() {
+          return serviceRoot_;
+      },
+        set: function(value) {
+            serviceRoot_ = value;
+            if (typeof self.getContextLink === 'undefined') {
+                //set context link builder function
+                self.hasContextLink(function(context) {
+                    var req = context.request;
+                    var p = /\/$/g.test(serviceRoot_) ? serviceRoot_ + "$metadata" : serviceRoot_ + "/" + "$metadata";
+                    if (req) {
+                        return (req.protocol||"http") + "://" + req.headers.host + p;
+                    }
+                    return p;
+                });
+            }
+        }
+    })
 }
 
     /**
@@ -1221,7 +1309,9 @@ EntityDataContext.prototype.model = function(name) {
     if (_.isNil(definition)) {
         return;
     }
-    return new DataModel(definition, this);
+    var res = new DataModel(definition);
+    res.context = this;
+    return res;
 };
 
 
@@ -1233,7 +1323,7 @@ EntityDataContext.prototype.model = function(name) {
  */
 function ODataConventionModelBuilder(configuration) {
 
-    ODataModelBuilder.super_.bind(this)(configuration);
+    ODataConventionModelBuilder.super_.bind(this)(configuration);
 
 }
 util.inherits(ODataConventionModelBuilder, ODataModelBuilder);
@@ -1273,7 +1363,8 @@ util.inherits(ODataConventionModelBuilder, ODataModelBuilder);
                 /**
                  * @type {DataModel}
                  */
-                var model = new DataModel(definition, new EntityDataContext(configuration));
+                var model = new DataModel(definition);
+                model.context = new EntityDataContext(configuration);
                 var inheritedAttributes = [];
                 var primaryKey = _.find(model.attributes, function(x) {
                     return x.primary;
