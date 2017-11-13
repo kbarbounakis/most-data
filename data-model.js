@@ -1558,9 +1558,9 @@ DataModel.prototype.save = function(obj, callback)
 {
     if (typeof callback !== 'function') {
         var d = Q.defer();
-        save_.call(this, obj, function(err, result) {
+        save_.call(this, obj, function(err) {
             if (err) { return d.reject(err); }
-            d.resolve(result);
+            d.resolve(obj);
         });
         return d.promise;
     }

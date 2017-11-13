@@ -31,6 +31,7 @@ var entityTypeProperty = Symbol('entityType');
 // noinspection JSUnusedLocalSymbols
 var edmProperty = Symbol('edm');
 var SchemaDefaultNamespace = "Edm.Models";
+var initializeProperty = Symbol('initialize');
 
 function Args() {
     //
@@ -923,6 +924,24 @@ function ODataModelBuilder(configuration) {
         return this.getEntitySet(name);
     };
 
+/**
+ * Registers an entity type
+ * @param {string} name
+ * @returns {boolean}
+ */
+ODataModelBuilder.prototype.removeEntitySet = function(name) {
+    var findRe = new RegExp("^" + name + "$" ,"ig");
+    var index = _.findIndex(this[entityContainerProperty], function(x) {
+        return findRe.test(x.name) && x.kind === EntitySetKind.EntitySet;
+    });
+    if (index>=0) {
+        this[entityContainerProperty].splice(index,1);
+        return true;
+    }
+    return false;
+};
+
+
     /**
      * Gets an entity set
      * @param name
@@ -1449,6 +1468,9 @@ util.inherits(ODataConventionModelBuilder, ODataModelBuilder);
      */
     ODataConventionModelBuilder.prototype.initialize = function() {
         var self = this;
+        if (self[initializeProperty]) {
+            return Q.resolve();
+        }
         return Q.promise(function(resolve, reject) {
             /**
              * @type {DataConfiguration|*}
@@ -1459,6 +1481,7 @@ util.inherits(ODataConventionModelBuilder, ODataModelBuilder);
                 var fs = require(nativeFsModule);
                 var modelPath = configuration.getModelPath();
                 if (_.isNil(modelPath)) {
+                    self[initializeProperty] = true;
                     return resolve();
                 }
                 return fs.readdir(modelPath, function(err, files) {
@@ -1476,6 +1499,21 @@ util.inherits(ODataConventionModelBuilder, ODataModelBuilder);
                                 self.addEntitySet(x, pluralize(x));
                             }
                         });
+                        //remove hidden models from entity set container
+                        for (var i = 0; i < self[entityContainerProperty].length; i++) {
+                            var x = self[entityContainerProperty][i];
+                            //get model
+                            var entityTypeName = x.entityType.name;
+                            var definition = self.getConfiguration().model(x.entityType.name);
+                            if (definition && definition.hidden) {
+                                self.removeEntitySet(x.name);
+                                if (!definition.abstract) {
+                                    self.ignore(entityTypeName);
+                                }
+                                i -= 1;
+                            }
+                        }
+                        self[initializeProperty] = true;
                         return resolve();
                     }
                     catch(err) {
@@ -1483,6 +1521,7 @@ util.inherits(ODataConventionModelBuilder, ODataModelBuilder);
                     }
                 });
             }
+            self[initializeProperty] = true;
             return resolve();
         });
 
