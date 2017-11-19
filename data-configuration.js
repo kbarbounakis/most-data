@@ -1,42 +1,11 @@
 /**
- * MOST Web Framework
- * A JavaScript Web Framework
- * http://themost.io
- * Created by Kyriakos Barbounakis<k.barbounakis@gmail.com> on 2015-02-13.
- *
- * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com
- Anthi Oikonomou anthioikonomou@gmail.com
- All rights reserved.
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions are met:
- * Redistributions of source code must retain the above copyright notice, this
- list of conditions and the following disclaimer.
- * Redistributions in binary form must reproduce the above copyright notice,
- this list of conditions and the following disclaimer in the documentation
- and/or other materials provided with the distribution.
- * Neither the name of MOST Web Framework nor the names of its
- contributors may be used to endorse or promote products derived from
- this software without specific prior written permission.
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-/**
  * @ignore
  */
-var _ = require("lodash"),
-    sprintf = require('sprintf'),
-    dataCommon = require('./data-common'),
-    util = require('util'),
-    path = require("path"),
-    fs = require("fs");
+var _ = require("lodash");
+var sprintf = require('sprintf').sprintf;
+var dataCommon = require('./data-common');
+var path = require("path");
+var fs = require("fs");
 
 /**
  * @ignore
@@ -49,6 +18,7 @@ var _ = require("lodash"),
  * @property {boolean} slidingExpiration
  * @property {string} loginPage
  */
+// eslint-disable-next-line no-unused-vars
 function DataConfigurationAuth() {
     //
 }
@@ -99,7 +69,7 @@ function DataConfiguration(configPath) {
                     //append default data types which are not defined in application data types
                     var defaultDataTypes = require('./dataTypes.json');
                     //enumerate default data types and replace or append application specific data types
-                    for (var key in defaultDataTypes) {
+                    _.forEach(_.keys(defaultDataTypes), function(key) {
                         if (dataTypes.hasOwnProperty(key)) {
                             if (dataTypes[key].version) {
                                 if (dataTypes[key].version <= defaultDataTypes[key].version) {
@@ -116,7 +86,7 @@ function DataConfiguration(configPath) {
                             //append data type
                             dataTypes[key] = defaultDataTypes[key];
                         }
-                    }
+                    });
                 }
             }
             catch(e) {
@@ -200,14 +170,14 @@ function DataConfiguration(configPath) {
                         }
                         else {
                             //adapter type does not export a createInstance(options) function
-                            console.log(sprintf.sprintf("The specified data adapter type (%s) does not have the appropriate constructor. Adapter type cannot be loaded.", x.invariantName));
+                            console.log(sprintf("The specified data adapter type (%s) does not have the appropriate constructor. Adapter type cannot be loaded.", x.invariantName));
                         }
                     }
                     catch(e) {
                         //catch error
                         console.log(e);
                         //and log a specific error for this adapter type
-                        console.log(sprintf.sprintf("The specified data adapter type (%s) cannot be instantiated. Adapter type cannot be loaded.", x.invariantName));
+                        console.log(sprintf("The specified data adapter type (%s) cannot be instantiated. Adapter type cannot be loaded.", x.invariantName));
                     }
                     if (valid) {
                         //register adapter
@@ -219,7 +189,7 @@ function DataConfiguration(configPath) {
                     }
                 }
                 else {
-                    console.log(sprintf.sprintf("The specified data adapter type (%s) does not have a type defined. Adapter type cannot be loaded.", x.invariantName));
+                    console.log(sprintf("The specified data adapter type (%s) does not have a type defined. Adapter type cannot be loaded.", x.invariantName));
                 }
             });
         }

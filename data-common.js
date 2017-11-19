@@ -31,12 +31,7 @@
 
 (function() {
 
-
-    /**
-     * @ignore
-     */
-    var util = require('util'),
-        _ = require('lodash');
+    var _ = require('lodash');
     /**
      * Load native object extensions
      */
@@ -49,7 +44,7 @@
          * @ignore
          */
         var find = function(callback, thisObject) {
-            if (this == null) {
+            if (this === null) {
                 throw new TypeError('Array.prototype.find called on null or undefined');
             }
             if (typeof callback !== 'function') {
@@ -87,12 +82,12 @@
     {
         /**
          * @param {Function} callback
-         * @param {Object=} [thisObject]
+         * @param {*=} [thisObject]
          * @returns {*}
          * @ignore
          */
         var select = function(callback, thisObject) {
-            if (this == null) {
+            if (this === null) {
                 throw new TypeError('Array.prototype.find called on null or undefined');
             }
             if (typeof callback !== 'function') {
@@ -134,7 +129,7 @@
          * @ignore
          */
         var distinct = function(callback, thisObject) {
-            if (this == null) {
+            if (this === null) {
                 throw new TypeError('Array.prototype.find called on null or undefined');
             }
             if (typeof callback !== 'function') {
@@ -162,7 +157,9 @@
                 Object.defineProperty(Array.prototype, 'distinct', {
                     value: distinct, configurable: true, enumerable: false, writable: true
                 });
-            } catch(e) {}
+            } catch(e) {
+                //
+            }
         }
 
         if (!Array.prototype.distinct) { Array.prototype.distinct = distinct; }
@@ -176,7 +173,7 @@
          * @ignore
          */
         var isNullOrUndefined = function(obj) {
-            return (typeof obj === 'undefined') || (obj==null);
+            return (typeof obj === 'undefined') || (obj===null);
         };
 
         if (Object.defineProperty) {
@@ -245,7 +242,7 @@
      * @returns {boolean}
      */
     dataCommon.isDefined = function(obj) {
-        return (typeof obj !== 'undefined' && obj != null);
+        return (typeof obj !== 'undefined' && obj !== null);
     };
 
     /**
