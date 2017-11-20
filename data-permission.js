@@ -490,42 +490,20 @@ function queryUser(context, username, callback) {
         if (_.isNil(context)) {
             return callback();
         }
-        else {
-            //get user key
-            var users = context.model('User');
-            if (_.isNil(users)) {
-                return callback();
-            }
-            users.where('name').equal(username).silent().select('id', 'name').first(function(err, result) {
-                if (err) {
-                    callback(err);
-                }
-                else {
-                    //if anonymous user was not found
-                    if (_.isNil(result)) {
-                        return callback();
-                    }
-                    //get anonymous user object
-                    var user = users.convert(result);
-                    //get user groups
-                    user.property('groups').select('id', 'name').silent().all(function(err, groups) {
-                        if (err) {
-                            callback(err);
-                            return;
-                        }
-                        //set anonymous user groups
-                        user.groups = groups || [];
-                        //return user
-                        callback(null, user);
-                    });
-                }
-            });
+        var users = context.model('User');
+        if (_.isNil(users)) {
+            return callback();
         }
+        users.where('name').equal(username).silent().select('id','name').expand("groups").getTypedItem().then(function(result) {
+            return callback(null, result);
+        }).catch(function(err) {
+            return callback(err);
+        });
     }
-    catch (e) {
-        callback(e);
+    catch (err) {
+        callback(err);
     }
-};
+}
 /**
  * @param {DataContext} context
  * @param {function(Error=,Array=)} callback
@@ -562,7 +540,7 @@ function effectiveAccounts(context, callback) {
                     result.groups = result.groups || [];
                     result.groups.forEach(function(x) { arr.push({ "id": x.id, "name": x.name }); });
                 }
-                if (arr.length==0)
+                if (arr.length===0)
                     arr.push({ id: null });
                 callback(null, arr);
             }
@@ -657,7 +635,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
     {
         var unattendedExecutionAccount=authSettings.unattendedExecutionAccount;
         if ((typeof unattendedExecutionAccount !== 'undefined'
-            || unattendedExecutionAccount != null)
+            || unattendedExecutionAccount !== null)
             && (unattendedExecutionAccount===context.user.name))
         {
             callback();
@@ -681,7 +659,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
         //get model privileges
         var modelPrivileges = model.privileges || [];
         //if model has no privileges defined
-        if (modelPrivileges.length==0) {
+        if (modelPrivileges.length===0) {
             //do nothing
             callback(null);
             //and exit
@@ -690,7 +668,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
         //tuning up operation
         //validate request mask permissions against all users privilege { mask:<requestMask>,disabled:false,account:"*" }
         var allUsersPrivilege = modelPrivileges.find(function(x) {
-            return (((x.mask & requestMask)==requestMask) && !x.disabled && (x.account==='*'));
+            return (((x.mask & requestMask)===requestMask) && !x.disabled && (x.account==='*'));
         });
         if (typeof allUsersPrivilege !== 'undefined') {
             //do nothing
@@ -703,7 +681,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
             if (err) { callback(err); return; }
             //get all enabled privileges
             var privileges = modelPrivileges.filter(function(x) {
-                return !x.disabled && ((x.mask & requestMask) == requestMask);
+                return !x.disabled && ((x.mask & requestMask) === requestMask);
             });
 
             var cancel = false, assigned = false, entity = qry.entity(model.viewAdapter), expand = null,
@@ -713,7 +691,7 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                     return cb();
                 }
                 try {
-                    if (item.type=='global') {
+                    if (item.type==='global') {
                         //check if a privilege is assigned by the model
                         if (item.account==='*') {
                             //get permission and exit

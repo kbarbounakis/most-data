@@ -3354,8 +3354,6 @@ DataQueryable.prototype.getAllTypedItems = function() {
 
 if (typeof exports !== 'undefined')
 {
-    module.exports = {
-        DataQueryable:DataQueryable,
-        DataAttributeResolver:DataAttributeResolver
-    };
+    module.exports.DataQueryable = DataQueryable;
+    module.exports.DataAttributeResolver = DataAttributeResolver;
 }
