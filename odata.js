@@ -319,7 +319,7 @@ EntityCollectionConfiguration.prototype.hasAction = function(name) {
     if (_.isEmpty(name)) {
         return;
     }
-    var findRe = new RegExp("^$" + name + "$" ,"ig");
+    var findRe = new RegExp("^" + name + "$" ,"ig");
     return _.find(this.actions, function(x) {
         return findRe.test(x.name);
     });
@@ -419,7 +419,7 @@ function EntityTypeConfiguration(name) {
         if (_.isEmpty(name)) {
             return;
         }
-        var findRe = new RegExp("^$" + name + "$" ,"ig");
+        var findRe = new RegExp("^" + name + "$" ,"ig");
         return _.find(this.actions, function(x) {
             return findRe.test(x.name);
         });

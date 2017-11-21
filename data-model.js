@@ -446,6 +446,13 @@ function DataModel(obj) {
 util.inherits(DataModel, types.EventEmitter2);
 
 /**
+ * @returns {Function}
+ */
+DataModel.prototype.getDataObjectType = function() {
+    return getDataObjectClass_.bind(this)();
+};
+
+/**
  * Initializes the current data model. This method is used for extending the behaviour of an install of DataModel class.
  */
 DataModel.prototype.initialize = function() {
@@ -1275,7 +1282,7 @@ DataModel.prototype.idOf = function(obj) {
         return;
     if (obj===null)
         return;
-    if (typeof this.primaryKey === 'undefined' || this.primaryKey == null)
+    if (typeof this.primaryKey === 'undefined' || this.primaryKey === null)
         return;
     if (typeof obj === 'object')
         return obj[this.primaryKey];
