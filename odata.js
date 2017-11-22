@@ -1639,22 +1639,20 @@ util.inherits(ODataConventionModelBuilder, ODataModelBuilder);
      */
     ODataConventionModelBuilder.prototype.getEdm = function() {
         var self = this, superGetEdm = ODataConventionModelBuilder.super_.prototype.getEdm;
-        return Q.promise(function (resolve, reject) {
-            try{
-                if (_.isObject(self[edmProperty])) {
-                    return resolve(self[edmProperty]);
-                }
-                return self.initialize().then(function() {
-                    return superGetEdm.bind(self)().then(function(result) {
-                        self[edmProperty] = result;
-                        return resolve(self[edmProperty]);
-                    });
+        try{
+            if (_.isObject(self[edmProperty])) {
+                return Q.resolve(self[edmProperty]);
+            }
+            return self.initialize().then(function() {
+                return superGetEdm.bind(self)().then(function(result) {
+                    self[edmProperty] = result;
+                    return Q.resolve(self[edmProperty]);
                 });
-            }
-            catch(err) {
-                return reject(err);
-            }
-        });
+            });
+        }
+        catch(err) {
+            return Q.reject(err);
+        }
     };
 
 
