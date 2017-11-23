@@ -256,7 +256,7 @@ function DataModel(obj) {
     this.sealed = false;
     this.abstract = false;
     this.version = '0.1';
-    this.type = 'data';
+    //this.type = 'data';
     this.caching = 'none';
     this.fields = [];
     this.eventListeners = [];

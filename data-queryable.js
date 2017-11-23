@@ -121,13 +121,13 @@ DataAttributeResolver.prototype.resolveNestedAttribute = function(attr) {
             expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(self.model, attr);
             //select field
             if (member.length>2)
-                select = qry.fields.select(member[2]).from(member[1]);
+                select = qry.fields.select(member[member.length-1]).from(member[member.length-2]);
             else
                 select  = qry.fields.select(member[1]).from(member[0]);
         }
         if (expr) {
-            if (typeof this.query.$expand === 'undefined' || null) {
-                this.query.$expand = expr;
+            if (_.isNil(self.query.$expand)) {
+                self.query.$expand = expr;
             }
             else {
                 arr = [];
@@ -147,8 +147,9 @@ DataAttributeResolver.prototype.resolveNestedAttribute = function(attr) {
                             }
                         return false;
                     });
-                    if (typeof obj === 'undefined')
+                    if (typeof obj === 'undefined') {
                         self.query.$expand.push(y);
+                    }
                 });
             }
             return select;
@@ -203,10 +204,9 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
             res.join(entity).with(expr);
             if (arrMember.length>2) {
                 parentModel._alias = mapping.childField;
-                var expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(parentModel, arrMember[1] + '/' + arrMember[2]);
-                var arr = [];
-                arr.push(res.$expand);
-                arr.push(expr);
+                var memberExpr = arrMember.slice(1).join('/');
+                var expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(parentModel, memberExpr);
+                var arr = [].concat(res.$expand).concat(expr);
                 return arr;
             }
             return res.$expand;
@@ -350,6 +350,14 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
         return { name: matches[1] + '(' + matches[2] + '/' + matches[3] + '/' + matches[4]  + ')', property:matches[5] };
     }
     /**
+     * nested attribute aggregate function with alias e.g. f(x/b/c/d) as a
+     * @ignore
+     */
+    matches = /^(\w+)\((\w+)\/(\w+)\/(\w+)\/(\w+)\)\sas\s(\w+)$/i.exec(s);
+    if (matches) {
+        return { name: matches[1] + '(' + matches[2] + '/' + matches[3] + '/' + matches[4] + '/' + matches[5]  + ')', property:matches[6] };
+    }
+    /**
      * nested attribute with alias e.g. x/b as a
      * @ignore
      */
@@ -364,6 +372,14 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
     matches = /^(\w+)\/(\w+)\/(\w+)\sas\s(\w+)$/i.exec(s);
     if (matches) {
         return { name: matches[1] + '/' + matches[2] + '/' + matches[3], property:matches[4] };
+    }
+    /**
+     * nested attribute with alias e.g. x/b/c/d as a
+     * @ignore
+     */
+    matches = /^(\w+)\/(\w+)\/(\w+)\/(\w+)\sas\s(\w+)$/i.exec(s);
+    if (matches) {
+        return { name: matches[1] + '/' + matches[2] + '/' + matches[3] + '/' + matches[4], property:matches[5] };
     }
     /**
      * nested attribute aggregate function with alias e.g. f(x/b)
@@ -382,6 +398,14 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
         return { name: matches[1] + '('  + matches[2] + '/' + matches[3] + '/' + matches[4]  + ')' };
     }
     /**
+     * nested attribute aggregate function with alias e.g. f(x/b/c/d)
+     * @ignore
+     */
+    matches = /^(\w+)\((\w+)\/(\w+)\/(\w+)\/(\w+)\)$/i.exec(s);
+    if (matches) {
+        return { name: matches[1] + '('  + matches[2] + '/' + matches[3] + '/' + matches[4] + matches[5]  + ')' };
+    }
+    /**
      * nested attribute with alias e.g. x/b
      * @ignore
      */
@@ -395,6 +419,15 @@ DataAttributeResolver.prototype.testNestedAttribute = function(s) {
      * @ignore
      */
     matches = /^(\w+)\/(\w+)\/(\w+)$/.exec(s);
+    if (matches) {
+        return { name: s };
+    }
+
+    /**
+     * nested attribute with alias e.g. x/b/c/d
+     * @ignore
+     */
+    matches = /^(\w+)\/(\w+)\/(\w+)\/(\w+)$/.exec(s);
     if (matches) {
         return { name: s };
     }
@@ -769,6 +802,22 @@ DataQueryable.prototype.or = function(attr) {
     return this;
 };
 
+function resolveValue(obj) {
+    if (typeof obj === 'string' && /^\$it\//.test(obj)) {
+        var attr = obj.replace(/^\$it\//,'');
+        if (DataAttributeResolver.prototype.testNestedAttribute(attr)) {
+            return DataAttributeResolver.prototype.resolveNestedAttribute.call(this, attr);
+        }
+        else {
+            attr = DataAttributeResolver.prototype.testAttribute(attr);
+            if (attr) {
+                return this.fieldOf(attr.name);
+            }
+        }
+    }
+    return obj;
+}
+
 /**
  * Performs an equality comparison.
  * @param obj {*} - The right operand of the expression
@@ -784,7 +833,8 @@ DataQueryable.prototype.or = function(attr) {
     });
  */
 DataQueryable.prototype.equal = function(obj) {
-    this.query.equal(obj);
+
+    this.query.equal(resolveValue.bind(this)(obj));
     return this;
 };
 
@@ -822,7 +872,7 @@ DataQueryable.prototype.is = function(obj) {
     });
  */
 DataQueryable.prototype.notEqual = function(obj) {
-    this.query.notEqual(obj);
+    this.query.notEqual(resolveValue.bind(this)(obj));
     return this;
 };
 
@@ -852,7 +902,7 @@ DataQueryable.prototype.notEqual = function(obj) {
  89   Nvidia GeForce GTX 650 Ti Boost               1625.49       2015-11-21 17:29:21.000+02:00
  */
 DataQueryable.prototype.greaterThan = function(obj) {
-    this.query.greaterThan(obj);
+    this.query.greaterThan(resolveValue.bind(this)(obj));
     return this;
 };
 
@@ -873,7 +923,7 @@ DataQueryable.prototype.greaterThan = function(obj) {
     });
  */
 DataQueryable.prototype.greaterOrEqual = function(obj) {
-    this.query.greaterOrEqual(obj);
+    this.query.greaterOrEqual(resolveValue.bind(this)(obj));
     return this;
 };
 
@@ -910,7 +960,7 @@ DataQueryable.prototype.bit = function(value, result) {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.lowerThan = function(obj) {
-    this.query.lowerThan(obj);
+    this.query.lowerThan(resolveValue.bind(this)(obj));
     return this;
 };
 
@@ -931,7 +981,7 @@ DataQueryable.prototype.lowerThan = function(obj) {
     });
  */
 DataQueryable.prototype.lowerOrEqual = function(obj) {
-    this.query.lowerOrEqual(obj);
+    this.query.lowerOrEqual(resolveValue.bind(this)(obj));
     return this;
 };
 
@@ -1111,13 +1161,13 @@ DataQueryable.prototype.notContains = function(value) {
  440  Bose SoundLink Bluetooth Mobile Speaker II  HS5288  155.27
  */
 DataQueryable.prototype.between = function(value1, value2) {
-    this.query.between(value1, value2);
+    this.query.between(resolveValue.bind(this)(value1), resolveValue.bind(this)(value2));
     return this;
 };
 
 function select_(arg) {
     var self = this;
-    if (typeof arg === 'string' && arg.length==0) {
+    if (typeof arg === 'string' && arg.length===0) {
         return;
     }
     var a = DataAttributeResolver.prototype.testAggregatedNestedAttribute.call(self,arg);
