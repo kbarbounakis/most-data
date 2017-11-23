@@ -1,46 +1,21 @@
 /**
- * MOST Web Framework
- * A JavaScript Web Framework
- * http://themost.io
- * Created by Kyriakos Barbounakis<k.barbounakis@gmail.com> on 2014-10-13.
- *
- * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com
- Anthi Oikonomou anthioikonomou@gmail.com
- All rights reserved.
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions are met:
- * Redistributions of source code must retain the above copyright notice, this
- list of conditions and the following disclaimer.
- * Redistributions in binary form must reproduce the above copyright notice,
- this list of conditions and the following disclaimer in the documentation
- and/or other materials provided with the distribution.
- * Neither the name of MOST Web Framework nor the names of its
- contributors may be used to endorse or promote products derived from
- this software without specific prior written permission.
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
  * @ignore
  */
-var util = require('util'),
-    sprintf = require('sprintf'),
-    _ = require("lodash"),
-    types = require('./types'),
-    DataObjectJunction = require('./data-object-junction').DataObjectJunction,
-    DataObjectTag = require('./data-object-tag').DataObjectTag,
-    HasManyAssociation = require('./has-many-association').HasManyAssociation,
-    HasOneAssociation = require('./has-one-association').HasOneAssociation,
-    HasParentJunction = require('./has-parent-junction').HasParentJunction;
+var util = require('util');
+var sprintf = require('sprintf');
+var _ = require("lodash");
+var EventEmitter2 = require('./types').EventEmitter2;
+var DataException = require('./types').DataException;
+var Symbol = require('symbol');
+var DataObjectJunction = require('./data-object-junction').DataObjectJunction;
+var DataObjectTag = require('./data-object-tag').DataObjectTag;
+var HasManyAssociation = require('./has-many-association').HasManyAssociation;
+var HasOneAssociation = require('./has-one-association').HasOneAssociation;
+var HasParentJunction = require('./has-parent-junction').HasParentJunction;
+
+var selectorsProperty = Symbol('selectors');
+var typeProperty = Symbol('type');
+var modelProperty = Symbol('model');
 
 /**
  * @ignore
@@ -55,7 +30,7 @@ var STR_MISSING_CALLBACK_ARGUMENT = 'Missing argument. Callback function expecte
  * @param {string=} type
  * @param {*=} obj The object that is going to be extended
  * @constructor
- * @augments EventEmitter2
+ * @augments EventEmitter
  * @property {DataContext}  context - An instance of DataContext class associated with this object.
  * @property {string} $$type - A string that represents the type of this object.
  * @property {DataModel} $$model - The data model which is associated with this object.
@@ -76,26 +51,26 @@ function DataObject(type, obj)
         enumerable:false,
         configurable:false
     });
-    /**
-     * @type {string}
-     * @private
-     */
-    var type_ = null;
     if (type)
-        type_ = type;
+        this[typeProperty] = type;
     else {
         //get type from constructor name
         if (/Model$/.test(this.constructor.name)) {
-            type_ = this.constructor.name.replace(/Model$/,'');
+            this[typeProperty] = this.constructor.name.replace(/Model$/,'');
         }
         else {
             if (this.constructor.name!=='DataObject')
-                type_ = this.constructor.name;
+                this[typeProperty] = this.constructor.name;
         }
     }
     Object.defineProperty(this,'$$type',{
-        get: function() { return type_; } ,
-        set: function(value) { type_=value; if (model_) { model_ = null; } },
+        get: function() {
+            return this[typeProperty];
+            },
+        set: function(value) {
+                this[typeProperty]=value;
+                delete this[modelProperty];
+            },
         enumerable:false,
         configurable:false
     });
@@ -115,25 +90,27 @@ function DataObject(type, obj)
         configurable:false
     });
 
-    var model_;
     Object.defineProperty(this,'$$model',{
         get: function() {
-            if (_.isNil(type_))
+            if (_.isNil(this[typeProperty]))
                 return;
-            if (model_) { return model_; }
-            if (context_) {
-                model_ = context_.model(type_);
+            if (this[modelProperty]) {
+                return this[modelProperty];
             }
-            return model_;
+            if (context_) {
+                this[modelProperty] = context_.model(this[typeProperty]);
+            }
+            return this[modelProperty];
         },
         enumerable:false,
         configurable:false
     });
 
-    var __selectors = { };
+    this[selectorsProperty] = {};
     Object.defineProperty(this,'selectors',{
-        get: function() { return __selectors; } ,
-        set: function(value) { __selectors=value; },
+        get: function() {
+            return this[selectorsProperty];
+            } ,
         enumerable:false,
         configurable:false
     });
@@ -144,7 +121,7 @@ function DataObject(type, obj)
             model = self.$$model;
         model.inferState(self, function(err, state) {
             if (err) { return callback(err); }
-            callback(null, (state==1));
+            callback(null, (state===1));
         });
     }).selector('live', function(callback) {
         if (typeof callback !== 'function') { return new Error(STR_MISSING_CALLBACK_ARGUMENT, STR_MISSING_ARGUMENT_CODE); }
@@ -152,53 +129,37 @@ function DataObject(type, obj)
             model = self.$$model;
         model.inferState(self, function(err, state) {
             if (err) { return callback(err); }
-            callback(null, (state==2));
+            callback(null, (state===2));
         });
     });
 
-    if (typeof obj !== 'undefined' && obj != null) {
+    if (typeof obj !== 'undefined' && obj !== null) {
         _.assign(this, obj);
     }
 
-    /**
-     * Gets the identifier of this DataObject instance.
-     * @returns {*}
-     */
-    this.getId = function () {
-        return this.$$id;
-    };
-
-    this.silent = function(value) {
-        return this.getModel().silent(value);
-    }
-
 }
-util.inherits(DataObject, types.EventEmitter2);
-
-var STRIP_COMMENTS = /((\/\/.*$)|(\/\*[\s\S]*?\*\/))/mg;
-var ARGUMENT_NAMES = /(?:^|,)\s*([^\s,=]+)/g;
+util.inherits(DataObject, EventEmitter2);
+/**
+ * Gets the identifier of this data object
+ * @returns {*}
+ */
+DataObject.prototype.getId = function() {
+    return this.$$id;
+};
 
 /**
- * @ignore
- * @param func
- * @returns {Array}
+ * Gets or sets data operation based on this data object in silent (unattended) mode
+ * @param {boolean} value
+ * @returns {DataObject}
  */
-function $args ( func ) {
-    var fnStr = func.toString().replace(STRIP_COMMENTS, '');
-    var argsList = fnStr.slice(fnStr.indexOf('(')+1, fnStr.indexOf(')'));
-    var result = argsList.match( ARGUMENT_NAMES );
-
-    if(result === null) {
-        return [];
+DataObject.prototype.silent = function(value) {
+    var model = this.getModel();
+    if (typeof model === 'undefined' || model === null) {
+        throw new TypeError('Data model cannot be empty at this context');
     }
-    else {
-        var stripped = [];
-        for ( var i = 0; i < result.length; i++  ) {
-            stripped.push( result[i].replace(/[\s,]/g, '') );
-        }
-        return stripped;
-    }
-}
+    model.silent(value);
+    return this;
+};
 
 /**
  * Registers a selector for the current data object
@@ -231,7 +192,6 @@ DataObject.prototype.selector = function(name, selector) {
      * @private
      * @type {{}|*}
      */
-    this.selectors = this.selectors || {};
     if (typeof name !== 'string') {
         return new Error('Invalid argument. String expected.', 'EARG');
     }
@@ -298,31 +258,6 @@ DataObject.prototype.getModel = function() {
     return this.$$model;
 };
 
-/**
- * Gets the identifier of this data object
- * @returns {*}
- * @deprecated This function is deprecated. Use DataObject.$$id property instead
- */
-DataObject.prototype.idOf = function() {
-    return this.$$id;
-};
-
-/**
- * @param name
- * @returns {DataObject}
- * @deprecated
- * @ignore
- */
-DataObject.prototype.removeProperty = function(name) {
-    var model = this.$$model, field = model.field(name);
-    if (_.isNil(field)) {
-        var er = new Error('The specified field cannot be found.'); er.code = 'EDATA';
-        throw er;
-    }
-    //safe delete property
-    delete this[name];
-    return this;
-};
 
 /**
  * @param {String} name The relation name
@@ -359,7 +294,7 @@ DataObject.prototype.property = function(name) {
                     else {
                         model.inferState(self, function(err, state) {
                             if (err) { return callback(err); }
-                            if (state==2) {
+                            if (state===2) {
                                 model.where(model.primaryKey).equal(self[model.primaryKey]).select(name).value(function(err, value) {
                                     if (err) { return callback(err); }
                                     callback(null, value);
@@ -590,7 +525,7 @@ DataObject.prototype.execute = function(context, fn) {
 DataObject.prototype.query = function(attr)
 {
     var mapping = this.getModel().inferMapping(attr);
-    if (_.isNil(mapping)) { new types.DataException('EASSOCIATION','The given attribute does not define an association of any type.'); }
+    if (_.isNil(mapping)) { new DataException('EASSOCIATION','The given attribute does not define an association of any type.'); }
     return this.property(attr)
 };
 
@@ -604,7 +539,7 @@ function save_(context, callback) {
     //get current application
     var model = self.getModel();
     if (_.isNil(model)) {
-        return callback.call(self, new types.DataException('EMODEL','Data model cannot be found.'));
+        return callback.call(self, new DataException('EMODEL','Data model cannot be found.'));
     }
     var i;
     //register before listeners
@@ -667,7 +602,7 @@ function remove_(context, callback) {
     //get current application
     var model = self.getModel();
     if (_.isNil(model)) {
-        return callback.call(self, new types.DataException('EMODEL','Data model cannot be found.'));
+        return callback.call(self, new DataException('EMODEL','Data model cannot be found.'));
     }
     //register before listeners
     var beforeListeners = self.listeners('before.remove');

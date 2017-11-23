@@ -619,21 +619,14 @@ DataModel.prototype.asQueryable = function() {
     return new DataQueryable(this);
 };
 
-
 /**
- * Applies open data filter, ordering, grouping and paging params and returns a data queryable object
- * @param {String|{$filter:string=, $skip:number=, $levels:number=, $top:number=, $take:number=, $order:string=, $inlinecount:string=, $expand:string=,$select:string=, $orderby:string=, $group:string=, $groupby:string=}} params - A string that represents an open data filter or an object with open data parameters
- * @param {function(Error=,DataQueryable=)} callback -  A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain an instance of DataQueryable class.
- * @example
- context.model('Order').filter(context.params, function(err,q) {
-    if (err) { return callback(err); }
-    q.take(10, function(err, result) {
-        if (err) { return callback(err); }
-        callback(null, result);
-    });
- });
+ * @private
+ * @memberOf DataModel
+ * @param {*} params
+ * @param {Function} callback
+ * @returns {*}
  */
-DataModel.prototype.filter = function(params, callback) {
+function filterInternal(params, callback) {
     var self = this;
     var parser = qry.openData.createParser(), $joinExpressions = [], view;
     if (typeof params !== 'undefined' && params !== null && typeof params.$select === 'string') {
@@ -675,8 +668,8 @@ DataModel.prototype.filter = function(params, callback) {
                     arrExpr.forEach(function(y) {
                         var joinExpr = $joinExpressions.find(function(x) {
                             if (x.$entity && x.$entity.$as) {
-                                    return (x.$entity.$as === y.$entity.$as);
-                                }
+                                return (x.$entity.$as === y.$entity.$as);
+                            }
                             return false;
                         });
                         if (_.isNil(joinExpr))
@@ -796,6 +789,30 @@ DataModel.prototype.filter = function(params, callback) {
     }
     catch(e) {
         return callback(e);
+    }
+}
+
+/**
+ * @async
+ * Applies open data filter, ordering, grouping and paging params and returns a data queryable object
+ * @param {String|{$filter:string=, $skip:number=, $levels:number=, $top:number=, $take:number=, $order:string=, $inlinecount:string=, $expand:string=,$select:string=, $orderby:string=, $group:string=, $groupby:string=}} params - A string that represents an open data filter or an object with open data parameters
+ * @param {Function=} callback -  A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain an instance of DataQueryable class.
+ * @returns Promise<DataQueryable>|*
+ * @example
+ context.model('Order').filter(context.params, function(err,q) {
+    if (err) { return callback(err); }
+    q.take(10, function(err, result) {
+        if (err) { return callback(err); }
+        callback(null, result);
+    });
+ });
+ */
+DataModel.prototype.filter = function(params, callback) {
+    if (typeof callback === 'function') {
+        return filterInternal.bind(this)(params, callback);
+    }
+    else {
+        return Q.nbind(filterInternal, this)(params);
     }
 };
 
