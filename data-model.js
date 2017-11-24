@@ -36,11 +36,9 @@ var _ = require("lodash"),
     sprintf = require('sprintf'),
     path = require("path"),
     async = require('async'),
-    events = require('events'),
     qry = require('most-query'),
     types = require('./types'),
     DataAssociationMapping = require('./types').DataAssociationMapping,
-    functions = require('./functions'),
     dataCommon = require('./data-common'),
     dataListeners = require('./data-listeners'),
     validators = require('./data-validator'),
@@ -68,7 +66,7 @@ function inferTagMapping_(field) {
         return;
     }
     //validate DataField.many attribute
-    if (!(field.hasOwnProperty('many') && field.many == true)) {
+    if (!(field.hasOwnProperty('many') && field.many === true)) {
         return;
     }
     //check if the type of the given field is a primitive data type
@@ -331,7 +329,7 @@ function DataModel(obj) {
      */
     Object.defineProperty(this, 'attributes', { get: function() {
         //validate self field collection
-        if (typeof attributes !== 'undefined' && attributes != null)
+        if (typeof attributes !== 'undefined' && attributes !== null)
             return attributes;
         //init attributes collection
         attributes = [];
@@ -375,7 +373,7 @@ function DataModel(obj) {
             baseModel.attributes.forEach(function(x) {
                 if (!x.primary) {
                     //check if member is overridden by the current model
-                    field = self.fields.find(function(y) { return y.name == x.name; });
+                    field = self.fields.find(function(y) { return y.name === x.name; });
                     if (typeof field === 'undefined')
                         attributes.push(x);
                 }
@@ -488,7 +486,6 @@ DataModel.prototype.clone = function(context) {
         DataCachingListener = dataListeners.DataCachingListener,
         DataModelCreateViewListener = dataListeners.DataModelCreateViewListener,
         DataModelSeedListener = dataListeners.DataModelSeedListener,
-        DataModelSubTypesListener = dataListeners.DataModelSubTypesListener,
         DataStateValidatorListener = require('./data-state-validator').DataStateValidatorListener;
 
     //register system event listeners
@@ -1070,9 +1067,9 @@ DataModel.prototype.min = function(attr, callback) {
  */
 DataModel.prototype.base = function()
 {
-    if (typeof this.inherits === 'undefined' || this.inherits == null)
+    if (typeof this.inherits === 'undefined' || this.inherits === null)
         return null;
-    if (typeof this.context === 'undefined' || this.context == null)
+    if (typeof this.context === 'undefined' || this.context === null)
         throw new Error("The underlying data context cannot be empty.");
     return this.context.model(this.inherits);
 };
@@ -1150,7 +1147,7 @@ function getDataObjectClass_() {
                     }
                     catch(e) {
                         if (e.code === 'MODULE_NOT_FOUND') {
-                            if (typeof self.inherits === 'undefined' || self.inherits == null) {
+                            if (typeof self.inherits === 'undefined' || self.inherits === null) {
                                 //if , finally, we are unable to find class file, load default DataObject class
                                 DataObjectClass = require('./data-object').DataObject;
                             }
@@ -1218,7 +1215,7 @@ function getDataObjectClass_() {
  //get User model
  var users = context.model('User');
  users.where('name').equal(context.user.name).first().then(function(result) {
-    if (md.common.isNullOrUndefined(result)) {
+    if (typeof result === 'undefined') {
         return done(new Error('User cannot be found'));
     }
     //convert result
@@ -1226,7 +1223,7 @@ function getDataObjectClass_() {
     //get user's person
     user.person(function(err, result) {
         if (err) { return done(err); }
-        if (md.common.isNullOrUndefined(result)) {
+        if (typeof result === 'undefined') {
             return done(new Error('Person cannot be found'));
         }
         console.log('Person: ' + JSON.stringify(result));
@@ -1357,7 +1354,7 @@ function cast_(obj, state) {
                 if (_.isNil(mapping))
                     result[x.name] = obj[name];
                 else if ((mapping.associationType==='association') && (mapping.childModel===self.name)) {
-                    if ((typeof obj[name] === 'object') && (obj[name] != null))
+                    if ((typeof obj[name] === 'object') && (obj[name] !== null))
                     //set associated key value (e.g. primary key value)
                         result[x.name] = obj[name][mapping.parentField];
                     else
@@ -1394,20 +1391,20 @@ function castForValidation_(obj, state) {
         var result = {}, name;
         self.attributes.filter(function(x) {
             if (x.model!==self.name) {
-                if (types.parsers.parseBoolean(x.cloned) == false)
+                if (types.parsers.parseBoolean(x.cloned) === false)
                         return false;
             }
             return (!x.readonly) ||
-                (x.readonly && (typeof x.calculation!=='undefined') && state==2) ||
-                (x.readonly && (typeof x.value!=='undefined') && state==1) ||
-                (x.readonly && (typeof x.calculation!=='undefined') && state==1);
+                (x.readonly && (typeof x.calculation!=='undefined') && state===2) ||
+                (x.readonly && (typeof x.value!=='undefined') && state===1) ||
+                (x.readonly && (typeof x.calculation!=='undefined') && state===1);
         }).filter(function(y) {
             /*
              change: 2016-02-27
              author:k.barbounakis@gmail.com
              description:exclude non editable attributes on update operation
              */
-            return (y.state==2) ? (y.hasOwnProperty("editable") ? y.editable : true) : true;
+            return (y.state===2) ? (y.hasOwnProperty("editable") ? y.editable : true) : true;
         }).forEach(function(x) {
             name = obj.hasOwnProperty(x.property) ? x.property : x.name;
             if (obj.hasOwnProperty(name))
@@ -1416,7 +1413,7 @@ function castForValidation_(obj, state) {
                 if (_.isNil(mapping))
                     result[x.name] = obj[name];
                 else if ((mapping.associationType==='association') && (mapping.childModel===self.name)) {
-                    if ((typeof obj[name] === 'object') && (obj[name] != null))
+                    if ((typeof obj[name] === 'object') && (obj[name] !== null))
                     //set associated key value (e.g. primary key value)
                         result[x.name] = obj[name][mapping.parentField];
                     else
@@ -1522,7 +1519,7 @@ DataModel.prototype.new = function(obj)
  */
 function save_(obj, callback) {
     var self = this;
-    if (typeof obj=='undefined' || obj == null) {
+    if (typeof obj=='undefined' || obj === null) {
         callback.call(self, null);
         return;
     }
@@ -1655,7 +1652,7 @@ function saveBaseObject_(obj, callback) {
         callback.call(self, new Error('Invalid argument. Source object cannot be an array.'));
         return 0;
     }
-    if (obj.$state == 4) {
+    if (obj.$state === 4) {
         return removeSingleObject_.call(self, obj, callback);
     }
     //get object state before any other operation
@@ -1870,7 +1867,7 @@ function insert_(obj, callback) {
     var self = this;
     //ensure callback
     callback = callback || function() {};
-    if ((obj==null) || obj === undefined) {
+    if ((obj===null) || obj === undefined) {
         callback.call(self, null);
     }
     //set state
@@ -2026,7 +2023,7 @@ DataModel.prototype.remove = function(obj, callback)
                 if (err) {
                     return callback(err);
                 }
-                if (typeof result !== 'undefined' && result != null) {
+                if (typeof result !== 'undefined' && result !== null) {
                     _.assign(e.target, result);
                 }
                 //execute after remove events
@@ -2082,7 +2079,7 @@ DataModel.PluralExpression = /([a-zA-Z]+?)([e']s|[^aiou]s)$/;
  */
 DataModel.prototype.ensureModel = function(callback) {
     var self = this;
-    if (self.name=='Migration') {
+    if (self.name==='Migration') {
         //do nothing
         return callback();
     }
@@ -2144,7 +2141,7 @@ DataModel.prototype.migrate = function(callback)
     //     var m = context.model(x.type);
     //     if (m) {
     //         var m1 = models.find(function(y) {
-    //             return y.name == m.name;
+    //             return y.name === m.name;
     //         });
     //     }
     // });
@@ -2626,7 +2623,7 @@ function validate_(obj, state, callback) {
             arrValidators.push(new validators.DataTypeValidator(attr.type));
         }
 
-        if (arrValidators.length == 0) {
+        if (arrValidators.length === 0) {
             return cb();
         }
         //do validation

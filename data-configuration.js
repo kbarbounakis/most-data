@@ -18,6 +18,7 @@ var fs = require("fs");
  * @property {boolean} slidingExpiration
  * @property {string} loginPage
  */
+// noinspection JSUnusedGlobalSymbols
 // eslint-disable-next-line no-unused-vars
 function DataConfigurationAuth() {
     //
@@ -94,7 +95,7 @@ function DataConfiguration(configPath) {
                     dataCommon.log('Data: Application specific data types are missing. The default data types will be loaded instead.');
                 }
                 else {
-                    dataCommon.log('Data: An error occured while loading application data types.');
+                    dataCommon.log('Data: An error occurred while loading application data types.');
                     throw e;
                 }
                 dataTypes = require('./dataTypes.json');
@@ -120,14 +121,14 @@ function DataConfiguration(configPath) {
                     dataCommon.log('Data: The default application configuration cannot be found or is inaccesible.');
                 }
                 else {
-                    dataCommon.log('Data: An error occured while trying to open default application configuration.');
+                    dataCommon.log('Data: An error occurred while trying to open default application configuration.');
                     dataCommon.log(e);
                 }
                 config = { adapters:[], adapterTypes:[]  };
             }
         }
         else {
-            dataCommon.log('Data: An error occured while trying to open application configuration.');
+            dataCommon.log('Data: An error occurred while trying to open application configuration.');
             dataCommon.log(e);
             config = { adapters:[], adapterTypes:[]  };
         }
@@ -216,7 +217,7 @@ function DataConfiguration(configPath) {
                 return auth;
             }
             catch(e) {
-                console.log('An error occured while trying to load auth configuration');
+                console.log('An error occurred while trying to load auth configuration');
                 auth = {};
                 return auth;
             }
@@ -231,7 +232,7 @@ function DataConfiguration(configPath) {
             return config.settings.auth;
         }
         catch(e) {
-            var er = new Error('An error occured while trying to load auth configuration');
+            var er = new Error('An error occurred while trying to load auth configuration');
             er.code = "ECONF";
             throw er;
         }
@@ -246,6 +247,7 @@ function DataConfiguration(configPath) {
     this.getModelPath = function() {
         return path_;
     };
+    // noinspection JSUnusedGlobalSymbols
     /**
      * Sets a string which represents the path where schemas exist.
      * @param p
@@ -305,7 +307,7 @@ function DataConfiguration(configPath) {
             return this.model(name);
         }
     };
-
+// noinspection JSUnusedGlobalSymbols
     /**
      * Gets a boolean which indicates whether the specified data type is defined in data types collection or not.
      * @param name
@@ -360,7 +362,7 @@ DataConfiguration.prototype.model = function(name)
     if (typeof this._files === 'undefined') { this._files = fs.readdirSync(modelPath); }
     //and finally get this list of file
     files = this._files;
-    if (files.length==0)
+    if (files.length===0)
         return null;
     var r = new RegExp('^' + name.concat('.json') + '$','i');
     for (i = 0; i < files.length; i++) {
@@ -383,7 +385,7 @@ DataConfiguration.prototype.model = function(name)
 /**
  * @private
  */
-var namedConfiguations_ = { };
+var namedConfigurations_ = { };
 
 var cfg = {
 
@@ -444,10 +446,10 @@ cfg.getNamedConfiguration = function(name) {
     if (/^current$/i.test(name)) {
         return cfg.current;
     }
-    if (typeof namedConfiguations_[name] !== 'undefined')
-        return namedConfiguations_[name];
-    namedConfiguations_[name] = new DataConfiguration();
-    return namedConfiguations_[name];
+    if (typeof namedConfigurations_[name] !== 'undefined')
+        return namedConfigurations_[name];
+    namedConfigurations_[name] = new DataConfiguration();
+    return namedConfigurations_[name];
 };
 
 cfg.DataConfiguration = DataConfiguration;

@@ -201,6 +201,20 @@ EdmMultiplicity.Many = "Many";
 EdmMultiplicity.One = "One";
 EdmMultiplicity.Unknown = "Unknown";
 EdmMultiplicity.ZeroOrOne = "ZeroOrOne";
+/**
+ * @param {string} value
+ * @returns {string|*}
+ */
+EdmMultiplicity.parse = function(value) {
+    if (typeof value === 'string') {
+        var re = new RegExp('^'+value+'$','ig');
+        return _.find(Object.getOwnPropertyNames(EdmMultiplicity), function(x) {
+            if (typeof EdmMultiplicity[x] === 'string') {
+                return re.test(EdmMultiplicity[x]);
+            }
+        });
+    }
+};
 
 /**
  * @enum
@@ -308,6 +322,7 @@ function EntityCollectionConfiguration(entityType) {
     this[entityTypeProperty] = entityType;
 }
 
+// noinspection JSUnusedGlobalSymbols
 /**
  * Creates an action that bind to this entity collection
  * @param {string} name
@@ -418,121 +433,6 @@ function EntityTypeConfiguration(name) {
     this.collection = new EntityCollectionConfiguration(this);
 
 }
-
-
-/**
- * @static
- * Validates if the given object instance has a mapped OData action with the given name.
- * @param {*} obj
- * @param {string} name
- * @returns Function|*
- */
-EntityTypeConfiguration.hasOwnAction = function(obj, name) {
-    if (typeof obj !== 'object' && typeof obj !== 'function') {
-        return;
-    }
-    const re = new RegExp("^" + name + "$", "ig");
-    var functionName = _.find(getOwnPropertyNames(obj), function(x) {
-        return (typeof obj[x] === 'function') && (obj[x].dataAction instanceof ActionConfiguration) && re.test(obj[x].dataAction.name);
-    });
-    if (functionName) {
-        return obj[functionName];
-    }
-};
-
-/**
- * @static
- * Validates if the given object instance has a dynamic navigation property getter with the specified name.
- * @param {*} obj
- * @param {string} name
- * @returns Function|*
- */
-EntityTypeConfiguration.hasOwnNavigationPropertyGet = function(obj, name) {
-    if (typeof obj !== 'object' && typeof obj !== 'function') {
-        return;
-    }
-    const re = new RegExp("^" + name + "$", "ig");
-    var functionName = _.find(getOwnPropertyNames(obj), function(x) {
-        return (typeof obj[x] === 'function') && (typeof obj[x].navigationPropertyGet === 'object')  && re.test(obj[x].navigationPropertyGet.name);
-    });
-    if (functionName) {
-        return obj[functionName];
-    }
-};
-
-/**
- * @static
- * Validates if the given object instance has a dynamic navigation property setter with the specified name.
- * @param {*} obj
- * @param {string} name
- * @returns Function|*
- */
-EntityTypeConfiguration.hasOwnNavigationPropertySet = function(obj, name) {
-    if (typeof obj !== 'object' && typeof obj !== 'function') {
-        return;
-    }
-    const re = new RegExp("^" + name + "$", "ig");
-    var functionName = _.find(getOwnPropertyNames(obj), function(x) {
-        return (typeof obj[x] === 'function') && (typeof obj[x].navigationPropertySet === 'object')  && re.test(obj[x].navigationPropertySet.name);
-    });
-    if (functionName) {
-        return obj[functionName];
-    }
-};
-
-/**
- * @static
- * Validates if the given object instance has a mapped OData function with the given name.
- * @param {*} obj
- * @param {string} name
- * @returns Function|*
- */
-EntityTypeConfiguration.hasOwnFunction = function(obj, name) {
-    if (typeof obj !== 'object' && typeof obj !== 'function') {
-        return;
-    }
-    const re = new RegExp("^" + name + "$", "ig");
-    var functionName = _.find(getOwnPropertyNames(obj), function(x) {
-        return (typeof obj[x] === 'function') && (obj[x].dataFunction instanceof FunctionConfiguration) && re.test(obj[x].dataFunction.name);
-    });
-    if (functionName) {
-        return obj[functionName];
-    }
-};
-
-
-/**
- * @static
- * @param {*} obj
- * @returns Array<Function>
- */
-EntityTypeConfiguration.getOwnFunctions = function(obj) {
-    if (typeof obj !== 'object' && typeof obj !== 'function') {
-        return;
-    }
-    return _.map(_.filter(getOwnPropertyNames(obj), function(x) {
-        return (typeof obj[x] === 'function') && (obj[x].dataFunction instanceof FunctionConfiguration);
-    }),  function(x) {
-        return obj[x];
-    });
-};
-
-/**
- * @static
- * @param {*} obj
- * @returns Array<Function>
- */
-EntityTypeConfiguration.getOwnActions = function(obj) {
-    if (typeof obj !== 'object' && typeof obj !== 'function') {
-        return;
-    }
-    return _.map(_.filter(getOwnPropertyNames(obj), function(x) {
-        return (typeof obj[x] === 'function') && (obj[x].dataAction instanceof ActionConfiguration);
-    }),  function(x) {
-        return obj[x];
-    });
-};
-
 
 // noinspection JSUnusedGlobalSymbols
     /**
@@ -704,7 +604,7 @@ EntityTypeConfiguration.getOwnActions = function(obj) {
         this.ignoredProperty.push(name);
 
     };
-
+// noinspection JSUnusedGlobalSymbols
     /**
      * Removes the property from the entity.
      * @param {string} name
@@ -967,6 +867,7 @@ EntitySetConfiguration.prototype.getUrl = function() {
 // noinspection JSUnusedGlobalSymbols
         this.getEditLink = editLinkFunc;
     };
+// noinspection JSUnusedGlobalSymbols
 /**
  * @param {*} context
  * @param {*} any
@@ -985,7 +886,13 @@ EntitySetConfiguration.prototype.mapInstance = function(context, any) {
     }
     return any;
 };
-
+// noinspection JSUnusedGlobalSymbols
+/**
+ *
+ * @param {*} context
+ * @param {*} any
+ * @returns {*}
+ */
 EntitySetConfiguration.prototype.mapInstanceSet = function(context, any) {
     if (_.isNil(any)) {
         return;
@@ -1729,7 +1636,7 @@ util.inherits(ODataConventionModelBuilder, ODataModelBuilder);
     ODataConventionModelBuilder.prototype.initialize = function() {
         var self = this;
         if (self[initializeProperty]) {
-            return Q.resolve();
+            return resolve();
         }
         return Q.promise(function(resolve, reject) {
             /**
@@ -1795,177 +1702,21 @@ util.inherits(ODataConventionModelBuilder, ODataModelBuilder);
         var self = this, superGetEdm = ODataConventionModelBuilder.super_.prototype.getEdm;
         try{
             if (_.isObject(self[edmProperty])) {
-                return Q.resolve(self[edmProperty]);
+                return resolve(self[edmProperty]);
             }
             return self.initialize().then(function() {
                 return superGetEdm.bind(self)().then(function(result) {
                     self[edmProperty] = result;
-                    return Q.resolve(self[edmProperty]);
+                    return resolve(self[edmProperty]);
                 });
             });
         }
         catch(err) {
-            return Q.reject(err);
+            return reject(err);
         }
     };
 
-/**
- * Maps a function to an OData entity type action
- * @param {string} name
- * @param {string} returnType
- * @returns {Function}
- */
-function dataAction(name, returnType) {
-    if (typeof name !== 'string') {
-        throw new TypeError('Action name must be a string');
-    }
-    return function (target, key, descriptor) {
-        if (typeof descriptor.value !== 'function') {
-            throw new Error('Decorator is not valid on this declaration type.');
-        }
-        var action =  new ActionConfiguration(name);
-        action.isBound = true;
-        if (typeof returnType === 'string') {
-            const match = /^Collection\(([a-zA-Z0-9._]+)\)$/ig.exec(returnType);
-            if (match) {
-                action.returnsCollection(match[1])
-            }
-            else {
-                action.returns(returnType);
-            }
-        }
-        descriptor.value.dataAction = action;
-        return descriptor;
-    }
-}
 
-/**
- * Defines the getter of a dynamic navigation property
- * @param {string} name
- * @param {string} type
- * @param {string=} multiplicity
- * @returns {Function}
- */
-function navigationPropertyGet(name, type, multiplicity) {
-    if (typeof name !== 'string') {
-        throw new TypeError('Action name must be a string');
-    }
-    return function (target, key, descriptor) {
-        if (typeof descriptor.value !== 'function') {
-            throw new Error('Decorator is not valid on this declaration type.');
-        }
-        descriptor.value.navigationPropertyGet =  {
-            "name": name,
-            "type": type,
-            "multiplicity": _.isNil(multiplicity) ? EdmMultiplicity.ZeroOrOne : multiplicity
-        };
-    }
-}
-
-/**
- * Defines the setter of a dynamic navigation property
- * @param {string} name
- * @returns {Function}
- */
-function navigationPropertySet(name) {
-    if (typeof name !== 'string') {
-        throw new TypeError('Action name must be a string');
-    }
-    return function (target, key, descriptor) {
-        if (typeof descriptor.value !== 'function') {
-            throw new Error('Decorator is not valid on this declaration type.');
-        }
-        descriptor.value.navigationPropertySet =  {
-            "name": name
-        };
-    }
-}
-
-/**
- * Defines a data action parameter of an already mapped OData entity type action
- * @param {string} name
- * @param {string} type
- * @param {boolean=} nullable
- * @returns {Function}
- */
-function dataActionParam(name, type, nullable) {
-    if (typeof name !== 'string') {
-        throw new TypeError('Parameter name must be a string');
-    }
-    if (typeof type !== 'string') {
-        throw new TypeError('Parameter type must be a string');
-    }
-    return function (target, key, descriptor) {
-        if (typeof descriptor.value !== 'function') {
-            throw new Error('Decorator is not valid on this declaration type.');
-        }
-        if (descriptor.value.dataAction instanceof ActionConfiguration) {
-            descriptor.value.dataAction.parameter(name, type, nullable);
-        }
-        else {
-            throw new Error('Data action cannot be empty for this member. Expected httpAction(name,returnType) decorator.');
-        }
-        return descriptor;
-    }
-}
-
-/**
- * Defines a data function parameter of an already mapped OData entity type function
- * @param {string} name
- * @param {string} type
- * @param {boolean=} nullable
- * @returns {Function}
- */
-function dataFunctionParam(name, type, nullable) {
-    if (typeof name !== 'string') {
-        throw new TypeError('Parameter name must be a string');
-    }
-    if (typeof type !== 'string') {
-        throw new TypeError('Parameter type must be a string');
-    }
-    return function (target, key, descriptor) {
-        if (typeof descriptor.value !== 'function') {
-            throw new Error('Decorator is not valid on this declaration type.');
-        }
-        if (descriptor.value.dataFunction instanceof FunctionConfiguration) {
-            descriptor.value.dataFunction.parameter(name, type, nullable);
-        }
-        else {
-            throw new Error('Data function cannot be empty for this member. Expected httpFunction(name,returnType) decorator.');
-        }
-        return descriptor;
-    }
-}
-
-/**
- * Maps a function to an OData entity type function
- * @param {string} name
- * @param {string} returnType
- * @returns {Function}
- */
-function dataFunction(name, returnType) {
-    if (typeof name !== 'string') {
-        throw new TypeError('Function name must be a string');
-    }
-    return function (target, key, descriptor) {
-        if (typeof descriptor.value !== 'function') {
-            throw new Error('Decorator is not valid on this declaration type.');
-        }
-        var func =  new FunctionConfiguration(name);
-        func.isBound = true;
-        if (typeof returnType === 'string') {
-            const match = /^Collection\(([a-zA-Z0-9._]+)\)$/ig.exec(returnType);
-            if (match) {
-                func.returnsCollection(match[1]);
-            }
-            else {
-                func.returns(returnType);
-            }
-        }
-        descriptor.value.dataFunction = func;
-        return descriptor;
-    }
-}
 
 /**
  *
@@ -1998,6 +1749,231 @@ if (typeof Object.defineDecorator === 'undefined') {
     Object.defineDecorator = defineDecorator;
 }
 
+/**
+ * @class
+ * @constructor
+ */
+function EdmMapping() {
+    //
+}
+
+/**
+ * @static
+ * Maps a function to an OData entity type action
+ * @returns {Function}
+ */
+EdmMapping.action = function () {
+    if (typeof name !== 'string') {
+        throw new TypeError('Action name must be a string');
+    }
+    return function (target, key, descriptor) {
+        if (typeof descriptor.value !== 'function') {
+            throw new Error('Decorator is not valid on this declaration type.');
+        }
+        var action =  new ActionConfiguration(name);
+        action.isBound = true;
+        if (typeof returnType === 'string') {
+            var match = /^Collection\(([a-zA-Z0-9._]+)\)$/ig.exec(returnType);
+            if (match) {
+                action.returnsCollection(match[1])
+            }
+            else {
+                action.returns(returnType);
+            }
+        }
+        descriptor.value.actionAttribute = action;
+        return descriptor;
+    }
+};
+/**
+ * @static
+ * Maps a function to an OData entity type function
+ * @param {string} name
+ * @param {string} returnType
+ * @returns {Function}
+ */
+EdmMapping.func = function (name, returnType) {
+    if (typeof name !== 'string') {
+        throw new TypeError('Function name must be a string');
+    }
+    return function (target, key, descriptor) {
+        if (typeof descriptor.value !== 'function') {
+            throw new Error('Decorator is not valid on this declaration type.');
+        }
+        var func =  new FunctionConfiguration(name);
+        func.isBound = true;
+        if (typeof returnType === 'string') {
+            var match = /^Collection\(([a-zA-Z0-9._]+)\)$/ig.exec(returnType);
+            if (match) {
+                func.returnsCollection(match[1]);
+            }
+            else {
+                func.returns(returnType);
+            }
+        }
+        descriptor.value.funcAttribute = func;
+        return descriptor;
+    }
+};
+
+
+/**
+ * @static
+ * Defines a data action parameter of an already mapped OData entity type action
+ * @param {string} name
+ * @param {string} type
+ * @param {boolean=} nullable
+ * @returns {Function}
+ */
+EdmMapping.param = function(name, type, nullable) {
+    if (typeof name !== 'string') {
+        throw new TypeError('Parameter name must be a string');
+    }
+    if (typeof type !== 'string') {
+        throw new TypeError('Parameter type must be a string');
+    }
+    return function (target, key, descriptor) {
+        if (typeof descriptor.value !== 'function') {
+            throw new Error('Decorator is not valid on this declaration type.');
+        }
+        if (descriptor.value.actionAttribute instanceof ActionConfiguration) {
+            descriptor.value.actionAttribute.parameter(name, type, nullable);
+        }
+        else if (descriptor.value.funcAttribute instanceof FunctionConfiguration) {
+            descriptor.value.funcAttribute.parameter(name, type, nullable);
+        }
+        else {
+            throw new Error('Procedure configuration cannot be empty for this member. Expected EdmMapping.action(name, returnType) or EdmMapping.func(name, returnType) decorator.');
+        }
+        return descriptor;
+    }
+};
+
+/**
+ * @static
+ * Defines the getter of a dynamic navigation property
+ * @param {string} name
+ * @param {string} type
+ * @param {string=} multiplicity
+ * @returns {Function}
+ */
+EdmMapping.navigationProperty = function(name, type, multiplicity) {
+    if (typeof name !== 'string') {
+        throw new TypeError('Action name must be a string');
+    }
+    return function (target, key, descriptor) {
+        if (typeof descriptor.value !== 'function') {
+            throw new Error('Decorator is not valid on this declaration type.');
+        }
+        var propMultiplicity = EdmMultiplicity.ZeroOrOne;
+        if (typeof multiplicity !== 'undefined' && typeof multiplicity !== 'string') {
+            throw new TypeError('Multiplicity must be a string');
+        }
+        if (typeof multiplicity === 'string') {
+            propMultiplicity = EdmMultiplicity.parse(multiplicity) || EdmMultiplicity.Unknown;
+        }
+        descriptor.value.navigationPropertyAttribute =  {
+            "name": name,
+            "type": type,
+            "multiplicity": propMultiplicity
+        };
+    }
+};
+
+
+/**
+ * @static
+ * Validates if the given object instance has a mapped OData action with the given name.
+ * @param {*} obj
+ * @param {string} name
+ * @returns Function|*
+ */
+EdmMapping.hasOwnAction = function(obj, name) {
+    if (typeof obj !== 'object' && typeof obj !== 'function') {
+        return;
+    }
+    var re = new RegExp("^" + name + "$", "ig");
+    var functionName = _.find(getOwnPropertyNames(obj), function(x) {
+        return (typeof obj[x] === 'function') && (obj[x].actionAttribute instanceof ActionConfiguration) && re.test(obj[x].actionAttribute.name);
+    });
+    if (functionName) {
+        return obj[functionName];
+    }
+};
+
+/**
+ * @static
+ * Validates if the given object instance has a dynamic navigation property getter with the specified name.
+ * @param {*} obj
+ * @param {string} name
+ * @returns Function|*
+ */
+EdmMapping.hasOwnNavigationProperty = function(obj, name) {
+    if (typeof obj !== 'object' && typeof obj !== 'function') {
+        return;
+    }
+    var re = new RegExp("^" + name + "$", "ig");
+    var functionName = _.find(getOwnPropertyNames(obj), function(x) {
+        return (typeof obj[x] === 'function') && (typeof obj[x].navigationPropertyAttribute === 'object')  && re.test(obj[x].navigationPropertyAttribute.name);
+    });
+    if (functionName) {
+        return obj[functionName];
+    }
+};
+
+/**
+ * @static
+ * Validates if the given object instance has a mapped OData function with the given name.
+ * @param {*} obj
+ * @param {string} name
+ * @returns Function|*
+ */
+EdmMapping.hasOwnFunction = function(obj, name) {
+    if (typeof obj !== 'object' && typeof obj !== 'function') {
+        return;
+    }
+    var re = new RegExp("^" + name + "$", "ig");
+    var functionName = _.find(getOwnPropertyNames(obj), function(x) {
+        return (typeof obj[x] === 'function') && (obj[x].funcAttribute instanceof FunctionConfiguration) && re.test(obj[x].funcAttribute.name);
+    });
+    if (functionName) {
+        return obj[functionName];
+    }
+};
+
+
+/**
+ * @static
+ * @param {*} obj
+ * @returns Array.<Function>|*
+ */
+EdmMapping.getOwnFunctions = function(obj) {
+    if (typeof obj !== 'object' && typeof obj !== 'function') {
+        return;
+    }
+    return _.map(_.filter(getOwnPropertyNames(obj), function(x) {
+        return (typeof obj[x] === 'function') && (obj[x].funcAttribute instanceof FunctionConfiguration);
+    }),  function(x) {
+        return obj[x];
+    });
+};
+
+/**
+ * @static
+ * @param {*} obj
+ * @returns Array.<Function>|*
+ */
+EdmMapping.getOwnActions = function(obj) {
+    if (typeof obj !== 'object' && typeof obj !== 'function') {
+        return;
+    }
+    return _.map(_.filter(getOwnPropertyNames(obj), function(x) {
+        return (typeof obj[x] === 'function') && (obj[x].actionAttribute instanceof ActionConfiguration);
+    }),  function(x) {
+        return obj[x];
+    });
+};
+
 
 //exports
 
@@ -2012,9 +1988,5 @@ module.exports.EntitySetConfiguration = EntitySetConfiguration;
 module.exports.SingletonConfiguration = SingletonConfiguration;
 module.exports.ODataModelBuilder = ODataModelBuilder;
 module.exports.ODataConventionModelBuilder = ODataConventionModelBuilder;
+module.exports.EdmMapping = EdmMapping;
 module.exports.defineDecorator = defineDecorator;
-module.exports.navigationPropertyGet = navigationPropertyGet;
-module.exports.dataAction = dataAction;
-module.exports.dataActionParam = dataActionParam;
-module.exports.dataFunction = dataFunction;
-module.exports.dataFunctionParam = dataFunctionParam;
