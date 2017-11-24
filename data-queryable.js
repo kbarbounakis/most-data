@@ -34,12 +34,15 @@
  */
 var async=require('async'),
     sprintf = require('sprintf'),
+    Symbol = require('symbol'),
     _ = require("lodash"),
     dataCommon = require('./data-common'),
     mappingExtensions = require('./data-mapping-extensions'),
     types = require('./types'),
     qry = require('most-query'),
     Q = require('q');
+
+var aliasProperty = Symbol('alias');
 
 /**
  * @class
@@ -199,11 +202,11 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
              * @type QueryExpression
              */
             var res =qry.query(self.viewAdapter).select(['*']);
-            var expr = qry.query().where(qry.fields.select(childField.name).from(self._alias || self.viewAdapter)).equal(qry.fields.select(mapping.parentField).from(mapping.childField));
+            var expr = qry.query().where(qry.fields.select(childField.name).from(self[aliasProperty] || self.viewAdapter)).equal(qry.fields.select(mapping.parentField).from(mapping.childField));
             var entity = qry.entity(parentModel.viewAdapter).as(mapping.childField).left();
             res.join(entity).with(expr);
             if (arrMember.length>2) {
-                parentModel._alias = mapping.childField;
+                parentModel[aliasProperty] = mapping.childField;
                 var memberExpr = arrMember.slice(1).join('/');
                 var expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(parentModel, memberExpr);
                 var arr = [].concat(res.$expand).concat(expr);
@@ -225,7 +228,7 @@ DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr
                 throw new Error(sprintf.sprintf('Referenced field (%s) cannot be found.', mapping.parentField));
             }
             var res =qry.query('Unknown').select(['*']);
-            var expr = qry.query().where(qry.fields.select(parentField.name).from(self.viewAdapter)).equal(qry.fields.select(childField.name).from(arrMember[0]));
+            var expr = qry.query().where(qry.fields.select(parentField.name).from(self[aliasProperty] || self.viewAdapter)).equal(qry.fields.select(childField.name).from(arrMember[0]));
             var entity = qry.entity(childModel.viewAdapter).as(arrMember[0]).left();
             res.join(entity).with(expr);
             return res.$expand;

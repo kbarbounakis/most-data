@@ -354,7 +354,7 @@ var mappingExtensions = {
                         return deferred.resolve();
                     }
                     var arr = _.isArray(items) ? items : [items];
-                    if (arr.length == 0) {
+                    if (arr.length === 0) {
                         return deferred.resolve();
                     }
                     if (_.isNil(thisQueryable)) {
@@ -371,6 +371,9 @@ var mappingExtensions = {
                             //Description: if $levels parameter is not defined then set the default value to 0.
                             if (typeof q.$levels === 'undefined') {
                                 q.$levels = 0;
+                            }
+                            if (typeof q.query.$select === 'undefined') {
+                               q.select();
                             }
                             q.query
                                .distinct()

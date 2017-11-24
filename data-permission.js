@@ -803,7 +803,10 @@ DataPermissionEventListener.prototype.beforeExecute = function(e, callback)
                         if (err) { return callback(err); }
                         var q = qry.query(model.viewAdapter).select([model.primaryKey]).distinct();
                         if (expand) {
-                            q.join(expand[0].$entity).with(expand[0].$with);
+                            var arrExpand=[].concat(expand);
+                            _.forEach(arrExpand, function(x){
+                                q.join(x.$entity).with(x.$with);
+                            });
                         }
                         q.join(perms1).with(expr);
                         var pqAlias = 'pq' + common.randomInt(100000,999999).toString();
