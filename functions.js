@@ -33,7 +33,6 @@
  */
 var types = require('./types'),
     sprintf = require('sprintf'),
-    util = require('util'),
     dataCommon = require('./data-common'),
     moment = require('moment'),
     _ = require('lodash'),
@@ -43,7 +42,6 @@ var types = require('./types'),
  * @exports most-data/functions
  */
 var functions = { };
-
 /**
  * @class
  * @param {DataContext=} context
@@ -60,7 +58,7 @@ function FunctionContext(context, model, target) {
       * @type {DataModel}
       */
     this.model = model;
-    if ((_.isNil(context)) && (typeof model !=='undefined') && (typeof model != null)) {
+    if (_.isNil(context) && _.isObject(model)) {
         //get current context from DataModel.context property
         this.context = model.context;
     }
@@ -94,7 +92,7 @@ FunctionContext.prototype.eval = function(expr, callback) {
         try {
             var f = eval(expr2eval);
             var value1 = f.call(this);
-            if (typeof value1 !== 'undefined' && value1 !=null && typeof value1.then === 'function') {
+            if (typeof value1 !== 'undefined' && value1 !== null && typeof value1.then === 'function') {
                 value1.then(function(result) {
                     return callback(null, result);
                 }).catch(function(err) {
@@ -341,6 +339,7 @@ functions.FunctionContext = FunctionContext;
  * @param {*=} target
  * @returns FunctionContext
  */
+// eslint-disable-next-line no-unused-vars
 functions.createContext = function(context, model, target) {
     return new FunctionContext();
 };
@@ -392,7 +391,7 @@ functions.user = function(e, callback) {
         }
         else {
             //filter result to exclude anonymous user
-            var filtered = result.filter(function(x) { return x.name!='anonymous'; }, result);
+            var filtered = result.filter(function(x) { return x.name!=='anonymous'; }, result);
             //if user was found
             if (filtered.length>0) {
                 e.model.context.user.id = result[0].id;

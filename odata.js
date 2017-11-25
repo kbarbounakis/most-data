@@ -208,7 +208,7 @@ EdmMultiplicity.ZeroOrOne = "ZeroOrOne";
 EdmMultiplicity.parse = function(value) {
     if (typeof value === 'string') {
         var re = new RegExp('^'+value+'$','ig');
-        return _.find(Object.getOwnPropertyNames(EdmMultiplicity), function(x) {
+        return _.find(_.keys(EdmMultiplicity), function(x) {
             if (typeof EdmMultiplicity[x] === 'string') {
                 return re.test(EdmMultiplicity[x]);
             }
@@ -406,6 +406,17 @@ function getOwnPropertyNames(obj) {
             return ownPropertyNames.indexOf(x)<0;
         }));
         proto = Object.getPrototypeOf(proto);
+    }
+    if (typeof obj === 'function') {
+        //remove caller
+        var index = ownPropertyNames.indexOf("caller");
+        if (index>=0) {
+            ownPropertyNames.splice(index,1);
+        }
+        index = ownPropertyNames.indexOf("arguments");
+        if (index>=0) {
+            ownPropertyNames.splice(index,1);
+        }
     }
     return ownPropertyNames;
 }
@@ -1636,7 +1647,7 @@ util.inherits(ODataConventionModelBuilder, ODataModelBuilder);
     ODataConventionModelBuilder.prototype.initialize = function() {
         var self = this;
         if (self[initializeProperty]) {
-            return resolve();
+            return Q.resolve();
         }
         return Q.promise(function(resolve, reject) {
             /**
@@ -1702,17 +1713,17 @@ util.inherits(ODataConventionModelBuilder, ODataModelBuilder);
         var self = this, superGetEdm = ODataConventionModelBuilder.super_.prototype.getEdm;
         try{
             if (_.isObject(self[edmProperty])) {
-                return resolve(self[edmProperty]);
+                return Q.resolve(self[edmProperty]);
             }
             return self.initialize().then(function() {
                 return superGetEdm.bind(self)().then(function(result) {
                     self[edmProperty] = result;
-                    return resolve(self[edmProperty]);
+                    return Q.resolve(self[edmProperty]);
                 });
             });
         }
         catch(err) {
-            return reject(err);
+            return Q.reject(err);
         }
     };
 
@@ -1729,7 +1740,7 @@ function defineDecorator(proto, key, decorator) {
         throw new TypeError('Invalid prototype. Expected object or function.');
     }
     if (typeof key !== 'string') {
-        throw new TypeError('Invalid property name. Expected string.');
+        throw new TypeError('Invalid property name. Expected string or function.');
     }
     if (typeof decorator !== 'function') {
         throw new TypeError('Invalid decorator. Expected function.');
@@ -1759,10 +1770,33 @@ function EdmMapping() {
 
 /**
  * @static
- * Maps a function to an OData entity type action
+ * Maps a prototype to an OData entity type
+ * @param {string} name
  * @returns {Function}
  */
-EdmMapping.action = function () {
+EdmMapping.entityType = function (name) {
+    if (typeof name !== 'string') {
+        throw new TypeError('Entity type must be a string');
+    }
+    return function (target, key, descriptor) {
+        if (typeof target === 'function') {
+            target.entityTypeDecorator = name;
+        }
+        else {
+            throw new Error('Decorator is not valid on this declaration type.');
+        }
+        return descriptor;
+    }
+};
+
+/**
+ * @static
+ * Maps a function to an OData entity type action
+ * @param {string} name
+ * @param {*=} returnType
+ * @returns {Function}
+ */
+EdmMapping.action = function (name, returnType) {
     if (typeof name !== 'string') {
         throw new TypeError('Action name must be a string');
     }
@@ -1781,7 +1815,15 @@ EdmMapping.action = function () {
                 action.returns(returnType);
             }
         }
-        descriptor.value.actionAttribute = action;
+        else if (typeof returnType === 'function') {
+            if (typeof returnType.entityTypeDecorator === 'string') {
+                action.returns(returnType.entityTypeDecorator);
+            }
+            else {
+                action.returns(returnType.name);
+            }
+        }
+        descriptor.value.actionDecorator = action;
         return descriptor;
     }
 };
@@ -1789,7 +1831,7 @@ EdmMapping.action = function () {
  * @static
  * Maps a function to an OData entity type function
  * @param {string} name
- * @param {string} returnType
+ * @param {*=} returnType
  * @returns {Function}
  */
 EdmMapping.func = function (name, returnType) {
@@ -1811,7 +1853,15 @@ EdmMapping.func = function (name, returnType) {
                 func.returns(returnType);
             }
         }
-        descriptor.value.funcAttribute = func;
+        else if (typeof returnType === 'function') {
+            if (typeof returnType.entityTypeDecorator === 'string') {
+                func.returns(returnType.entityTypeDecorator);
+            }
+            else {
+                func.returns(returnType.name);
+            }
+        }
+        descriptor.value.functionDecorator = func;
         return descriptor;
     }
 };
@@ -1821,7 +1871,7 @@ EdmMapping.func = function (name, returnType) {
  * @static
  * Defines a data action parameter of an already mapped OData entity type action
  * @param {string} name
- * @param {string} type
+ * @param {*} type
  * @param {boolean=} nullable
  * @returns {Function}
  */
@@ -1829,18 +1879,31 @@ EdmMapping.param = function(name, type, nullable) {
     if (typeof name !== 'string') {
         throw new TypeError('Parameter name must be a string');
     }
-    if (typeof type !== 'string') {
-        throw new TypeError('Parameter type must be a string');
-    }
     return function (target, key, descriptor) {
+        if (typeof type !== 'string' && typeof type !== 'function') {
+            throw new TypeError('Parameter type must be a string or function');
+        }
         if (typeof descriptor.value !== 'function') {
             throw new Error('Decorator is not valid on this declaration type.');
         }
-        if (descriptor.value.actionAttribute instanceof ActionConfiguration) {
-            descriptor.value.actionAttribute.parameter(name, type, nullable);
+        //get parameter  type
+        var typeString;
+        if (typeof type === 'function') {
+            if (typeof type.entityTypeDecorator === 'string') {
+                typeString = type.entityTypeDecorator;
+            }
+            else {
+                typeString = type.name;
+            }
         }
-        else if (descriptor.value.funcAttribute instanceof FunctionConfiguration) {
-            descriptor.value.funcAttribute.parameter(name, type, nullable);
+        else if (typeof type === 'string') {
+            typeString = type;
+        }
+        if (descriptor.value.actionDecorator instanceof ActionConfiguration) {
+            descriptor.value.actionDecorator.parameter(name, typeString, nullable);
+        }
+        else if (descriptor.value.functionDecorator instanceof FunctionConfiguration) {
+            descriptor.value.functionDecorator.parameter(name, typeString, nullable);
         }
         else {
             throw new Error('Procedure configuration cannot be empty for this member. Expected EdmMapping.action(name, returnType) or EdmMapping.func(name, returnType) decorator.');
@@ -1872,10 +1935,31 @@ EdmMapping.navigationProperty = function(name, type, multiplicity) {
         if (typeof multiplicity === 'string') {
             propMultiplicity = EdmMultiplicity.parse(multiplicity) || EdmMultiplicity.Unknown;
         }
-        descriptor.value.navigationPropertyAttribute =  {
+        descriptor.value.navigationPropertyDecorator =  {
             "name": name,
             "type": type,
             "multiplicity": propMultiplicity
+        };
+    }
+};
+
+/**
+ * @static
+ * Maps an object property to an OData entity type property
+ * @param {string} name
+ * @param {string} type
+ * @param {boolean=} nullable
+ * @returns {Function}
+ */
+EdmMapping.property = function(name, type, nullable) {
+    if (typeof name !== 'string') {
+        throw new TypeError('Action name must be a string');
+    }
+    return function (target, key, descriptor) {
+        descriptor.value.propertyDecorator =  {
+            "name": name,
+            "type": type,
+            "nullable": _.isBoolean(nullable) ? nullable : false
         };
     }
 };
@@ -1894,7 +1978,7 @@ EdmMapping.hasOwnAction = function(obj, name) {
     }
     var re = new RegExp("^" + name + "$", "ig");
     var functionName = _.find(getOwnPropertyNames(obj), function(x) {
-        return (typeof obj[x] === 'function') && (obj[x].actionAttribute instanceof ActionConfiguration) && re.test(obj[x].actionAttribute.name);
+        return (typeof obj[x] === 'function') && (obj[x].actionDecorator instanceof ActionConfiguration) && re.test(obj[x].actionDecorator.name);
     });
     if (functionName) {
         return obj[functionName];
@@ -1914,7 +1998,7 @@ EdmMapping.hasOwnNavigationProperty = function(obj, name) {
     }
     var re = new RegExp("^" + name + "$", "ig");
     var functionName = _.find(getOwnPropertyNames(obj), function(x) {
-        return (typeof obj[x] === 'function') && (typeof obj[x].navigationPropertyAttribute === 'object')  && re.test(obj[x].navigationPropertyAttribute.name);
+        return (typeof obj[x] === 'function') && (typeof obj[x].navigationPropertyDecorator === 'object')  && re.test(obj[x].navigationPropertyDecorator.name);
     });
     if (functionName) {
         return obj[functionName];
@@ -1934,7 +2018,7 @@ EdmMapping.hasOwnFunction = function(obj, name) {
     }
     var re = new RegExp("^" + name + "$", "ig");
     var functionName = _.find(getOwnPropertyNames(obj), function(x) {
-        return (typeof obj[x] === 'function') && (obj[x].funcAttribute instanceof FunctionConfiguration) && re.test(obj[x].funcAttribute.name);
+        return (typeof obj[x] === 'function') && (obj[x].functionDecorator instanceof FunctionConfiguration) && re.test(obj[x].functionDecorator.name);
     });
     if (functionName) {
         return obj[functionName];
@@ -1951,10 +2035,10 @@ EdmMapping.getOwnFunctions = function(obj) {
     if (typeof obj !== 'object' && typeof obj !== 'function') {
         return;
     }
-    return _.map(_.filter(getOwnPropertyNames(obj), function(x) {
-        return (typeof obj[x] === 'function') && (obj[x].funcAttribute instanceof FunctionConfiguration);
+    return _.flatMap(_.filter(getOwnPropertyNames(obj), function(x) {
+        return (typeof obj[x] === 'function') && (obj[x].functionDecorator instanceof FunctionConfiguration);
     }),  function(x) {
-        return obj[x];
+        return obj[x].functionDecorator;
     });
 };
 
@@ -1967,10 +2051,10 @@ EdmMapping.getOwnActions = function(obj) {
     if (typeof obj !== 'object' && typeof obj !== 'function') {
         return;
     }
-    return _.map(_.filter(getOwnPropertyNames(obj), function(x) {
-        return (typeof obj[x] === 'function') && (obj[x].actionAttribute instanceof ActionConfiguration);
+    return _.flatMap(_.filter(getOwnPropertyNames(obj), function(x) {
+        return (typeof obj[x] === 'function') && (obj[x].actionDecorator instanceof ActionConfiguration);
     }),  function(x) {
-        return obj[x];
+        return obj[x].actionDecorator;
     });
 };
 

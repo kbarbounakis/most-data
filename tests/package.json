@@ -1,0 +1,57 @@
+{
+  "name": "most-data-tests",
+  "version": "1.8.25",
+  "description": "MOST Data Tests",
+  "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "most",
+    "data",
+    "tests"
+  ],
+  "author": "k.barbounakis@gmail.com",
+  "license": "BSD-3-Clause",
+    "dependencies": {
+        "lodash": "^4.15.0",
+        "q": "^1.4.1"
+    },
+  "devDependencies": {
+    "babel-core": "^6.26.0",
+    "babel-eslint": "^8.0.2",
+    "babel-plugin-syntax-class-properties": "^6.13.0",
+    "babel-plugin-transform-builtin-extend": "^1.1.2",
+    "babel-plugin-transform-class-properties": "^6.24.1",
+    "babel-plugin-transform-decorators-legacy": "^1.3.4",
+    "babel-plugin-transform-es2015-modules-commonjs-simple": "^6.7.4",
+    "babel-plugin-transform-es2015-typeof-symbol": "^6.23.0",
+    "babel-preset-env": "^1.6.1",
+    "chai": "^4.1.2",
+    "del": "^3.0.0",
+    "easy-table": "^1.1.0",
+    "eslint": "^4.9.0",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^7.0.0",
+    "gulp-eslint": "^4.0.0",
+    "gulp-size": "^2.1.0",
+    "gulp-sourcemaps": "^2.6.1",
+    "mocha": "^3.5.3",
+    "winston": "^2.4.0"
+  },
+    "eslintConfig": {
+        "env": {
+            "browser": true,
+            "node": true,
+            "es6": true,
+            "jquery": true
+        },
+        "globals": {
+            "describe": false,
+            "it": false,
+            "before": false,
+            "after": false
+        },
+        "extends": "eslint:recommended"
+    }
+}

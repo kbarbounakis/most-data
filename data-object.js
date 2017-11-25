@@ -16,6 +16,7 @@ var HasParentJunction = require('./has-parent-junction').HasParentJunction;
 var selectorsProperty = Symbol('selectors');
 var typeProperty = Symbol('type');
 var modelProperty = Symbol('model');
+var contextProperty = Symbol('context');
 
 /**
  * @ignore
@@ -31,7 +32,6 @@ var STR_MISSING_CALLBACK_ARGUMENT = 'Missing argument. Callback function expecte
  * @param {*=} obj The object that is going to be extended
  * @constructor
  * @augments EventEmitter
- * @property {DataContext}  context - An instance of DataContext class associated with this object.
  * @property {string} $$type - A string that represents the type of this object.
  * @property {DataModel} $$model - The data model which is associated with this object.
  * @property {*} $$id - Gets the identifier of this object based on the associated model's primary key
@@ -41,13 +41,13 @@ function DataObject(type, obj)
 {
     var self = this;
     /**
-     * @type {DataContext}
-     * @private
+     * @property {DataContext}
+     * @description An instance of DataContext class associated with this object.
+     * @name DataObject#context
      */
-    var context_ = null;
     Object.defineProperty(this,'context',{
-        get: function() { return context_; } ,
-        set: function(value) { context_=value; },
+        get: function() { return this[contextProperty]; } ,
+        set: function(value) { this[contextProperty] = value; },
         enumerable:false,
         configurable:false
     });
@@ -97,8 +97,8 @@ function DataObject(type, obj)
             if (this[modelProperty]) {
                 return this[modelProperty];
             }
-            if (context_) {
-                this[modelProperty] = context_.model(this[typeProperty]);
+            if (this.context) {
+                this[modelProperty] = this.context.model(this[typeProperty]);
             }
             return this[modelProperty];
         },

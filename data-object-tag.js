@@ -33,7 +33,6 @@
  * @ignore
  */
 var util = require('util'),
-    async = require('async'),
     qry = require('most-query'),
     _ = require('lodash'),
     types = require('./types'),
