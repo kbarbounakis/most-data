@@ -2308,36 +2308,6 @@ DataModel.prototype.getDataView = function(name) {
 };
 
 
-/**
- * @param {DataField|*} field
- * @param {DataAssociationMapping|*} mapping
- * @private
- */
-  function cacheMapping_(field, mapping) {
-    if (_.isNil(field))
-        return;
-    //cache mapping
-    var cachedModel = this.getConfiguration().models[this.name];
-    if (cachedModel) {
-        var cachedField = cachedModel.fields.find(function(x) { return x.name === field.name });
-        if (typeof cachedField === 'undefined') {
-            //search in attributes
-            cachedField = this.attributes.find(function(x) { return x.name === field.name });
-            if (cachedField) {
-                //add overriden field
-                cachedModel.fields.push(_.assign({ }, cachedField));
-                cachedField = cachedModel.fields[cachedModel.fields.length-1];
-                //clear attributes
-                this._clearAttributes();
-            }
-        }
-        if (cachedField)
-        //add mapping
-            cachedField.mapping = mapping;
-    }
-}
-
-
 function inferDefaultMapping_(conf, name) {
       var self = this,
           field = self.field(name);

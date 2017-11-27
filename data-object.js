@@ -212,8 +212,7 @@ DataObject.prototype.selector = function(name, selector) {
  //retrieve a user, and execute :live selector
  var users = context.model('User');
  users.where('name').equal('admin@example.com')
- .first().then(function(result) {
-        var user = users.convert(result);
+ .getTypedItem().then(function(user) {
         user.is(":live").then(function(result) {
             if (result) {
                 console.log('User already exists');
@@ -361,11 +360,11 @@ function attrOf_(name, callback) {
         //if object has already this property
         if (self.hasOwnProperty(name)) {
             //if property is an object
-            if (typeof self[name] === 'object' && self[name] != null) {
+            if (typeof self[name] === 'object' && self[name] !== null) {
                 //return the defined parent field
                 callback(null, self[name][mapping.parentField]);
             }
-            else if (self[name] == null) {
+            else if (self[name] === null) {
                 callback();
             }
             else {
@@ -703,9 +702,8 @@ DataObject.prototype.getAdditionalModel = function() {
  * @example
  //get a place and afterwards get the country associated with it
  var places = context.model("Place");
- places.silent().where("name").equal("France").first().then(function(result) {
-    if (result) {
-        var place = places.convert(result);
+ places.silent().where("name").equal("France").getTypedItem().then(function(place) {
+    if (place) {
         return place.getAdditionalObject().then(function(result) {
             //place your code here
             return done();

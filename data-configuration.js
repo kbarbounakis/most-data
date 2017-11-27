@@ -3,9 +3,15 @@
  */
 var _ = require("lodash");
 var sprintf = require('sprintf').sprintf;
-var dataCommon = require('./data-common');
+var Symbol = require('symbol');
+var log = require('./data-common').log;
 var path = require("path");
 var fs = require("fs");
+var ModuleLoader = require('./module-loader').ModuleLoader;
+var DefaultModuleLoader = require('./module-loader').DefaultModuleLoader;
+var configPathProperty = Symbol('configPath');
+var executionPathProperty = Symbol('executionPath');
+var moduleLoaderProperty = Symbol('moduleLoader');
 
 /**
  * @ignore
@@ -34,7 +40,20 @@ function DataConfigurationAuth() {
  */
 function DataConfiguration(configPath) {
 
-    configPath = configPath || path.join(process.cwd(),'config');
+    if (typeof configPath !== 'undefined') {
+        if (!_.isString(configPath)) {
+            throw new TypeError('Configuration path must be a string.');
+        }
+        //validate path
+        if (!path.isAbsolute(configPath)) {
+            throw new TypeError('Configuration path must be an absolute path.');
+        }
+    }
+
+    //resolve configuration path
+    this[configPathProperty] = configPath || path.join(process.cwd(),'config');
+    //init default module loader
+    this[moduleLoaderProperty] = new DefaultModuleLoader(path.resolve(this[configPathProperty], ".."));
 
     /**
      * Model caching object (e.g. cfg.models.Migration, cfg.models.User etc)
@@ -61,9 +80,9 @@ function DataConfiguration(configPath) {
                 return dataTypes;
             //get data types from configuration file
             try {
-                dataTypes = require(path.join(configPath, 'dataTypes.json'));
+                dataTypes = require(path.join(this.getConfigurationPath(), 'dataTypes.json'));
                 if (_.isNil(dataTypes)) {
-                    dataCommon.log('Data: Application data types are empty. The default data types will be loaded instead.');
+                    log('Data: Application data types are empty. The default data types will be loaded instead.');
                     dataTypes = require('./dataTypes.json');
                 }
                 else {
@@ -92,10 +111,10 @@ function DataConfiguration(configPath) {
             }
             catch(e) {
                 if (e.code === 'MODULE_NOT_FOUND') {
-                    dataCommon.log('Data: Application specific data types are missing. The default data types will be loaded instead.');
+                    log('Data: Application specific data types are missing. The default data types will be loaded instead.');
                 }
                 else {
-                    dataCommon.log('Data: An error occurred while loading application data types.');
+                    log('Data: An error occurred while loading application data types.');
                     throw e;
                 }
                 dataTypes = require('./dataTypes.json');
@@ -108,28 +127,28 @@ function DataConfiguration(configPath) {
     var config;
     try {
         var env = process.env['NODE_ENV'] || 'production';
-        config = require(path.join(configPath, 'app.' + env + '.json'));
+        config = require(path.join(this.getConfigurationPath(), 'app.' + env + '.json'));
     }
     catch (e) {
         if (e.code === 'MODULE_NOT_FOUND') {
-            dataCommon.log('Data: The environment specific configuration cannot be found or is inaccesible.');
+            log('Data: The environment specific configuration cannot be found or is inaccesible.');
             try {
-                config = require(path.join(configPath, 'app.json'));
+                config = require(path.join(this.getConfigurationPath(), 'app.json'));
             }
             catch(e) {
                 if (e.code === 'MODULE_NOT_FOUND') {
-                    dataCommon.log('Data: The default application configuration cannot be found or is inaccesible.');
+                    log('Data: The default application configuration cannot be found or is inaccesible.');
                 }
                 else {
-                    dataCommon.log('Data: An error occurred while trying to open default application configuration.');
-                    dataCommon.log(e);
+                    log('Data: An error occurred while trying to open default application configuration.');
+                    log(e);
                 }
                 config = { adapters:[], adapterTypes:[]  };
             }
         }
         else {
-            dataCommon.log('Data: An error occurred while trying to open application configuration.');
-            dataCommon.log(e);
+            log('Data: An error occurred while trying to open application configuration.');
+            log(e);
             config = { adapters:[], adapterTypes:[]  };
         }
     }
@@ -171,14 +190,14 @@ function DataConfiguration(configPath) {
                         }
                         else {
                             //adapter type does not export a createInstance(options) function
-                            console.log(sprintf("The specified data adapter type (%s) does not have the appropriate constructor. Adapter type cannot be loaded.", x.invariantName));
+                            log(sprintf("The specified data adapter type (%s) does not have the appropriate constructor. Adapter type cannot be loaded.", x.invariantName));
                         }
                     }
                     catch(e) {
                         //catch error
-                        console.log(e);
+                        log(e);
                         //and log a specific error for this adapter type
-                        console.log(sprintf("The specified data adapter type (%s) cannot be instantiated. Adapter type cannot be loaded.", x.invariantName));
+                        log(sprintf("The specified data adapter type (%s) cannot be instantiated. Adapter type cannot be loaded.", x.invariantName));
                     }
                     if (valid) {
                         //register adapter
@@ -190,7 +209,7 @@ function DataConfiguration(configPath) {
                     }
                 }
                 else {
-                    console.log(sprintf("The specified data adapter type (%s) does not have a type defined. Adapter type cannot be loaded.", x.invariantName));
+                    log(sprintf("The specified data adapter type (%s) does not have a type defined. Adapter type cannot be loaded.", x.invariantName));
                 }
             });
         }
@@ -217,7 +236,7 @@ function DataConfiguration(configPath) {
                 return auth;
             }
             catch(e) {
-                console.log('An error occurred while trying to load auth configuration');
+                log('An error occurred while trying to load auth configuration');
                 auth = {};
                 return auth;
             }
@@ -238,7 +257,7 @@ function DataConfiguration(configPath) {
         }
     };
     
-    var path_ = path.join(configPath,'models');
+    var path_ = path.join(this.getConfigurationPath(),'models');
 
     /**
      * Gets a string which represents the path where schemas exist. The default location is the config/models folder. 
@@ -325,7 +344,43 @@ function DataConfiguration(configPath) {
 
 }
 
+/**
+ * Gets the current module loader
+ * @returns {ModuleLoader}
+ */
+DataConfiguration.prototype.getModuleLoader = function() {
+    return this[moduleLoaderProperty];
+};
 
+/**
+ * @param {ModuleLoader} loader
+ * @returns {DataConfiguration}
+ */
+DataConfiguration.prototype.useModuleLoader = function(loader) {
+    if (loader instanceof ModuleLoader) {
+        this[moduleLoaderProperty] = loader;
+        return this;
+    }
+    throw new TypeError('Module loader must be an instance of ModuleLoader class');
+};
+
+
+
+/**
+ * Gets the configuration root directory
+ * @returns {string}
+ */
+DataConfiguration.prototype.getConfigurationPath = function() {
+    return this[configPathProperty];
+};
+
+/**
+ * Gets the configuration root directory
+ * @returns {string}
+ */
+DataConfiguration.prototype.getExecutionPath = function() {
+    return this[executionPathProperty];
+};
 
 /**
  * @returns {*}

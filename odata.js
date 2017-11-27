@@ -424,11 +424,12 @@ function getOwnPropertyNames(obj) {
 
 /**
  * @class
+ * @param {ODataModelBuilder} builder
  * @param {string} name
  * @constructor
  * @property {string} name - Gets the name of this entity type
  */
-function EntityTypeConfiguration(name) {
+function EntityTypeConfiguration(builder, name) {
 
     Args.notString(name, 'Entity type name');
     Object.defineProperty(this, 'name', {
@@ -436,6 +437,7 @@ function EntityTypeConfiguration(name) {
             return name;
         }
     });
+    this[builderProperty] = builder;
     this.property = [];
     this.ignoredProperty = [];
     this.navigationProperty = [];
@@ -444,6 +446,13 @@ function EntityTypeConfiguration(name) {
     this.collection = new EntityCollectionConfiguration(this);
 
 }
+
+/**
+ * @returns {ODataModelBuilder}
+ */
+EntityTypeConfiguration.prototype.getBuilder = function() {
+    return this[builderProperty];
+};
 
 // noinspection JSUnusedGlobalSymbols
     /**
@@ -469,7 +478,7 @@ function EntityTypeConfiguration(name) {
         }
         a = new ActionConfiguration(name);
         //add current entity as parameter
-        a.parameter(_.camelCase(this.name), this.name);
+        a.parameter("bindingParameter", this.name);
         a.isBound = true;
         this.actions.push(a);
         return a;
@@ -502,7 +511,7 @@ function EntityTypeConfiguration(name) {
         }
         a = new FunctionConfiguration(name);
         a.isBound = true;
-        a.parameter(_.camelCase(this.name), this.name);
+        a.parameter("bindingParameter", this.name);
         //add current entity as parameter
         this.functions.push(a);
         return a;
@@ -668,6 +677,66 @@ function EntityTypeConfiguration(name) {
         };
         return this;
     };
+
+/**
+ * @param {*} context
+ * @param {*} any
+ */
+EntityTypeConfiguration.prototype.mapInstance = function(context, any) {
+    if (_.isNil(any)) {
+        return;
+    }
+    if (context) {
+        var contextLink = this.getBuilder().getContextLink(context);
+        if (contextLink) {
+            return _.assign({
+                "@odata.context":contextLink + '/$entity'
+            }, any);
+        }
+    }
+    return any;
+};
+
+// noinspection JSUnusedGlobalSymbols
+/**
+ *
+ * @param {*} context
+ * @param {*} any
+ * @returns {*}
+ */
+EntityTypeConfiguration.prototype.mapInstanceSet = function(context, any) {
+    if (_.isNil(any)) {
+        return;
+    }
+    var result = {};
+    if (context) {
+        var contextLink = this.getBuilder().getContextLink(context);
+        if (contextLink) {
+            result["@odata.context"] = contextLink;
+        }
+    }
+    //search for total property for backward compatibility issues
+    if (any.hasOwnProperty("total") && /^\+?\d+$/.test(any["total"])) {
+        result["@odata.count"] = parseInt(any["total"]);
+    }
+    if (any.hasOwnProperty("count") && /^\+?\d+$/.test(any["count"])) {
+        result["@odata.count"] = parseInt(any["count"]);
+    }
+    result["value"] = [];
+    if (_.isArray(any)) {
+        result["value"] = any;
+    }
+    //search for records property for backward compatibility issues
+    else if (_.isArray(any.records)) {
+        result["value"] = any.records;
+    }
+    else if (_.isArray(any.value)) {
+        result["value"] = any.value;
+    }
+    return result;
+};
+
+
 
 /**
  * @class
@@ -1010,7 +1079,7 @@ function ODataModelBuilder(configuration) {
      */
     ODataModelBuilder.prototype.addEntity = function(name) {
         if (!this.hasEntity(name)) {
-            this[entityTypesProperty][name] = new EntityTypeConfiguration(name);
+            this[entityTypesProperty][name] = new EntityTypeConfiguration(this, name);
         }
         return this.getEntity(name)
     };
@@ -1605,6 +1674,32 @@ util.inherits(ODataConventionModelBuilder, ODataModelBuilder);
                         }
                     }
                 });
+                //enumerate functions
+                var DataObjectClass = model.getDataObjectType();
+                //get static functions
+                var ownFunctions = EdmMapping.getOwnFunctions(DataObjectClass);
+                _.forEach(ownFunctions, function(x) {
+                    modelEntityType.collection.addFunction(x.name);
+                    _.assign(modelEntityType.collection.hasFunction(x.name), x);
+                });
+                //get instance functions
+                ownFunctions = EdmMapping.getOwnFunctions(DataObjectClass.prototype);
+                _.forEach(ownFunctions, function(x) {
+                    modelEntityType.addFunction(x.name);
+                    _.assign(modelEntityType.hasFunction(x.name), x);
+                });
+                //get static actions
+                var ownActions = EdmMapping.getOwnActions(DataObjectClass);
+                _.forEach(ownActions, function(x) {
+                    modelEntityType.collection.addAction(x.name);
+                    _.assign(modelEntityType.collection.hasAction(x.name), x);
+                });
+                //get instance actions
+                ownActions = EdmMapping.getOwnActions(DataObjectClass.prototype);
+                _.forEach(ownActions, function(x) {
+                    modelEntityType.addFunction(x.name);
+                    _.assign(modelEntityType.hasAction(x.name), x);
+                });
                 //add link function
                 if (typeof self.getContextLink === 'function') {
                     modelEntitySet.hasContextLink(function(context) {
@@ -1823,6 +1918,13 @@ EdmMapping.action = function (name, returnType) {
                 action.returns(returnType.name);
             }
         }
+        if (typeof target === 'function') {
+            //bound to collection
+            action.parameter("bindingParameter",EdmType.CollectionOf(target.entityTypeDecorator || target.name));
+        }
+        else {
+            action.parameter("bindingParameter",target.entityTypeDecorator || target.constructor.name);
+        }
         descriptor.value.actionDecorator = action;
         return descriptor;
     }
@@ -1860,6 +1962,13 @@ EdmMapping.func = function (name, returnType) {
             else {
                 func.returns(returnType.name);
             }
+        }
+        if (typeof target === 'function') {
+            //bound to collection
+            func.parameter("bindingParameter",EdmType.CollectionOf(target.entityTypeDecorator || target.name));
+        }
+        else {
+            func.parameter("bindingParameter",target.entityTypeDecorator || target.constructor.name);
         }
         descriptor.value.functionDecorator = func;
         return descriptor;

@@ -407,6 +407,7 @@ function DataContext() {
  * @param name {string} A string that represents the model to be loaded.
  * @returns {DataModel}
  */
+// eslint-disable-next-line no-unused-vars
 DataContext.prototype.model = function(name) {
     return null;
 };

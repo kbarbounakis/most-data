@@ -71,12 +71,13 @@
                 Object.defineProperty(Array.prototype, 'find', {
                     value: find, configurable: true, enumerable: false, writable: true
                 });
-            } catch(e) {}
+            } catch(err) {
+                //
+            }
         }
 
         if (!Array.prototype.find) { Array.prototype.find = find; }
     }
-
 
     if (typeof Array.prototype.select === 'undefined')
     {
@@ -110,11 +111,9 @@
         };
 
         if (Object.defineProperty) {
-            try {
-                Object.defineProperty(Array.prototype, 'select', {
-                    value: select, configurable: true, enumerable: false, writable: true
-                });
-            } catch(e) {}
+            Object.defineProperty(Array.prototype, 'select', {
+                value: select, configurable: true, enumerable: false, writable: true
+            });
         }
 
         if (!Array.prototype.select) { Array.prototype.select = select; }
@@ -153,13 +152,9 @@
         };
 
         if (Object.defineProperty) {
-            try {
-                Object.defineProperty(Array.prototype, 'distinct', {
-                    value: distinct, configurable: true, enumerable: false, writable: true
-                });
-            } catch(e) {
-                //
-            }
+            Object.defineProperty(Array.prototype, 'distinct', {
+                value: distinct, configurable: true, enumerable: false, writable: true
+            });
         }
 
         if (!Array.prototype.distinct) { Array.prototype.distinct = distinct; }
@@ -177,17 +172,13 @@
         };
 
         if (Object.defineProperty) {
-            try {
-                Object.defineProperty(Object.prototype, 'isNullOrUndefined', {
-                    value: isNullOrUndefined, configurable: true, enumerable: false, writable: true
-                });
-            } catch(e) {}
+            Object.defineProperty(Object.prototype, 'isNullOrUndefined', {
+                value: isNullOrUndefined, configurable: true, enumerable: false, writable: true
+            });
         }
         if (!Object.prototype.isNullOrUndefined) { Object.prototype.isNullOrUndefined = isNullOrUndefined; }
     }
-    /**
-     * @exports most-data/data-common
-     */
+
     var dataCommon = {
 
     };
@@ -197,12 +188,15 @@
      */
     dataCommon.log = function(data) {
         if (data instanceof Error) {
+// eslint-disable-next-line no-console
             console.log(data);
         }
         else {
+// eslint-disable-next-line no-console
             console.log(data);
         }
         if (data.stack) {
+// eslint-disable-next-line no-console
             console.log(data.stack);
         }
     };
@@ -282,7 +276,7 @@
      * @returns {string|undefined}
      */
     dataCommon.md5  = function(value) {
-        if (typeof value === 'undefined' || value == null) {
+        if (typeof value === 'undefined' || value === null) {
             return;
         }
         var crypto = require('crypto'), md5 = crypto.createHash('md5');
