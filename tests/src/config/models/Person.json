@@ -103,7 +103,7 @@
         "name": "email",
         "title": "Email Address",
         "description": "The primary email address of the person.",
-        "type": "Text"
+        "type": "Email"
     },
     {
         "name": "knows",

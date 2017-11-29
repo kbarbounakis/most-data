@@ -6,7 +6,7 @@
         {
             "name": "local-db", "invariantName": "sqlite", "default": true,
             "options": {
-                "database": "./tests/app/db/local.db"
+                "database": "./tests/db/local.db"
             }
         }
     ]

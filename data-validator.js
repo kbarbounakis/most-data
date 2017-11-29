@@ -37,10 +37,6 @@ var _ = require('lodash'),
     util = require('util'),
         conf = require('./data-configuration');
 
-    /**
-     * @module most-data/data-validator
-     */
-
     var validators = { };
     /**
      * @class

@@ -15,7 +15,8 @@
   "license": "BSD-3-Clause",
     "dependencies": {
         "lodash": "^4.15.0",
-        "q": "^1.4.1"
+        "q": "^1.4.1",
+        "most-data-sqlite":"^0.1.16"
     },
   "devDependencies": {
     "babel-core": "^6.26.0",

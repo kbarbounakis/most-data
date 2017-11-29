@@ -1,46 +1,16 @@
 /**
- * MOST Web Framework
- * A JavaScript Web Framework
- * http://themost.io
- * Created by Kyriakos Barbounakis<k.barbounakis@gmail.com> on 2014-10-13.
- *
- * Copyright (c) 2014, Kyriakos Barbounakis k.barbounakis@gmail.com
- Anthi Oikonomou anthioikonomou@gmail.com
- All rights reserved.
- Redistribution and use in source and binary forms, with or without
- modification, are permitted provided that the following conditions are met:
- * Redistributions of source code must retain the above copyright notice, this
- list of conditions and the following disclaimer.
- * Redistributions in binary form must reproduce the above copyright notice,
- this list of conditions and the following disclaimer in the documentation
- and/or other materials provided with the distribution.
- * Neither the name of MOST Web Framework nor the names of its
- contributors may be used to endorse or promote products derived from
- this software without specific prior written permission.
- THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
- AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
- DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
- FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
- SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
- CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
- OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
-
-/**
  * @ignore
  */
-var async=require('async'),
-    sprintf = require('sprintf'),
-    Symbol = require('symbol'),
-    _ = require("lodash"),
-    dataCommon = require('./data-common'),
-    mappingExtensions = require('./data-mapping-extensions'),
-    types = require('./types'),
-    qry = require('most-query'),
-    Q = require('q');
+var async = require('async');
+var sprintf = require('sprintf').sprintf;
+var Symbol = require('symbol');
+var _ = require("lodash");
+var dataCommon = require('./data-common');
+var mappingExtensions = require('./data-mapping-extensions');
+var types = require('./types');
+var qry = require('most-query');
+var DataException = require('./types').DataException;
+var Q = require('q');
 
 var aliasProperty = Symbol('alias');
 
@@ -170,71 +140,70 @@ DataAttributeResolver.prototype.resolveNestedAttribute = function(attr) {
  * @returns {*} - An object that represents a query join expression
  */
 DataAttributeResolver.prototype.resolveNestedAttributeJoin = function(memberExpr) {
-    var self = this, childField, parentField;
+    var self = this, childField, parentField, res, expr, entity;
     if (/\//.test(memberExpr)) {
         //if the specified member contains '/' e.g. user/name then prepare join
         var arrMember = memberExpr.split('/');
         var attrMember = self.field(arrMember[0]);
         if (_.isNil(attrMember)) {
-            throw new Error(sprintf.sprintf('The target model does not have an attribute named as %s',arrMember[0]));
+            throw new Error(sprintf('The target model does not have an attribute named as %s',arrMember[0]));
         }
         //search for field mapping
         var mapping = self.inferMapping(arrMember[0]);
         if (_.isNil(mapping)) {
-            throw new Error(sprintf.sprintf('The target model does not have an association defined for attribute named %s',arrMember[0]));
+            throw new Error(sprintf('The target model does not have an association defined for attribute named %s',arrMember[0]));
         }
         if (mapping.childModel===self.name && mapping.associationType==='association') {
             //get parent model
             var parentModel = self.context.model(mapping.parentModel);
             if (_.isNil(parentModel)) {
-                throw new Error(sprintf.sprintf('Association parent model (%s) cannot be found.', mapping.parentModel));
+                throw new Error(sprintf('Association parent model (%s) cannot be found.', mapping.parentModel));
             }
             childField = self.field(mapping.childField);
             if (_.isNil(childField)) {
-                throw new Error(sprintf.sprintf('Association field (%s) cannot be found.', mapping.childField));
+                throw new Error(sprintf('Association field (%s) cannot be found.', mapping.childField));
             }
             parentField = parentModel.field(mapping.parentField);
             if (_.isNil(parentField)) {
-                throw new Error(sprintf.sprintf('Referenced field (%s) cannot be found.', mapping.parentField));
+                throw new Error(sprintf('Referenced field (%s) cannot be found.', mapping.parentField));
             }
             /**
              * store temp query expression
              * @type QueryExpression
              */
-            var res =qry.query(self.viewAdapter).select(['*']);
-            var expr = qry.query().where(qry.fields.select(childField.name).from(self[aliasProperty] || self.viewAdapter)).equal(qry.fields.select(mapping.parentField).from(mapping.childField));
-            var entity = qry.entity(parentModel.viewAdapter).as(mapping.childField).left();
+            res =qry.query(self.viewAdapter).select(['*']);
+            expr = qry.query().where(qry.fields.select(childField.name).from(self[aliasProperty] || self.viewAdapter)).equal(qry.fields.select(mapping.parentField).from(mapping.childField));
+            entity = qry.entity(parentModel.viewAdapter).as(mapping.childField).left();
             res.join(entity).with(expr);
             if (arrMember.length>2) {
                 parentModel[aliasProperty] = mapping.childField;
-                var memberExpr = arrMember.slice(1).join('/');
-                var expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(parentModel, memberExpr);
-                var arr = [].concat(res.$expand).concat(expr);
-                return arr;
+                expr = DataAttributeResolver.prototype.resolveNestedAttributeJoin.call(parentModel, arrMember.slice(1).join('/'));
+                return [].concat(res.$expand).concat(expr);
             }
+            //--set active field
             return res.$expand;
         }
         else if (mapping.parentModel===self.name && mapping.associationType==='association') {
             var childModel = self.context.model(mapping.childModel);
             if (_.isNil(childModel)) {
-                throw new Error(sprintf.sprintf('Association child model (%s) cannot be found.', mapping.childModel));
+                throw new Error(sprintf('Association child model (%s) cannot be found.', mapping.childModel));
             }
             childField = childModel.field(mapping.childField);
             if (_.isNil(childField)) {
-                throw new Error(sprintf.sprintf('Association field (%s) cannot be found.', mapping.childField));
+                throw new Error(sprintf('Association field (%s) cannot be found.', mapping.childField));
             }
             parentField = self.field(mapping.parentField);
             if (_.isNil(parentField)) {
-                throw new Error(sprintf.sprintf('Referenced field (%s) cannot be found.', mapping.parentField));
+                throw new Error(sprintf('Referenced field (%s) cannot be found.', mapping.parentField));
             }
-            var res =qry.query('Unknown').select(['*']);
-            var expr = qry.query().where(qry.fields.select(parentField.name).from(self[aliasProperty] || self.viewAdapter)).equal(qry.fields.select(childField.name).from(arrMember[0]));
-            var entity = qry.entity(childModel.viewAdapter).as(arrMember[0]).left();
+            res =qry.query('Unknown').select(['*']);
+            expr = qry.query().where(qry.fields.select(parentField.name).from(self[aliasProperty] || self.viewAdapter)).equal(qry.fields.select(childField.name).from(arrMember[0]));
+            entity = qry.entity(childModel.viewAdapter).as(arrMember[0]).left();
             res.join(entity).with(expr);
             return res.$expand;
         }
         else {
-            throw new Error(sprintf.sprintf('The association type between %s and %s model is not supported for filtering, grouping or sorting data.', mapping.parentModel , mapping.childModel));
+            throw new Error(sprintf('The association type between %s and %s model is not supported for filtering, grouping or sorting data.', mapping.parentModel , mapping.childModel));
         }
     }
 };
@@ -593,7 +562,7 @@ function DataQueryable(model) {
 }
 /**
  * Clones the current DataQueryable instance.
- * @returns {DataQuerable|*} - The cloned object.
+ * @returns {DataQueryable|*} - The cloned object.
  */
 DataQueryable.prototype.clone = function() {
     var result = new DataQueryable(this.model);
@@ -618,8 +587,8 @@ DataQueryable.prototype.clone = function() {
  * @ignore
  */
 DataQueryable.prototype.ensureContext = function() {
-    if (this.model!=null)
-        if (this.model.context!=null)
+    if (this.model!==null)
+        if (this.model.context!==null)
             return this.model.context;
     return null;
 };
@@ -669,6 +638,8 @@ DataQueryable.prototype.where = function(attr) {
     return this;
 };
 
+
+
 /**
  * Initializes a full-text search expression
  * @param {string} text - A string which represents the text we want to search for
@@ -685,20 +656,22 @@ DataQueryable.prototype.where = function(attr) {
  */
 DataQueryable.prototype.search = function(text) {
     var self = this;
+// eslint-disable-next-line no-unused-vars
     var options = { multiword:true };
     var terms = [];
     if (typeof text !== 'string') { return self; }
     var re = /("(.*?)")|(\w+)/g;
-    var match;
-    while(match = re.exec(text)) {
+    var match = re.exec(text);
+    while(match) {
         if (match[2]) {
             terms.push(match[2]);
         }
         else {
             terms.push(match[0]);
         }
+        match = re.exec(text);
     }
-    if (terms.length==0) {
+    if (terms.length===0) {
         return self;
     }
     self.prepare();
@@ -743,10 +716,10 @@ DataQueryable.prototype.join = function(model)
     var joinModel = self.model.context.model(model);
     //validate joined model
     if (_.isNil(joinModel))
-        throw new Error(sprintf.sprintf("The %s model cannot be found", model));
-    var arr = self.model.attributes.filter(function(x) { return x.type==joinModel.name; });
-    if (arr.length==0)
-        throw new Error(sprintf.sprintf("An internal error occured. The association between %s and %s cannot be found", this.model.name ,model));
+        throw new Error(sprintf("The %s model cannot be found", model));
+    var arr = self.model.attributes.filter(function(x) { return x.type===joinModel.name; });
+    if (arr.length===0)
+        throw new Error(sprintf("An internal error occured. The association between %s and %s cannot be found", this.model.name ,model));
     var mapping = self.model.inferMapping(arr[0].name);
     var expr = qry.query();
     expr.where(self.fieldOf(mapping.childField)).equal(joinModel.fieldOf(mapping.parentField));
@@ -805,16 +778,23 @@ DataQueryable.prototype.or = function(attr) {
     return this;
 };
 
+/**
+ * @private
+ * @memberof DataQueryable#
+ * @param {*} obj
+ * @returns {*}
+ */
 function resolveValue(obj) {
+    var self = this;
     if (typeof obj === 'string' && /^\$it\//.test(obj)) {
         var attr = obj.replace(/^\$it\//,'');
         if (DataAttributeResolver.prototype.testNestedAttribute(attr)) {
-            return DataAttributeResolver.prototype.resolveNestedAttribute.call(this, attr);
+            return DataAttributeResolver.prototype.resolveNestedAttribute.call(self, attr);
         }
         else {
             attr = DataAttributeResolver.prototype.testAttribute(attr);
             if (attr) {
-                return this.fieldOf(attr.name);
+                return self.fieldOf(attr.name);
             }
         }
     }
@@ -1168,6 +1148,12 @@ DataQueryable.prototype.between = function(value1, value2) {
     return this;
 };
 
+/**
+ * @memberOf DataQueryable#
+ * @param arg
+ * @returns {*}
+ * @private
+ */
 function select_(arg) {
     var self = this;
     if (typeof arg === 'string' && arg.length===0) {
@@ -1325,7 +1311,7 @@ DataQueryable.prototype.select = function(attr) {
             }
         }
         if (_.isArray(arr)) {
-            if (arr.length==0)
+            if (arr.length===0)
                 arr = null;
         }
     }
@@ -1334,7 +1320,7 @@ DataQueryable.prototype.select = function(attr) {
         if (_.isArray(arg)) {
             arr = [];
             //check if field is a model dataview
-            if (arg.length == 1 && typeof arg[0] === 'string') {
+            if (arg.length === 1 && typeof arg[0] === 'string') {
                 if (self.model.dataviews(arg[0])) {
                     return self.select(arg[0]);
                 }
@@ -1389,40 +1375,6 @@ DataQueryable.prototype.select = function(attr) {
 
     return this;
 };
-/**
- * Adds a field or an array of fields to select statement
- * @param {String|Array|DataField|*} attr
- * @return {DataQueryable}
- * @deprecated
- */
-DataQueryable.prototype.alsoSelect = function(attr) {
-    var self = this;
-    if (!self.query.hasFields()) {
-        return self.select(attr);
-    }
-    else {
-        if (_.isNil(attr))
-            return self;
-        var arr = [];
-        if (typeof attr === 'string') {
-            arr.push(attr);
-        }
-        else if (_.isArray(attr)) {
-            arr = attr.slice(0);
-        }
-        else if (typeof attr === 'object') {
-            arr.push(attr);
-        }
-        var $select = self.query.$select;
-        arr.forEach(function(x) {
-            var field = self.fieldOf(x);
-            if (_.isArray($select[self.model.viewAdapter]))
-                $select[self.model.viewAdapter].push(field);
-
-        });
-        return self;
-    }
-};
 
 DataQueryable.prototype.dateOf = function(attr) {
     if (typeof attr ==='undefined' || attr === null)
@@ -1468,7 +1420,7 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
             }
         }
         if (typeof  field === 'undefined' || field === null)
-            throw new Error(sprintf.sprintf('The specified field %s cannot be found in target model.', matches[2]));
+            throw new Error(sprintf('The specified field %s cannot be found in target model.', matches[2]));
         if (_.isNil(alias)) {
             matches = /as\s(\w+)$/i.exec(attr);
             if (matches) {
@@ -1478,15 +1430,15 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
                 alias = aggr.concat('Of', field.name);
             }
         }
-        if (aggr=='count')
+        if (aggr==='count')
             return qry.fields.count(field.name).from(this.model.viewAdapter).as(alias);
-        else if (aggr=='avg')
+        else if (aggr==='avg')
             return qry.fields.average(field.name).from(this.model.viewAdapter).as(alias);
-        else if (aggr=='sum')
+        else if (aggr==='sum')
             return qry.fields.sum(field.name).from(this.model.viewAdapter).as(alias);
-        else if (aggr=='min')
+        else if (aggr==='min')
             return qry.fields.min(field.name).from(this.model.viewAdapter).as(alias);
-        else if (aggr=='max')
+        else if (aggr==='max')
             return qry.fields.max(field.name).from(this.model.viewAdapter).as(alias);
     }
     else {
@@ -1496,7 +1448,7 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
             field = this.model.field(matches[2]);
             aggr = matches[1];
             if (typeof  field === 'undefined' || field === null)
-                throw new Error(sprintf.sprintf('The specified field %s cannot be found in target model.', matches[2]));
+                throw new Error(sprintf('The specified field %s cannot be found in target model.', matches[2]));
             if (_.isNil(alias)) {
                 matches = /as\s(\w+)$/i.exec(attr);
                 if (matches) {
@@ -1508,12 +1460,12 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
             return res;
         }
         else {
-            //matche expression [field] as [alias] e.g. itemType as type
+            //matches expression [field] as [alias] e.g. itemType as type
             matches = /^(\w+)\s+as\s+(.*?)$/i.exec(attr);
             if (matches) {
                 field = this.model.field(matches[1]);
                 if (typeof  field === 'undefined' || field === null)
-                    throw new Error(sprintf.sprintf('The specified field %s cannot be found in target model.', attr));
+                    throw new Error(sprintf('The specified field %s cannot be found in target model.', attr));
                 alias = matches[2];
                 prop = alias || field.property || field.name;
                 return qry.fields.select(field.name).from(this.model.viewAdapter).as(prop);
@@ -1522,7 +1474,7 @@ DataQueryable.prototype.fieldOf = function(attr, alias) {
                 //try to match field with expression [field] as [alias] or [nested]/[field] as [alias]
                 field = this.model.field(attr);
                 if (typeof  field === 'undefined' || field === null)
-                    throw new Error(sprintf.sprintf('The specified field %s cannot be found in target model.', attr));
+                    throw new Error(sprintf('The specified field %s cannot be found in target model.', attr));
                 var f = qry.fields.select(field.name).from(this.model.viewAdapter);
                 if (field.property)
                     return f.as(field.property);
@@ -1632,7 +1584,7 @@ DataQueryable.prototype.orderByDescending = function(attr) {
 
 /**
  * Continues a descending sorting operation
- * @param {string} - The field name to use for sorting results
+ * @param {string} attr The field name to use for sorting results
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.thenByDescending = function(attr) {
@@ -1647,7 +1599,7 @@ DataQueryable.prototype.thenByDescending = function(attr) {
 /**
  * Executes the specified query against the underlying model and returns the first item.
  * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
- * @returns {Deferred|*}
+ * @returns {Promise|*}
  * @example
  //retrieve an order by id
  context.model('Order')
@@ -1673,7 +1625,8 @@ DataQueryable.prototype.first = function(callback) {
 };
 /**
  * @private
- * @param {function(Error=,*=)} callback
+ * @memberOf DataQueryable#
+ * @param {Function} callback
  */
 function firstInternal(callback) {
     var self = this;
@@ -1713,6 +1666,7 @@ DataQueryable.prototype.all = function(callback) {
 
 /**
  * @private
+ * @memberOf DataQueryable#
  * @param {Function} callback
  */
 function allInternal(callback) {
@@ -1750,9 +1704,10 @@ DataQueryable.prototype.skip = function(n) {
 };
 
 /**
+ * @memberOf DataQueryable#
  * @private
  * @param {Number} n - Defines the number of items to take
- * @param {function=} callback
+ * @param {Function} callback
  * @returns {*} - A collection of objects that meet the query provided
  */
 function takeInternal(n, callback) {
@@ -1834,7 +1789,7 @@ DataQueryable.prototype.take = function(n, callback) {
  </code></pre>
  * @param {function(Error=,DataResultSet=)=} callback - A callback function with arguments (err, result) where the first argument is the error, if any
  * and the second argument is an object that represents a result set
- * @returns {Deferred|*} - If callback is missing returns a promise.
+ * @returns {Promise|*} - If callback is missing returns a promise.
  @example
  //retrieve products list order by price
  context.model('Product')
@@ -1895,6 +1850,7 @@ DataQueryable.prototype.getItems = function() {
 
 /**
  * @private
+ * @memberOf DataQueryable#
  * @param {Function} callback
  */
 function listInternal(callback) {
@@ -1940,67 +1896,27 @@ function listInternal(callback) {
  */
 DataQueryable.prototype.countOf = function(name, alias) {
     alias = alias || 'countOf'.concat(name);
-    var res = this.fieldOf(sprintf.sprintf('count(%s)', name));
-    if (typeof alias !== 'undefined' && alias!=null)
-        res.as(alias);
-    return res;
-};
-/**
- * @param {string} name
- * @param {string=} alias
- * @returns {*|QueryField}
- * @deprecated
- * @ignore
- */
-DataQueryable.prototype.maxOf = function(name, alias) {
-    alias = alias || 'maxOf'.concat(name);
-    var res = this.fieldOf(sprintf.sprintf('max(%s)', name));
-    if (typeof alias !== 'undefined' && alias!=null)
-        res.as(alias);
-    return res;
-};
-/**
- * @param {string} name
- * @param {string=} alias
- * @returns {*|QueryField}
- * @deprecated
- * @ignore
- */
-DataQueryable.prototype.minOf = function(name, alias) {
-    alias = alias || 'minOf'.concat(name);
-    var res = this.fieldOf(sprintf.sprintf('min(%s)', name));
-    if (typeof alias !== 'undefined' && alias!=null)
-        res.as(alias);
-    return res;
-};
-/**
- * @param {string} name
- * @param {string=} alias
- * @returns {*|QueryField}
- * @deprecated
- * @ignore
- */
-DataQueryable.prototype.averageOf = function(name, alias) {
-    alias = alias || 'avgOf'.concat(name);
-    var res = this.fieldOf(sprintf.sprintf('avg(%s)', name));
-    if (typeof alias !== 'undefined' && alias!=null)
-        res.as(alias);
-    return res;
-};
-/**
- * @param {string} name
- * @param {string=} alias
- * @returns {*|QueryField}
- */
-DataQueryable.prototype.sumOf = function(name, alias) {
-    alias = alias || 'sumOf'.concat(name);
-    var res = this.fieldOf(sprintf.sprintf('sum(%s)', name));
-    if (typeof alias !== 'undefined' && alias!=null)
+    var res = this.fieldOf(sprintf('count(%s)', name));
+    if (typeof alias !== 'undefined' && alias!==null)
         res.as(alias);
     return res;
 };
 
 /**
+ * @param {string} name
+ * @param {string=} alias
+ * @returns {QueryField|*}
+ */
+DataQueryable.prototype.sumOf = function(name, alias) {
+    alias = alias || 'sumOf'.concat(name);
+    var res = this.fieldOf(sprintf('sum(%s)', name));
+    if (typeof alias !== 'undefined' && alias!==null)
+        res.as(alias);
+    return res;
+};
+
+/**
+ * @memberOf DataQueryable#
  * @private
  * @param callback {Function}
  * @returns {*} - A collection of objects that meet the query provided
@@ -2010,8 +1926,9 @@ function countInternal(callback) {
     callback = callback || function() {};
     //add a count expression
     var field = self.model.attributes[0];
-    if (field==null)
+    if (_.isNil(field)) {
         return callback.call(this, new Error('Queryable collection does not have any property.'));
+    }
     //normalize query and remove skip
     delete self.query.$skip;
     delete self.query.$take;
@@ -2035,7 +1952,7 @@ function countInternal(callback) {
 /**
  * Executes the query against the current model and returns the count of items found.
  * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result, if any.
- * @returns {Deferred|*} - If callback parameter is missing then returns a Deferred object.
+ * @returns {Promise|*} - If callback parameter is missing then returns a Deferred object.
  * @example
  //retrieve the number of a product's orders
  context.model('Order')
@@ -2062,8 +1979,9 @@ DataQueryable.prototype.count = function(callback) {
 
 /**
  * @private
+ * @memberOf DataQueryable#
  * @param {string} attr
- * @param callback {Function}
+ * @param {Function} callback
  */
 function maxInternal(attr, callback) {
     var self = this;
@@ -2079,7 +1997,7 @@ function maxInternal(attr, callback) {
  * Executes the query against the current model and returns the maximum value of the given attribute.
  * @param {string} attr - A string that represents a field of the current model
  * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result, if any.
- * @returns {Deferred|*} - If callback parameter is missing then returns a Deferred object.
+ * @returns {Promise|*} - If callback parameter is missing then returns a Deferred object.
  * @example
  //retrieve the maximum price of products sold during last month
  context.model('Order')
@@ -2106,8 +2024,9 @@ DataQueryable.prototype.max = function(attr, callback) {
 
 /**
  * @private
- * @param attr {String}
- * @param callback {Function}
+ * @memberOf DataQueryable#
+ * @param {string} attr
+ * @param {Function} callback
  */
 function minInternal(attr, callback) {
     var self = this;
@@ -2123,9 +2042,9 @@ function minInternal(attr, callback) {
  * Executes the query against the current model and returns the average value of the given attribute.
  * @param {string} attr - A string that represents a field of the current model
  * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result, if any.
- * @returns {Deferred|*} - If callback parameter is missing then returns a Deferred object.
+ * @returns {Promise|*} - If callback parameter is missing then returns a Deferred object.
  * @example
- //retrieve the mininum price of products sold during last month
+ //retrieve the minimum price of products sold during last month
  context.model('Order')
  .where('orderDate').greaterOrEqual(moment().startOf('month').toDate())
  .min('orderedItem/price').then(function(result) {
@@ -2150,6 +2069,7 @@ DataQueryable.prototype.min = function(attr, callback) {
 
 /**
  * @private
+ * @memberOf DataQueryable#
  * @param {string} attr
  * @param {Function} callback
  */
@@ -2192,35 +2112,8 @@ DataQueryable.prototype.average = function(attr, callback) {
     }
 };
 /**
- * @private
- * @param {Function} callback
- */
-function executeCount_(callback) {
-    try {
-        var self = this, context = self.ensureContext();
-        var clonedQuery = self.query.clone();
-        //delete properties
-        delete clonedQuery.$skip;
-        delete clonedQuery.$take;
-        //add wildcard field
-        clonedQuery.select([qry.fields.count('*')]);
-        //execute count
-        context.db.execute(clonedQuery, null, function(err, result) {
-            if (err) {
-                callback(err);
-                return;
-            }
-            callback(err, result.length>0 ? result[0] : 0);
-        });
-    }
-    catch (e) {
-        callback(e);
-    }
-
-};
-/**
  * Migrates the underlying data model
- * @param {function(Error=)} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
+ * @param {Function} callback - A callback function that should be called at the end of this operation. The first argument may be an error if any occured.
  */
 DataQueryable.prototype.migrate = function(callback) {
     var self = this;
@@ -2248,11 +2141,12 @@ DataQueryable.prototype.postExecute = function(result, callback) {
 
 /**
  * Executes the underlying query statement.
- * @param {function(Error,*=)} callback
+ * @memberOf DataQueryable#
+ * @param {Function} callback
  * @private
  */
  function execute_(callback) {
-    var self = this, context = self.ensureContext();
+    var self = this;
     self.migrate(function(err) {
         if (err) { callback(err); return; }
         var e = { model:self.model, query:self.query, type:'select' };
@@ -2344,42 +2238,43 @@ DataQueryable.prototype.postExecute = function(result, callback) {
 
 /**
  * @private
- * @param {*} e
- * @param {function(Error=,*=)} callback
+ * @memberOf DataQueryable#
+ * @param {*} event
+ * @param {Function} callback
  */
- function finalExecuteInternal_(e, callback) {
+ function finalExecuteInternal_(event, callback) {
     var self = this, context = self.ensureContext();
     //pass data queryable to event
-    e.emitter = this;
+    event.emitter = this;
     var afterListenerCount = self.model.listeners('after.execute').length;
-    self.model.emit('before.execute', e, function(err) {
+    self.model.emit('before.execute', event, function(err) {
         if (err) {
             callback(err);
         }
         else {
             //if command has been completed, do not execute the command against the underlying database
-            if (typeof e['result'] !== 'undefined') {
+            if (typeof event['result'] !== 'undefined') {
                 //call after execute
-                var result = e['result'];
+                var result = event['result'];
                 afterExecute_.call(self, result, function(err, result) {
                     if (err) { callback(err); return; }
                     if (afterListenerCount===0) { callback(null, result); return; }
                     //raise after execute event
-                    self.model.emit('after.execute', e, function(err) {
+                    self.model.emit('after.execute', event, function(err) {
                         if (err) { callback(err); return; }
                         callback(null, result);
                     });
                 });
                 return;
             }
-            context.db.execute(e.query, null, function(err, result) {
+            context.db.execute(event.query, null, function(err, result) {
                 if (err) { callback(err); return; }
                 afterExecute_.call(self, result, function(err, result) {
                     if (err) { callback(err); return; }
                     if (afterListenerCount===0) { callback(null, result); return; }
                     //raise after execute event
-                    e.result = result;
-                    self.model.emit('after.execute', e, function(err) {
+                    event.result = result;
+                    self.model.emit('after.execute', event, function(err) {
                         if (err) { callback(err); return; }
                         callback(null, result);
                     });
@@ -2390,16 +2285,15 @@ DataQueryable.prototype.postExecute = function(result, callback) {
 }
 
 /**
+ * @private
+ * @memberOf DataQueryable#
  * @param {*} result
  * @param {Function} callback
  * @private
  */
 function afterExecute_(result, callback) {
-    /**
-     * @type {DataQueryable|*}
-     */
     var self = this;
-    var field, parentField, junction;
+    var field;
     if (self.$expand) {
         //get distinct values
 
@@ -2544,8 +2438,7 @@ function afterExecute_(result, callback) {
                 }
             }
             else {
-                console.log(sprintf.sprintf('Data assocication mapping (%s) for %s cannot be found or the association between these two models defined more than once.', expand, self.model.title));
-                return cb(null);
+                return cb(new DataException("EASSOC", sprintf('Data association mapping (%s) for %s cannot be found or the association between these two models defined more than once.', expand, self.model.title)));
             }
         }, function(err) {
             if (err) {
@@ -2563,6 +2456,7 @@ function afterExecute_(result, callback) {
 
 /**
  * @private
+ * @memberOf DataQueryable#
  * @param {Array|*} result
  * @param {Function} callback
  */
@@ -2574,10 +2468,10 @@ function toArrayCallback(result, callback) {
                 return callback(null, result);
             }
             var fields = self.query.fields();
-            if (_.isArray(fields)==false) {
+            if (_.isArray(fields)===false) {
                 return callback(null, result);
             }
-            if (fields.length==1) {
+            if (fields.length===1) {
                 var arr = [];
                 result.forEach(function(x) {
                     if (_.isNil(x))
@@ -2812,12 +2706,11 @@ DataQueryable.prototype.hasExpand = function(attr) {
 
     var expand = attr;
     if (typeof attr === 'string') {
-        expand == attr;
+        expand = attr;
     }
     else if (typeof attr.name === "string") {
         expand = attr.name;
     }
-
 
     return  _.find(this.$expand, function(x) {
         if (typeof x === 'string') {
@@ -2955,7 +2848,7 @@ DataQueryable.prototype.divide = function(x) {
  * @returns {DataQueryable}
  */
 DataQueryable.prototype.round = function(n) {
-    this.query.round(x); return this;
+    this.query.round(n); return this;
 };
 /**
  * Prepares a substring comparison
@@ -3207,6 +3100,7 @@ DataQueryable.prototype.toUpperCase = function() {
 };
 /**
  * @private
+ * @memberOf DataQueryable#
  * @param {Function} callback
  */
 function valueInternal(callback) {
@@ -3225,7 +3119,7 @@ function valueInternal(callback) {
 /**
  * Executes the underlying query and a single value.
  * @param {Function=} callback - A callback function where the first argument will contain the Error object if an error occured, or null otherwise. The second argument will contain the result.
- * @returns {Deferred|*}
+ * @returns {Promise|*}
  * @example
  //retrieve the full name (description) of a person
  context.model('Person')

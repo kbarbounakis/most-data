@@ -9,6 +9,7 @@ var del = require('del');
 var buildDir = 'dist/';
 //test source directory
 var sources = 'src/**/*.js';
+var config = 'src/config/**/*';
 
 //clean dist server modules
 gulp.task('clean:test', function() {
@@ -37,11 +38,14 @@ gulp.task('clean:test', function() {
 });
 
 gulp.task('copy:test', function() {
-    return gulp.src('src/config/**/*')
+    return gulp.src(config)
         .pipe(gulp.dest(path.join(buildDir, 'config')))
 });
 
 //build and watch server modules for changes
 gulp.task('watch:test', ['build:test'], function() {
-  return gulp.watch(sources, ['build:test']);
+  return gulp.watch([
+      sources,
+      config
+  ], ['build:test']);
 });
