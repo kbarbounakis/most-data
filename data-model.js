@@ -28,29 +28,26 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/**
- * @private
- */
-var _ = require("lodash"),
-    util = require('util'),
-    sprintf = require('sprintf'),
-    path = require("path"),
-    async = require('async'),
-    qry = require('most-query'),
-    types = require('./types'),
-    DataAssociationMapping = require('./types').DataAssociationMapping,
-    dataCommon = require('./data-common'),
-    dataListeners = require('./data-listeners'),
-    validators = require('./data-validator'),
-    dataAssociations = require('./data-associations'),
-    DataNestedObjectListener = require("./data-nested-object-listener").DataNestedObjectListener,
-    DataReferencedObjectListener = require("./data-ref-object-listener").DataReferencedObjectListener,
-    DataQueryable = require('./data-queryable').DataQueryable,
-    DataAttributeResolver = require('./data-queryable').DataAttributeResolver,
-    DataObjectAssociationListener = dataAssociations.DataObjectAssociationListener,
-    DataModelView = require('./data-model-view').DataModelView,
-    DataFilterResolver = require('./data-filter-resolver').DataFilterResolver,
-    Q = require("q");
+var _ = require("lodash");
+var util = require('util');
+var sprintf = require('sprintf');
+var path = require("path");
+var async = require('async');
+var qry = require('most-query');
+var types = require('./types');
+var DataAssociationMapping = require('./types').DataAssociationMapping;
+var dataCommon = require('./data-common');
+var dataListeners = require('./data-listeners');
+var validators = require('./data-validator');
+var dataAssociations = require('./data-associations');
+var DataNestedObjectListener = require("./data-nested-object-listener").DataNestedObjectListener;
+var DataReferencedObjectListener = require("./data-ref-object-listener").DataReferencedObjectListener;
+var DataQueryable = require('./data-queryable').DataQueryable;
+var DataAttributeResolver = require('./data-queryable').DataAttributeResolver;
+var DataObjectAssociationListener = dataAssociations.DataObjectAssociationListener;
+var DataModelView = require('./data-model-view').DataModelView;
+var DataFilterResolver = require('./data-filter-resolver').DataFilterResolver;
+var Q = require("q");
 
 /**
  * @param {DataField} field

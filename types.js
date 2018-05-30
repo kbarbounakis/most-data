@@ -28,16 +28,11 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-/**
- * @ignore
-  */
-var events = require('events'),
-    sprintf = require('sprintf'),
-    _ = require('lodash'),
-    util = require('util'),
-    async = require('async'),
-    qry = require('most-query');
+var events = require('events');
+var sprintf = require('sprintf').sprintf;
+var _ = require('lodash');
+var util = require('util');
+var async = require('async');
 
 var types = { };
 
@@ -665,44 +660,36 @@ DataQueryableField.prototype.toString = function() {
  * @returns {string}
  */
 DataQueryableField.prototype.max = function() {
-    return sprintf.sprintf('max(%s)', this.name) + this._as();
+    return sprintf('max(%s)', this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.min = function() {
-    return sprintf.sprintf('min(%s)', this.name) + this._as();
+    return sprintf('min(%s)', this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.count = function() {
-    return sprintf.sprintf('count(%s)', this.name) + this._as();
+    return sprintf('count(%s)', this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.average = function() {
-    return sprintf.sprintf('avg(%s)', this.name) + this._as();
+    return sprintf('avg(%s)', this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.length = function() {
-    return sprintf.sprintf('length(%s)', this.name) + this._as();
+    return sprintf('length(%s)', this.name) + this._as();
 };
-
-///**
-// * @param {String} s
-// * @returns {string}
-// */
-//DataQueryableField.prototype.indexOf = function(s) {
-//    return sprintf.sprintf('indexof(%s,%s)', this.name, qry.escape(s)) + this._as();
-//};
 
 /**
  * @param {number} pos
@@ -710,70 +697,70 @@ DataQueryableField.prototype.length = function() {
  * @returns {string}
  */
 DataQueryableField.prototype.substr = function(pos, length) {
-    return sprintf.sprintf('substring(%s,%s,%s)',this.name, pos, length) + this._as();
+    return sprintf('substring(%s,%s,%s)',this.name, pos, length) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.floor = function() {
-    return sprintf.sprintf('floor(%s)',this.name) + this._as();
+    return sprintf('floor(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.round = function() {
-    return sprintf.sprintf('round(%s)',this.name) + this._as();
+    return sprintf('round(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getYear = function() {
-    return sprintf.sprintf('year(%s)',this.name) + this._as();
+    return sprintf('year(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getDay = function() {
-    return sprintf.sprintf('day(%s)',this.name) + this._as();
+    return sprintf('day(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getMonth = function() {
-    return sprintf.sprintf('month(%s)',this.name) + this._as();
+    return sprintf('month(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getMinutes = function() {
-    return sprintf.sprintf('minute(%s)',this.name) + this._as();
+    return sprintf('minute(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getHours = function() {
-    return sprintf.sprintf('hour(%s)',this.name) + this._as();
+    return sprintf('hour(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getSeconds = function() {
-    return sprintf.sprintf('second(%s)',this.name) + this._as();
+    return sprintf('second(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.getDate = function() {
-    return sprintf.sprintf('date(%s)',this.name) + this._as();
+    return sprintf('date(%s)',this.name) + this._as();
 };
 
 ///**
@@ -787,35 +774,35 @@ DataQueryableField.prototype.getDate = function() {
  * @returns {string}
  */
 DataQueryableField.prototype.toLocaleLowerCase = function() {
-    return sprintf.sprintf('tolower(%s)',this.name) + this._as();
+    return sprintf('tolower(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.toLowerCase = function() {
-    return sprintf.sprintf('tolower(%s)',this.name) + this._as();
+    return sprintf('tolower(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.toLocaleUpperCase = function() {
-    return sprintf.sprintf('toupper(%s)',this.name) + this._as();
+    return sprintf('toupper(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.toUpperCase = function() {
-    return sprintf.sprintf('toupper(%s)',this.name) + this._as();
+    return sprintf('toupper(%s)',this.name) + this._as();
 };
 
 /**
  * @returns {string}
  */
 DataQueryableField.prototype.trim = function() {
-    return sprintf.sprintf('trim(%s)',this.name) + this._as();
+    return sprintf('trim(%s)',this.name) + this._as();
 };
 
 /** native extensions **/
@@ -888,61 +875,6 @@ function DataModelMigration() {
      */
     this.model = null;
 }
-/**
- * @ignore
- * @deprecated
- * @class
- * @constructor
- */
-function DataModelBatch() {
-    /**
-     * Gets or sets a string that represents the data table that is going to be used in this operation.
-     * This property cannot be null.
-     */
-    this.appliesTo = null;
-    /**
-     * Gets an array that contains the items to be added
-     */
-    this.add = [];
-    /**
-     * Gets an array that contains the items to be updated
-     */
-    this.change = [];
-    /**
-     * Gets an array that contains the items to be updated
-     */
-    this.remove = [];
-    /**
-     * Gets or sets the target model
-     * @type {DataModel}
-     */
-    this.model = null;
-}
-/**
- * @param {*} obj
- */
-DataModelBatch.prototype.prepare = function(obj) {
-    var self = this;
-    if (self.model==null)
-        throw new Error('The model of a batch operation cannot be empty at this context.');
-    var key = self.model.key();
-    if (!obj)
-        return;
-    var items = _.isArray(obj) ? obj : [obj];
-    array(items).each(function(x) {
-        if (x[key.name]!=null) {
-            //state is modified
-            self.change = self.change || [];
-            self.change.push(x);
-        }
-        else {
-            //state is added
-            self.add = self.add || [];
-            self.add.push(x);
-        }
-    });
-};
-
 /**
  * @classdesc DataAssociationMapping class describes the association between two models.
  * <p>
@@ -1255,7 +1187,6 @@ types.DataEventArgs = DataEventArgs;
 types.DataEventListener = DataEventListener;
 types.DataModelMigration = DataModelMigration;
 types.DataAssociationMapping = DataAssociationMapping;
-types.DataModelBatch = DataModelBatch;
 types.DataException=DataException;
 types.NotNullException=NotNullException;
 types.UniqueConstraintException=UniqueConstraintException;

@@ -28,14 +28,11 @@
  OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
  OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
-/**
- * @ignore
- */
-var util = require('util'),
-    _ = require("lodash"),
-    dataCommon = require('./data-common'),
-    types = require('./types'),
-    cfg = require('./data-configuration');
+var util = require('util');
+var _ = require("lodash");
+var dataCommon = require('./data-common');
+var types = require('./types');
+var cfg = require('./data-configuration');
 /**
  * @classdesc Represents the default data context of MOST Data Applications.
  * The default data context uses the adapter which is registered as the default adapter in application configuration.
@@ -285,9 +282,6 @@ NamedDataContext.prototype.finalize = function(cb) {
 
 if (typeof exports !== 'undefined')
 {
-    module.exports = {
-        DefaultDataContext:DefaultDataContext,
-        NamedDataContext:NamedDataContext
-
-    };
+    module.exports.DefaultDataContext = DefaultDataContext;
+    module.exports.NamedDataContext = NamedDataContext;
 }
