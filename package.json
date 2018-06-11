@@ -29,7 +29,7 @@
     "async": "0.2.10",
     "lodash": "^4.17.10",
     "moment": "^2.22.2",
-    "most-query": "~0.1.34",
+    "most-query": "^0.1.36",
     "most-xml": "^0.3.4",
     "node-cache": "^1.1.0",
     "pluralize": "^7.0.0",
